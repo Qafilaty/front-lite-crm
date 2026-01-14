@@ -1,23 +1,51 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginViewProps {
   onRegisterRedirect: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess?: () => void;
 }
 
 const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSuccess }) => {
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // إعادة التوجيه عند نجاح تسجيل الدخول
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+    }
+  }, [isAuthenticated, navigate, location, onLoginSuccess]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setError('');
+    
+    try {
+      const result = await login(email, password);
+      if (!result.success) {
+        setError(result.error || 'فشل تسجيل الدخول');
+      }
+      // إذا نجح، useEffect سيعيد التوجيه تلقائياً
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
+    } finally {
       setLoading(false);
-      onLoginSuccess();
-    }, 1500);
+    }
   };
 
   return (
@@ -32,6 +60,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-bold text-red-600 text-center">
+              {error}
+            </div>
+          )}
+          
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البريد الإلكتروني</label>
             <div className="relative">
@@ -39,6 +73,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
               <input 
                 required 
                 type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@mail.com" 
                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
               />
@@ -55,6 +91,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
               <input 
                 required 
                 type={showPassword ? "text" : "password"} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" 
                 className="w-full pr-11 pl-12 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
               />
