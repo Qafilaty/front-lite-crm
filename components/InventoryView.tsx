@@ -9,9 +9,18 @@ import {
 interface InventoryViewProps {
   inventory: Product[];
   setInventory: React.Dispatch<React.SetStateAction<Product[]>>;
+  onAdd: (productData: any) => Promise<boolean>;
+  onUpdate: (id: string, productData: any) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean>;
 }
 
-const InventoryView: React.FC<InventoryViewProps> = ({ inventory, setInventory }) => {
+const InventoryView: React.FC<InventoryViewProps> = ({ 
+  inventory, 
+  setInventory, 
+  onAdd, 
+  onUpdate, 
+  onDelete 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -30,9 +39,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({ inventory, setInventory }
     setExpandedRows(newExpanded);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-      setInventory(prev => prev.filter(p => p.id !== id));
+      const success = await onDelete(id);
+      if (success) {
+        alert('تم حذف المنتج بنجاح');
+      } else {
+        alert('فشل حذف المنتج');
+      }
     }
   };
 
@@ -56,18 +70,48 @@ const InventoryView: React.FC<InventoryViewProps> = ({ inventory, setInventory }
     setIsModalOpen(true);
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!editingProduct.name || !editingProduct.sku) {
       alert('يرجى إكمال البيانات الأساسية');
       return;
     }
 
+    // Prepare product data for backend
+    const productData = {
+      name: editingProduct.name,
+      sku: editingProduct.sku,
+      price: Number(editingProduct.price),
+      status: true, // Boolean: true = active, false = inactive
+      note: '',
+      variantsProbability: editingProduct.variants && editingProduct.variants.length > 0 
+        ? editingProduct.variants.map(v => ({
+            name: v.name,
+            sku: v.sku,
+            price: Number(v.price),
+            cost: Number(v.price) * 0.7,
+            quantity: Number(v.stock),
+          }))
+        : undefined,
+    };
+
+    let success = false;
     if (modalMode === 'add') {
-      setInventory(prev => [editingProduct as Product, ...prev]);
-    } else {
-      setInventory(prev => prev.map(p => p.id === editingProduct.id ? (editingProduct as Product) : p));
+      success = await onAdd(productData);
+      if (success) {
+        alert('تم إضافة المنتج بنجاح!');
+      }
+    } else if (editingProduct.id) {
+      success = await onUpdate(editingProduct.id, productData);
+      if (success) {
+        alert('تم تحديث المنتج بنجاح!');
+      }
     }
-    setIsModalOpen(false);
+
+    if (success) {
+      setIsModalOpen(false);
+    } else {
+      alert('فشلت العملية. يرجى المحاولة مرة أخرى.');
+    }
   };
 
   const addVariant = () => {
