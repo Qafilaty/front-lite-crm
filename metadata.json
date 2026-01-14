@@ -1,0 +1,7 @@
+{
+  "name": "crm-light",
+  "description": "لوحة تحكم متكاملة لإدارة المستخدمين، الطلبات، والمخزون مع ميزات ذكية مدعومة بـ Gemini AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
