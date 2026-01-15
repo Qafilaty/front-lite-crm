@@ -18,6 +18,7 @@ import ShippingPricingPage from './pages/ShippingPricingPage';
 import StoreLinkingPage from './pages/StoreLinkingPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
+import WooCommerceSuccess from './pages/WooCommerceSuccess';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -26,7 +27,8 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
-      
+      <Route path="/woocommerce/success" element={<WooCommerceSuccess />} />
+
       {/* Protected Routes */}
       <Route
         path="/"

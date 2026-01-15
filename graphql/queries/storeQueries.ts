@@ -11,10 +11,10 @@ export const GET_STORE = gql`
       name
       domain
       logo
-      type
       status
       url
       typeOrder
+      typeStore
       company {
         id
         name
@@ -33,8 +33,8 @@ export const GET_ALL_STORES = gql`
       logo
       url
       domain
-      type
       status
+      typeStore
       createdAt
     }
   }

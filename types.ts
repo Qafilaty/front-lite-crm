@@ -147,3 +147,19 @@ export interface Wilaya {
   otherNames?: string[];
   communes?: Commune[];
 }
+export interface Store {
+  id: string;
+  name: string;
+  domain?: string;
+  logo?: string;
+  status?: boolean;
+  url?: string;
+  typeOrder?: string;
+  company?: {
+    id: string;
+    name: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+  typeStore?: string;
+}

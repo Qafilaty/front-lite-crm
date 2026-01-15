@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Order, OrderLog, OrderItem, OrderStatus } from '../types';
-import { 
-  ArrowRight, Save, X, History, 
+import {
+  ArrowRight, Save, X, History,
   User, Phone, MapPin, ShoppingBag, PlusCircle, Trash2, Plus, Clock, Truck, Home, Building2, Store, Check,
   CheckCircle2, RefreshCcw, Map
 } from 'lucide-react';
@@ -16,23 +17,23 @@ interface OrderDetailsViewProps {
   trackingMode?: boolean;
 }
 
-const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({ 
-  order, onBack, onUpdate, readOnly = false, trackingMode = false 
+const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
+  order, onBack, onUpdate, readOnly = false, trackingMode = false
 }) => {
   const [editedOrder, setEditedOrder] = useState<Order>({ ...order });
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
   const [newLog, setNewLog] = useState<{ status: OrderStatus; note: string }>({ status: order.status, note: '' });
 
   const confirmationStatuses: OrderStatus[] = [
-    'confirmed', 'message_sent', 'postponed', 'failed_01', 'failed_02', 
-    'failed_03', 'failed_04', 'failed_05', 'duplicate', 'wrong_number', 
+    'confirmed', 'message_sent', 'postponed', 'failed_01', 'failed_02',
+    'failed_03', 'failed_04', 'failed_05', 'duplicate', 'wrong_number',
     'wrong_order', 'out_of_stock', 'cancelled'
   ];
 
   const trackingStatuses: OrderStatus[] = [
-    'en_preparation', 'ramasse', 'sorti_livraison', 'delivered', 'annule', 
-    'tentative_01', 'tentative_02', 'tentative_03', 'reporte_01', 
-    'wrong_number', 'client_absent', 'wrong_address', 'retour_vendeur', 
+    'en_preparation', 'ramasse', 'sorti_livraison', 'delivered', 'annule',
+    'tentative_01', 'tentative_02', 'tentative_03', 'reporte_01',
+    'wrong_number', 'client_absent', 'wrong_address', 'retour_vendeur',
     'retourne_vendeur', 'paid'
   ];
 
@@ -125,14 +126,14 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <User className="w-5 h-5 text-indigo-500" />
               <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">معلومات العميل والشحن</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم العميل</label>
-                <input 
+                <input
                   disabled={readOnly}
-                  value={editedOrder.customer} 
-                  onChange={e => setEditedOrder({...editedOrder, customer: e.target.value})}
+                  value={editedOrder.customer}
+                  onChange={e => setEditedOrder({ ...editedOrder, customer: e.target.value })}
                   className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
                 />
               </div>
@@ -140,55 +141,55 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رقم الهاتف</label>
                 <div className="relative">
                   <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                  <input 
+                  <input
                     disabled={readOnly}
-                    value={editedOrder.phone} 
-                    onChange={e => setEditedOrder({...editedOrder, phone: e.target.value})}
+                    value={editedOrder.phone}
+                    onChange={e => setEditedOrder({ ...editedOrder, phone: e.target.value })}
                     className="w-full pr-12 pl-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
-                <input 
+                <input
                   disabled={readOnly}
-                  value={editedOrder.state} 
-                  onChange={e => setEditedOrder({...editedOrder, state: e.target.value})}
+                  value={editedOrder.state}
+                  onChange={e => setEditedOrder({ ...editedOrder, state: e.target.value })}
                   className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
-                <input 
+                <input
                   disabled={readOnly}
-                  value={editedOrder.municipality} 
-                  onChange={e => setEditedOrder({...editedOrder, municipality: e.target.value})}
+                  value={editedOrder.municipality}
+                  onChange={e => setEditedOrder({ ...editedOrder, municipality: e.target.value })}
                   className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>
-                <textarea 
+                <textarea
                   disabled={readOnly}
-                  value={editedOrder.address} 
-                  onChange={e => setEditedOrder({...editedOrder, address: e.target.value})}
+                  value={editedOrder.address}
+                  onChange={e => setEditedOrder({ ...editedOrder, address: e.target.value })}
                   className="w-full h-24 px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70 resize-none"
                 />
               </div>
             </div>
 
             <div className="flex gap-4">
-              <button 
+              <button
                 disabled={readOnly}
-                onClick={() => setEditedOrder({...editedOrder, deliveryType: 'home'})}
+                onClick={() => setEditedOrder({ ...editedOrder, deliveryType: 'home' })}
                 className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
               >
                 <Home className="w-5 h-5" />
                 <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمنزل</span>
               </button>
-              <button 
+              <button
                 disabled={readOnly}
-                onClick={() => setEditedOrder({...editedOrder, deliveryType: 'office'})}
+                onClick={() => setEditedOrder({ ...editedOrder, deliveryType: 'office' })}
                 className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
               >
                 <Building2 className="w-5 h-5" />
@@ -215,18 +216,18 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               {editedOrder.items.map((item, idx) => (
                 <div key={idx} className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-in slide-in-from-right-4">
                   <div className="md:col-span-5">
-                    <input 
+                    <input
                       disabled={readOnly}
-                      value={item.name} 
+                      value={item.name}
                       onChange={e => updateItem(idx, 'name', e.target.value)}
                       placeholder="اسم المنتج..."
                       className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-xs font-bold"
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <input 
+                    <input
                       disabled={readOnly}
-                      value={item.variant} 
+                      value={item.variant}
                       onChange={e => updateItem(idx, 'variant', e.target.value)}
                       placeholder="اللون/المقاس..."
                       className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-[10px] font-bold"
@@ -234,19 +235,19 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </div>
                   <div className="md:col-span-2 flex items-center gap-2">
                     <span className="text-[9px] font-black text-slate-400">الكمية:</span>
-                    <input 
+                    <input
                       disabled={readOnly}
                       type="number"
-                      value={item.quantity} 
+                      value={item.quantity}
                       onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
                       className="w-16 bg-white border border-slate-200 px-2 py-3 rounded-xl text-xs font-bold text-center"
                     />
                   </div>
                   <div className="md:col-span-1">
-                    <input 
+                    <input
                       disabled={readOnly}
                       type="number"
-                      value={item.price} 
+                      value={item.price}
                       onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
                       className="w-full bg-white border border-slate-200 px-2 py-3 rounded-xl text-xs font-bold text-indigo-600 text-center"
                     />
@@ -266,20 +267,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </div>
 
             <div className="pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
-                  <input 
-                    disabled={readOnly}
-                    type="number"
-                    value={editedOrder.shippingCost} 
-                    onChange={e => setEditedOrder({...editedOrder, shippingCost: parseFloat(e.target.value) || 0})}
-                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-indigo-600"
-                  />
-               </div>
-               <div className="md:col-span-2 flex flex-col justify-center items-end">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع النهائي (DZD)</p>
-                  <p className="text-3xl font-black text-slate-800 font-mono tracking-tighter">{editedOrder.amount} <span className="text-[10px]">دج</span></p>
-               </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
+                <input
+                  disabled={readOnly}
+                  type="number"
+                  value={editedOrder.shippingCost}
+                  onChange={e => setEditedOrder({ ...editedOrder, shippingCost: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-indigo-600"
+                />
+              </div>
+              <div className="md:col-span-2 flex flex-col justify-center items-end">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع النهائي (DZD)</p>
+                <p className="text-3xl font-black text-slate-800 font-mono tracking-tighter">{editedOrder.amount} <span className="text-[10px]">دج</span></p>
+              </div>
             </div>
           </div>
         </div>
@@ -316,56 +317,62 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
       {/* Status Modal */}
       {isAddLogOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[250] flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
-            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><CheckCircle2 className="w-5 h-5" /></div>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">تحديث الحالة</h4>
-               </div>
-               <button onClick={() => setIsAddLogOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-8 h-8" /></button>
-            </div>
-            
-            <div className="p-10 space-y-8">
-              <div className="space-y-4">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">اختر الحالة</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {statusesToDisplay.map(statusKey => {
-                    const colors = statusColors[statusKey] || statusColors.default;
-                    const isSelected = newLog.status === statusKey;
-                    return (
-                      <button 
-                        key={statusKey}
-                        onClick={() => setNewLog({...newLog, status: statusKey})}
-                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center group h-full
+        <React.Fragment>
+          {typeof document !== 'undefined' && ReactDOM.createPortal(
+            <div className="fixed inset-0 z-[250] grid place-items-center overflow-y-auto py-10 px-4">
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsAddLogOpen(false)}></div>
+              <div className="relative z-10 bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col my-auto">
+                <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><CheckCircle2 className="w-5 h-5" /></div>
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">تحديث الحالة</h4>
+                  </div>
+                  <button onClick={() => setIsAddLogOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-8 h-8" /></button>
+                </div>
+
+                <div className="p-10 space-y-8">
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">اختر الحالة</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {statusesToDisplay.map(statusKey => {
+                        const colors = statusColors[statusKey] || statusColors.default;
+                        const isSelected = newLog.status === statusKey;
+                        return (
+                          <button
+                            key={statusKey}
+                            onClick={() => setNewLog({ ...newLog, status: statusKey })}
+                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center group h-full
                           ${isSelected ? `border-indigo-600 ${colors.bg} ring-4 ring-indigo-500/10` : `border-slate-50 bg-slate-50 ${colors.hover}`} `}
-                      >
-                         <div className={`w-3 h-3 rounded-full border shadow-sm ${colors.bg} ${colors.border}`}></div>
-                         <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${colors.text}`}>{statusLabels[statusKey]}</span>
-                         {isSelected && <div className="absolute top-1 left-1 bg-indigo-600 rounded-full p-0.5 shadow-sm"><Check className="w-2.5 h-2.5 text-white" /></div>}
-                      </button>
-                    );
-                  })}
+                          >
+                            <div className={`w-3 h-3 rounded-full border shadow-sm ${colors.bg} ${colors.border}`}></div>
+                            <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${colors.text}`}>{statusLabels[statusKey]}</span>
+                            {isSelected && <div className="absolute top-1 left-1 bg-indigo-600 rounded-full p-0.5 shadow-sm"><Check className="w-2.5 h-2.5 text-white" /></div>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">الملاحظة</label>
+                    <textarea
+                      value={newLog.note}
+                      onChange={e => setNewLog({ ...newLog, note: e.target.value })}
+                      placeholder="اكتب ملاحظة التغيير..."
+                      className="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
+                  <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest">إلغاء</button>
+                  <button onClick={addStatusUpdate} className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30">حفظ الحالة الجديدة</button>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">الملاحظة</label>
-                <textarea 
-                  value={newLog.note} 
-                  onChange={e => setNewLog({...newLog, note: e.target.value})} 
-                  placeholder="اكتب ملاحظة التغيير..." 
-                  className="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner" 
-                />
-              </div>
-            </div>
-
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
-                <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest">إلغاء</button>
-                <button onClick={addStatusUpdate} className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30">حفظ الحالة الجديدة</button>
-            </div>
-          </div>
-        </div>
+            </div>,
+            document.body
+          )}
+        </React.Fragment>
       )}
     </div>
   );

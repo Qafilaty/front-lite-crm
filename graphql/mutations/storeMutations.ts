@@ -11,10 +11,10 @@ export const CREATE_STORE = gql`
       name
       domain
       logo
-      type
       status
       url
       typeOrder
+      typeStore
       createdAt
     }
   }
@@ -29,8 +29,8 @@ export const UPDATE_STORE = gql`
         name
         domain
         logo
-        type
         status
+        typeStore
       }
     }
   }

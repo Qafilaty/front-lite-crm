@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Product, ProductVariant } from '../types';
 import {
   Plus, Search, Trash2, Tag, ChevronDown, ChevronUp, Save, DollarSign,
-  ChevronRight, ChevronLeft, Package, Edit3, X, Layers, PlusCircle, PackageX
+  ChevronRight, ChevronLeft, Package, Edit3, X, Layers, PlusCircle, PackageX, Briefcase
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from './common/LoadingSpinner';
 import EmptyState from './common/EmptyState';
+import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 
 interface InventoryViewProps {
   inventory: Product[];
@@ -35,7 +37,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   // State for Add/Edit Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  // Extended product type for the form to include cost
+  const [editingProduct, setEditingProduct] = useState<Partial<Product> & { cost?: number }>({});
+
+  // State for Delete Confirmation
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -44,15 +52,24 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     setExpandedRows(newExpanded);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-      const toastId = toast.loading('جاري حذف المنتج...');
-      const success = await onDelete(id);
-      if (success) {
-        toast.success('تم حذف المنتج بنجاح', { id: toastId });
-      } else {
-        toast.error('فشل حذف المنتج', { id: toastId });
-      }
+  const confirmDelete = (id: string) => {
+    setProductToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!productToDelete) return;
+
+    setIsDeleting(true);
+    const success = await onDelete(productToDelete);
+    setIsDeleting(false);
+
+    if (success) {
+      toast.success('تم حذف المنتج بنجاح');
+      setIsDeleteModalOpen(false);
+      setProductToDelete(null);
+    } else {
+      toast.error('فشل حذف المنتج');
     }
   };
 
@@ -64,6 +81,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       sku: '',
       category: 'عام',
       price: 0,
+      cost: 0,
       stock: 0,
       variants: []
     });
@@ -72,7 +90,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   const openEditModal = (product: Product) => {
     setModalMode('edit');
-    setEditingProduct({ ...product });
+    // We assume backend might return cost, if not we default to 0 or calculate it
+    setEditingProduct({
+      ...product,
+      cost: product.cost || 0
+    });
     setIsModalOpen(true);
   };
 
@@ -83,25 +105,34 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     // Prepare product data for backend
+    // logic to handle variantsProbability as per API expectation
+    const variantsProbability = editingProduct.variants && editingProduct.variants.length > 0
+      ? editingProduct.variants.map(v => ({
+        name: v.name,
+        sku: v.sku,
+        price: Number(v.price),
+        pricePurchase: Number(v.cost || editingProduct.cost || 0), // Use variant cost or fallback to product cost
+        quantity: Number(v.stock),
+      }))
+      : [];
+
     const productData = {
       name: editingProduct.name,
       sku: editingProduct.sku,
+      category: editingProduct.category,
       price: Number(editingProduct.price),
-      status: true, // Boolean: true = active, false = inactive
+      pricePurchase: Number(editingProduct.cost), // Product level cost
+      quantityInStock: Number(editingProduct.stock), // Main stock if no variants
+      status: true,
+      description: editingProduct.description || '',
       note: '',
-      variantsProbability: editingProduct.variants && editingProduct.variants.length > 0
-        ? editingProduct.variants.map(v => ({
-          name: v.name,
-          sku: v.sku,
-          price: Number(v.price),
-          cost: Number(v.price) * 0.7,
-          quantity: Number(v.stock),
-        }))
-        : undefined,
+      // Only include variantsProbability if we actually have variants
+      ...(variantsProbability.length > 0 && { variantsProbability })
     };
 
     const toastId = toast.loading('جاري حفظ التغييرات...');
     let success = false;
+
     if (modalMode === 'add') {
       success = await onAdd(productData);
       if (success) {
@@ -127,7 +158,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       name: '',
       sku: '',
       stock: 0,
-      price: editingProduct.price
+      price: editingProduct.price || 0,
+      cost: editingProduct.cost || 0 // Default new variant cost to product cost
     };
     setEditingProduct({
       ...editingProduct,
@@ -145,7 +177,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     const newVariants = [...(editingProduct.variants || [])];
     newVariants[index] = { ...newVariants[index], [field]: value };
 
-    // Auto-update total stock if variants exist
+    // Auto-update total stock if variants exist (optional, but good UX)
     const totalStock = newVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
     setEditingProduct({ ...editingProduct, variants: newVariants, stock: totalStock });
   };
@@ -274,7 +306,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(product.id)}
+                              onClick={() => confirmDelete(product.id)}
                               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -293,6 +325,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                     <th className="px-4 py-2">SKU</th>
                                     <th className="px-4 py-2">الكمية</th>
                                     <th className="px-4 py-2">السعر</th>
+                                    <th className="px-4 py-2">التكلفة</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-indigo-50/30">
@@ -302,6 +335,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                       <td className="px-4 py-2 font-mono text-slate-500">{v.sku}</td>
                                       <td className="px-4 py-2 font-black text-slate-700">{v.stock}</td>
                                       <td className="px-4 py-2 font-black text-indigo-600">{v.price || product.price} ر.س</td>
+                                      <td className="px-4 py-2 font-black text-slate-500">{v.cost || 0} ر.س</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -331,170 +365,205 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={executeDelete}
+        title="حذف المنتج"
+        description="هل أنت متأكد من أنك تريد حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف جميع البيانات المرتبطة به."
+        isDeleting={isDeleting}
+      />
+
       {/* Add/Edit Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
-                  {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                </div>
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                  {modalMode === 'add' ? 'إضافة منتج جديد' : 'تعديل بيانات المنتج'}
-                </h4>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
-            </div>
-
-            <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم المنتج</label>
-                  <input
-                    type="text"
-                    value={editingProduct.name}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                    placeholder="اسم المنتج..."
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القسم</label>
-                  <select
-                    value={editingProduct.category}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                  >
-                    <option value="إلكترونيات">إلكترونيات</option>
-                    <option value="أزياء">أزياء</option>
-                    <option value="إكسسوارات">إكسسوارات</option>
-                    <option value="منزل">منزل</option>
-                    <option value="عام">عام</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الـ SKU الأساسي</label>
-                  <input
-                    type="text"
-                    value={editingProduct.sku}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
-                    placeholder="PRD-123..."
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">السعر الأساسي</label>
-                  <div className="relative">
-                    <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                    <input
-                      type="number"
-                      value={editingProduct.price}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
-                      className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                    />
+        <React.Fragment>
+          {typeof document !== 'undefined' && ReactDOM.createPortal(
+            <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto py-10 px-4">
+              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={() => setIsModalOpen(false)}></div>
+              <div className="relative z-10 bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto max-h-none">
+                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                      {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                    </div>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+                      {modalMode === 'add' ? 'إضافة منتج جديد' : 'تعديل بيانات المنتج'}
+                    </h4>
                   </div>
-                </div>
-              </div>
-
-              {/* Variants Section */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-500" />
-                    <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">المتغيرات (Variants)</h5>
-                  </div>
-                  <button
-                    onClick={addVariant}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" /> إضافة متغير
-                  </button>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
                 </div>
 
-                {editingProduct.variants && editingProduct.variants.length > 0 ? (
-                  <div className="space-y-3">
-                    {editingProduct.variants.map((variant, idx) => (
-                      <div key={variant.id} className="grid grid-cols-12 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group animate-in slide-in-from-right-4 duration-200">
-                        <div className="col-span-4 space-y-1">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">الاسم</label>
-                          <input
-                            value={variant.name}
-                            onChange={(e) => updateVariantInModal(idx, 'name', e.target.value)}
-                            placeholder="مثلاً: أحمر - XL"
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-bold"
-                          />
-                        </div>
-                        <div className="col-span-3 space-y-1">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">SKU</label>
-                          <input
-                            value={variant.sku}
-                            onChange={(e) => updateVariantInModal(idx, 'sku', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-mono"
-                          />
-                        </div>
-                        <div className="col-span-2 space-y-1">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">الكمية</label>
-                          <input
-                            type="number"
-                            value={variant.stock}
-                            onChange={(e) => updateVariantInModal(idx, 'stock', Number(e.target.value))}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
-                          />
-                        </div>
-                        <div className="col-span-2 space-y-1">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">السعر</label>
-                          <input
-                            type="number"
-                            value={variant.price || editingProduct.price}
-                            onChange={(e) => updateVariantInModal(idx, 'price', Number(e.target.value))}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black text-indigo-600"
-                          />
-                        </div>
-                        <div className="col-span-1 flex items-end justify-center pb-1">
-                          <button
-                            onClick={() => removeVariant(idx)}
-                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الكمية المتوفرة (بدون متغيرات)</label>
-                    <div className="relative">
-                      <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم المنتج</label>
                       <input
-                        type="number"
-                        value={editingProduct.stock}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })}
-                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                        type="text"
+                        value={editingProduct.name}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                        placeholder="اسم المنتج..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القسم</label>
+                      <select
+                        value={editingProduct.category}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                      >
+                        <option value="إلكترونيات">إلكترونيات</option>
+                        <option value="أزياء">أزياء</option>
+                        <option value="إكسسوارات">إكسسوارات</option>
+                        <option value="منزل">منزل</option>
+                        <option value="عام">عام</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الـ SKU الأساسي</label>
+                      <input
+                        type="text"
+                        value={editingProduct.sku}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
+                        placeholder="PRD-123..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">السعر (سعر البيع)</label>
+                      <div className="relative">
+                        <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input
+                          type="number"
+                          value={editingProduct.price}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
+                          className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التكلفة (سعر الشراء)</label>
+                      <div className="relative">
+                        <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input
+                          type="number"
+                          value={editingProduct.cost}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, cost: Number(e.target.value) })}
+                          className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-[10px] uppercase hover:bg-slate-100 transition-all"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleSaveProduct}
-                className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-black text-[10px] uppercase shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
-              >
-                <Save className="w-3.5 h-3.5" /> {modalMode === 'add' ? 'إضافة للمخزون' : 'حفظ التغييرات'}
-              </button>
-            </div>
-          </div>
-        </div>
+                  {/* Variants Section */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-indigo-500" />
+                        <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">المتغيرات (Variants)</h5>
+                      </div>
+                      <button
+                        onClick={addVariant}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" /> إضافة متغير
+                      </button>
+                    </div>
+
+                    {editingProduct.variants && editingProduct.variants.length > 0 ? (
+                      <div className="space-y-3">
+                        {editingProduct.variants.map((variant, idx) => (
+                          <div key={variant.id} className="grid grid-cols-12 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group animate-in slide-in-from-right-4 duration-200">
+                            <div className="col-span-3 space-y-1">
+                              <label className="text-[8px] font-black text-slate-400 uppercase">الاسم</label>
+                              <input
+                                value={variant.name}
+                                onChange={(e) => updateVariantInModal(idx, 'name', e.target.value)}
+                                placeholder="مثلاً: أحمر - XL"
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-bold"
+                              />
+                            </div>
+                            <div className="col-span-3 space-y-1">
+                              <label className="text-[8px] font-black text-slate-400 uppercase">SKU</label>
+                              <input
+                                value={variant.sku}
+                                onChange={(e) => updateVariantInModal(idx, 'sku', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-mono"
+                              />
+                            </div>
+                            <div className="col-span-2 space-y-1">
+                              <label className="text-[8px] font-black text-slate-400 uppercase">الكمية</label>
+                              <input
+                                type="number"
+                                value={variant.stock}
+                                onChange={(e) => updateVariantInModal(idx, 'stock', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
+                              />
+                            </div>
+                            <div className="col-span-2 space-y-1">
+                              <label className="text-[8px] font-black text-slate-400 uppercase">السعر</label>
+                              <input
+                                type="number"
+                                value={variant.price || editingProduct.price}
+                                onChange={(e) => updateVariantInModal(idx, 'price', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black text-indigo-600"
+                              />
+                            </div>
+                            <div className="col-span-2 space-y-1">
+                              <label className="text-[8px] font-black text-slate-400 uppercase">التكلفة</label>
+                              <input
+                                type="number"
+                                value={variant.cost || editingProduct.cost}
+                                onChange={(e) => updateVariantInModal(idx, 'cost', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeVariant(idx)}
+                              className="absolute -top-2 -left-2 p-1 bg-white border border-rose-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all shadow-sm opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الكمية المتوفرة (بدون متغيرات)</label>
+                        <div className="relative">
+                          <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                          <input
+                            type="number"
+                            value={editingProduct.stock}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })}
+                            className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-[10px] uppercase hover:bg-slate-100 transition-all"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleSaveProduct}
+                    className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-black text-[10px] uppercase shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-3.5 h-3.5" /> {modalMode === 'add' ? 'إضافة للمخزون' : 'حفظ التغييرات'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
+        </React.Fragment>
       )}
     </div>
   );

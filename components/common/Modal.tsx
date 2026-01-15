@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -34,13 +35,17 @@ export const Modal: React.FC<ModalProps> = ({
     full: 'max-w-[95vw]',
   };
 
-  return (
-    <div 
-      className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto py-10 px-4"
     >
       <div
-        className={`relative bg-white w-full ${sizeClasses[size]} rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 max-h-[90vh] flex flex-col`}
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      ></div>
+
+      <div
+        className={`relative z-10 bg-white w-full ${sizeClasses[size]} rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 flex flex-col my-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -72,4 +77,8 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? ReactDOM.createPortal(modalContent, document.body)
+    : null;
 };
