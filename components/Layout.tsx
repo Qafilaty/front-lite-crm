@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { View } from '../types';
+import ToastNotifications from './common/ToastNotifications';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -60,26 +61,27 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-['Tajawal'] text-slate-900 overflow-hidden" dir="rtl">
+      <ToastNotifications />
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
-      <Sidebar 
-        currentView={currentView} 
-        onViewChange={handleViewChange} 
-        isOpen={isSidebarOpen} 
-        isCollapsed={isSidebarCollapsed} 
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
-        onLogout={handleLogout} 
+      <Sidebar
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        isOpen={isSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
-        <Header 
+        <Header
           currentUser={user as any}
           onUpdateUser={updateCurrentUser}
-          onMenuClick={() => setIsSidebarOpen(true)} 
-          currentView={currentView} 
-          onViewChange={handleViewChange} 
-          isSidebarCollapsed={isSidebarCollapsed} 
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          onMenuClick={() => setIsSidebarOpen(true)}
+          currentView={currentView}
+          onViewChange={handleViewChange}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onLogout={handleLogout}
         />
         <main className="p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto">

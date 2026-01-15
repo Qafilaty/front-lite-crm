@@ -1,10 +1,13 @@
 
 import React, { useState } from 'react';
 import { Product, ProductVariant } from '../types';
-import { 
-  Plus, Search, Trash2, Tag, ChevronDown, ChevronUp, Save, DollarSign, 
-  ChevronRight, ChevronLeft, Package, Edit3, X, Layers, PlusCircle
+import {
+  Plus, Search, Trash2, Tag, ChevronDown, ChevronUp, Save, DollarSign,
+  ChevronRight, ChevronLeft, Package, Edit3, X, Layers, PlusCircle, PackageX
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import LoadingSpinner from './common/LoadingSpinner';
+import EmptyState from './common/EmptyState';
 
 interface InventoryViewProps {
   inventory: Product[];
@@ -12,14 +15,16 @@ interface InventoryViewProps {
   onAdd: (productData: any) => Promise<boolean>;
   onUpdate: (id: string, productData: any) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  isLoading?: boolean;
 }
 
-const InventoryView: React.FC<InventoryViewProps> = ({ 
-  inventory, 
-  setInventory, 
-  onAdd, 
-  onUpdate, 
-  onDelete 
+const InventoryView: React.FC<InventoryViewProps> = ({
+  inventory,
+  setInventory,
+  onAdd,
+  onUpdate,
+  onDelete,
+  isLoading = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -41,11 +46,12 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   const handleDelete = async (id: string) => {
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+      const toastId = toast.loading('جاري حذف المنتج...');
       const success = await onDelete(id);
       if (success) {
-        alert('تم حذف المنتج بنجاح');
+        toast.success('تم حذف المنتج بنجاح', { id: toastId });
       } else {
-        alert('فشل حذف المنتج');
+        toast.error('فشل حذف المنتج', { id: toastId });
       }
     }
   };
@@ -72,7 +78,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   const handleSaveProduct = async () => {
     if (!editingProduct.name || !editingProduct.sku) {
-      alert('يرجى إكمال البيانات الأساسية');
+      toast.error('يرجى إكمال البيانات الأساسية (الاسم والـ SKU)');
       return;
     }
 
@@ -83,34 +89,35 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       price: Number(editingProduct.price),
       status: true, // Boolean: true = active, false = inactive
       note: '',
-      variantsProbability: editingProduct.variants && editingProduct.variants.length > 0 
+      variantsProbability: editingProduct.variants && editingProduct.variants.length > 0
         ? editingProduct.variants.map(v => ({
-            name: v.name,
-            sku: v.sku,
-            price: Number(v.price),
-            cost: Number(v.price) * 0.7,
-            quantity: Number(v.stock),
-          }))
+          name: v.name,
+          sku: v.sku,
+          price: Number(v.price),
+          cost: Number(v.price) * 0.7,
+          quantity: Number(v.stock),
+        }))
         : undefined,
     };
 
+    const toastId = toast.loading('جاري حفظ التغييرات...');
     let success = false;
     if (modalMode === 'add') {
       success = await onAdd(productData);
       if (success) {
-        alert('تم إضافة المنتج بنجاح!');
+        toast.success('تم إضافة المنتج بنجاح!', { id: toastId });
       }
     } else if (editingProduct.id) {
       success = await onUpdate(editingProduct.id, productData);
       if (success) {
-        alert('تم تحديث المنتج بنجاح!');
+        toast.success('تم تحديث المنتج بنجاح!', { id: toastId });
       }
     }
 
     if (success) {
       setIsModalOpen(false);
     } else {
-      alert('فشلت العملية. يرجى المحاولة مرة أخرى.');
+      toast.error('فشلت العملية. يرجى المحاولة مرة أخرى.', { id: toastId });
     }
   };
 
@@ -137,15 +144,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   const updateVariantInModal = (index: number, field: keyof ProductVariant, value: any) => {
     const newVariants = [...(editingProduct.variants || [])];
     newVariants[index] = { ...newVariants[index], [field]: value };
-    
+
     // Auto-update total stock if variants exist
     const totalStock = newVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
     setEditingProduct({ ...editingProduct, variants: newVariants, stock: totalStock });
   };
 
   const filteredInventory = inventory.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -164,15 +171,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <div className="relative w-full lg:w-80">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="ابحث بالاسم أو SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pr-12 pl-4 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
             />
           </div>
-          <button 
+          <button
             onClick={openAddModal}
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
           >
@@ -193,122 +200,136 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-right border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] w-[30%]">المنتج والقسم</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">SKU</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">المخزون</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">السعر</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedInventory.map((product) => {
-                const isExpanded = expandedRows.has(product.id);
-                const hasVariants = product.variants && product.variants.length > 0;
-                
-                return (
-                  <React.Fragment key={product.id}>
-                    <tr className={`group hover:bg-slate-50/50 transition-all ${isExpanded ? 'bg-indigo-50/20' : ''}`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <button 
-                            onClick={() => toggleRow(product.id)}
-                            className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 transition-all ${hasVariants ? 'opacity-100' : 'opacity-20 cursor-default'}`}
-                            disabled={!hasVariants}
-                          >
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                          <div>
-                            <p className="text-[13px] font-black text-slate-800">{product.name}</p>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1 mt-0.5">
-                              <Tag className="w-2.5 h-2.5" /> {product.category}
+      {isLoading ? (
+        <div className="py-20">
+          <LoadingSpinner text="جاري تحميل المنتجات..." />
+        </div>
+      ) : filteredInventory.length === 0 ? (
+        <EmptyState
+          icon={PackageX}
+          title={searchTerm ? "لم يتم العثور على منتجات" : "المخزون فارغ"}
+          description={searchTerm ? "جرب البحث بكلمات مختلفة" : "لم تقم بإضافة أي منتجات للمخزون بعد"}
+          actionLabel={!searchTerm ? "إضافة أول منتج" : undefined}
+          onAction={!searchTerm ? openAddModal : undefined}
+        />
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-right border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] w-[30%]">المنتج والقسم</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">SKU</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">المخزون</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">السعر</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedInventory.map((product) => {
+                  const isExpanded = expandedRows.has(product.id);
+                  const hasVariants = product.variants && product.variants.length > 0;
+
+                  return (
+                    <React.Fragment key={product.id}>
+                      <tr className={`group hover:bg-slate-50/50 transition-all ${isExpanded ? 'bg-indigo-50/20' : ''}`}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => toggleRow(product.id)}
+                              className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 transition-all ${hasVariants ? 'opacity-100' : 'opacity-20 cursor-default'}`}
+                              disabled={!hasVariants}
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                            <div>
+                              <p className="text-[13px] font-black text-slate-800">{product.name}</p>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1 mt-0.5">
+                                <Tag className="w-2.5 h-2.5" /> {product.category}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[10px] font-black text-slate-500 font-mono tracking-wider bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                            {product.sku}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[12px] font-black ${product.stock < 10 ? 'text-rose-500' : 'text-slate-700'}`}>
+                              {product.stock} {hasVariants && <span className="text-[9px] text-slate-400 mr-1">(إجمالي)</span>}
                             </span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[10px] font-black text-slate-500 font-mono tracking-wider bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                          {product.sku}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                           <span className={`text-[12px] font-black ${product.stock < 10 ? 'text-rose-500' : 'text-slate-700'}`}>
-                             {product.stock} {hasVariants && <span className="text-[9px] text-slate-400 mr-1">(إجمالي)</span>}
-                           </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[13px] font-black text-indigo-600">{product.price} ر.س</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => openEditModal(product)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(product.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {isExpanded && hasVariants && (
-                      <tr className="bg-slate-50/40 animate-in slide-in-from-top-2">
-                        <td colSpan={5} className="px-10 py-4">
-                          <div className="bg-white rounded-lg border border-indigo-100 overflow-hidden shadow-sm">
-                            <table className="w-full text-right text-[10px]">
-                              <thead className="bg-indigo-50/30">
-                                <tr className="font-black text-indigo-400 uppercase tracking-widest">
-                                  <th className="px-4 py-2">المتغير</th>
-                                  <th className="px-4 py-2">SKU</th>
-                                  <th className="px-4 py-2">الكمية</th>
-                                  <th className="px-4 py-2">السعر</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-indigo-50/30">
-                                {product.variants?.map((v) => (
-                                  <tr key={v.id}>
-                                    <td className="px-4 py-2 font-black text-slate-700">{v.name}</td>
-                                    <td className="px-4 py-2 font-mono text-slate-500">{v.sku}</td>
-                                    <td className="px-4 py-2 font-black text-slate-700">{v.stock}</td>
-                                    <td className="px-4 py-2 font-black text-indigo-600">{v.price || product.price} ر.س</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[13px] font-black text-indigo-600">{product.price} ر.س</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openEditModal(product)}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                      {isExpanded && hasVariants && (
+                        <tr className="bg-slate-50/40 animate-in slide-in-from-top-2">
+                          <td colSpan={5} className="px-10 py-4">
+                            <div className="bg-white rounded-lg border border-indigo-100 overflow-hidden shadow-sm">
+                              <table className="w-full text-right text-[10px]">
+                                <thead className="bg-indigo-50/30">
+                                  <tr className="font-black text-indigo-400 uppercase tracking-widest">
+                                    <th className="px-4 py-2">المتغير</th>
+                                    <th className="px-4 py-2">SKU</th>
+                                    <th className="px-4 py-2">الكمية</th>
+                                    <th className="px-4 py-2">السعر</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-indigo-50/30">
+                                  {product.variants?.map((v) => (
+                                    <tr key={v.id}>
+                                      <td className="px-4 py-2 font-black text-slate-700">{v.name}</td>
+                                      <td className="px-4 py-2 font-mono text-slate-500">{v.sku}</td>
+                                      <td className="px-4 py-2 font-black text-slate-700">{v.stock}</td>
+                                      <td className="px-4 py-2 font-black text-indigo-600">{v.price || product.price} ر.س</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
+            <div className="flex items-center gap-2">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+              <div className="flex items-center gap-1 mx-2">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-7 h-7 rounded text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
+                ))}
+              </div>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+            </div>
+          </div>
         </div>
-        
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
-           <div className="flex items-center gap-2">
-             <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-             <div className="flex items-center gap-1 mx-2">
-               {[...Array(totalPages)].map((_, i) => (
-                 <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-7 h-7 rounded text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-               ))}
-             </div>
-             <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
-           </div>
-        </div>
-      </div>
+      )}
 
       {/* Add/Edit Product Modal */}
       {isModalOpen && (
@@ -316,33 +337,33 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div className="flex items-center gap-3">
-                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
-                    {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                 </div>
-                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                   {modalMode === 'add' ? 'إضافة منتج جديد' : 'تعديل بيانات المنتج'}
-                 </h4>
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                  {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                </div>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+                  {modalMode === 'add' ? 'إضافة منتج جديد' : 'تعديل بيانات المنتج'}
+                </h4>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم المنتج</label>
-                  <input 
+                  <input
                     type="text"
                     value={editingProduct.name}
-                    onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
                     placeholder="اسم المنتج..."
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القسم</label>
-                  <select 
+                  <select
                     value={editingProduct.category}
-                    onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                   >
                     <option value="إلكترونيات">إلكترونيات</option>
@@ -354,10 +375,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الـ SKU الأساسي</label>
-                  <input 
+                  <input
                     type="text"
                     value={editingProduct.sku}
-                    onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
                     placeholder="PRD-123..."
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all font-mono"
                   />
@@ -366,10 +387,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">السعر الأساسي</label>
                   <div className="relative">
                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                    <input 
+                    <input
                       type="number"
                       value={editingProduct.price}
-                      onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
                       className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                     />
                   </div>
@@ -383,7 +404,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     <Layers className="w-4 h-4 text-indigo-500" />
                     <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">المتغيرات (Variants)</h5>
                   </div>
-                  <button 
+                  <button
                     onClick={addVariant}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
                   >
@@ -397,41 +418,41 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                       <div key={variant.id} className="grid grid-cols-12 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group animate-in slide-in-from-right-4 duration-200">
                         <div className="col-span-4 space-y-1">
                           <label className="text-[8px] font-black text-slate-400 uppercase">الاسم</label>
-                          <input 
-                            value={variant.name} 
+                          <input
+                            value={variant.name}
                             onChange={(e) => updateVariantInModal(idx, 'name', e.target.value)}
-                            placeholder="مثلاً: أحمر - XL" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-bold" 
+                            placeholder="مثلاً: أحمر - XL"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-bold"
                           />
                         </div>
                         <div className="col-span-3 space-y-1">
                           <label className="text-[8px] font-black text-slate-400 uppercase">SKU</label>
-                          <input 
-                            value={variant.sku} 
+                          <input
+                            value={variant.sku}
                             onChange={(e) => updateVariantInModal(idx, 'sku', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-mono" 
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-mono"
                           />
                         </div>
                         <div className="col-span-2 space-y-1">
                           <label className="text-[8px] font-black text-slate-400 uppercase">الكمية</label>
-                          <input 
-                            type="number" 
-                            value={variant.stock} 
+                          <input
+                            type="number"
+                            value={variant.stock}
                             onChange={(e) => updateVariantInModal(idx, 'stock', Number(e.target.value))}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black" 
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
                           />
                         </div>
                         <div className="col-span-2 space-y-1">
                           <label className="text-[8px] font-black text-slate-400 uppercase">السعر</label>
-                          <input 
-                            type="number" 
-                            value={variant.price || editingProduct.price} 
+                          <input
+                            type="number"
+                            value={variant.price || editingProduct.price}
                             onChange={(e) => updateVariantInModal(idx, 'price', Number(e.target.value))}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black text-indigo-600" 
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black text-indigo-600"
                           />
                         </div>
                         <div className="col-span-1 flex items-end justify-center pb-1">
-                          <button 
+                          <button
                             onClick={() => removeVariant(idx)}
                             className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
                           >
@@ -445,11 +466,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الكمية المتوفرة (بدون متغيرات)</label>
                     <div className="relative">
-                       <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                       <input 
+                      <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                      <input
                         type="number"
                         value={editingProduct.stock}
-                        onChange={(e) => setEditingProduct({...editingProduct, stock: Number(e.target.value)})}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })}
                         className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
@@ -459,13 +480,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-[10px] uppercase hover:bg-slate-100 transition-all"
               >
                 إلغاء
               </button>
-              <button 
+              <button
                 onClick={handleSaveProduct}
                 className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-black text-[10px] uppercase shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
               >

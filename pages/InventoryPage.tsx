@@ -17,7 +17,7 @@ const InventoryPage: React.FC = () => {
       const result = await productService.getAllProducts(user.company.id, {
         pagination: { limit: 100, page: 1 }
       });
-      
+
       if (result.success && result.products) {
         // Transform backend data to frontend format
         const transformedProducts: Product[] = result.products.map((p: any) => ({
@@ -54,7 +54,7 @@ const InventoryPage: React.FC = () => {
         ...productData,
         idCompany: user?.company?.id,
       });
-      
+
       if (result.success) {
         await loadInventory(); // Reload inventory
         return true;
@@ -72,7 +72,7 @@ const InventoryPage: React.FC = () => {
         ...productData,
         idCompany: user?.company?.id,
       });
-      
+
       if (result.success) {
         await loadInventory(); // Reload inventory
         return true;
@@ -87,7 +87,7 @@ const InventoryPage: React.FC = () => {
   const handleDeleteProduct = async (id: string) => {
     try {
       const result = await productService.deleteProduct(id);
-      
+
       if (result.success) {
         await loadInventory(); // Reload inventory
         return true;
@@ -111,12 +111,13 @@ const InventoryPage: React.FC = () => {
   }
 
   return (
-    <InventoryView 
-      inventory={inventory} 
+    <InventoryView
+      inventory={inventory}
       setInventory={setInventory}
       onAdd={handleAddProduct}
       onUpdate={handleUpdateProduct}
       onDelete={handleDeleteProduct}
+      isLoading={loading}
     />
   );
 };
