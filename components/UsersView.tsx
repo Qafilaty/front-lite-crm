@@ -6,17 +6,32 @@ import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, U
 interface UsersViewProps {
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  onAdd: (userData: any) => Promise<boolean>;
+  onUpdate: (id: string, userData: any) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean>;
+  onToggleActivation: (id: string, activation: boolean) => Promise<boolean>;
 }
 
-const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
+const UsersView: React.FC<UsersViewProps> = ({ 
+  users, 
+  setUsers, 
+  onAdd, 
+  onUpdate, 
+  onDelete, 
+  onToggleActivation 
+}) => {
   const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  const [newUser, setNewUser] = useState<{ name: string; email: string; role: 'admin' | 'confirmed_orders' }>({ 
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [newUser, setNewUser] = useState<{ name: string; email: string; phone: string; role: 'admin' | 'confirmed'; password: string }>({ 
     name: '', 
     email: '', 
-    role: 'confirmed_orders' 
+    phone: '',
+    role: 'confirmed',
+    password: ''
   });
 
   const filteredUsers = users.filter(u => 
@@ -27,31 +42,79 @@ const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
+    const success = await onAdd({
       name: newUser.name,
       email: newUser.email,
+      phone: newUser.phone,
       role: newUser.role,
-      joinedDate: new Date().toLocaleDateString('ar-SA'),
-      ordersLocked: newUser.role === 'confirmed_orders' ? false : undefined
-    };
-    setUsers([user, ...users]);
-    setShowModal(false);
-    setNewUser({ name: '', email: '', role: 'confirmed_orders' });
-  };
-
-  const deleteUser = (userId: string) => {
-    if (window.confirm('هل أنت متأكد؟')) {
-      setUsers(users.filter(u => u.id !== userId));
+      password: newUser.password,
+    });
+    
+    if (success) {
+      setShowModal(false);
+      setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '' });
+      alert('تم إضافة المستخدم بنجاح!');
+    } else {
+      alert('فشلت عملية الإضافة');
     }
   };
 
-  const toggleOrderLock = (userId: string) => {
-    setUsers(users.map(u => 
-      u.id === userId ? { ...u, ordersLocked: !u.ordersLocked } : u
-    ));
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    
+    const success = await onUpdate(editingUser.id, {
+      name: editingUser.name,
+      email: editingUser.email,
+      phone: editingUser.phone,
+    });
+    
+    if (success) {
+      setShowModal(false);
+      setEditingUser(null);
+      alert('تم تحديث المستخدم بنجاح!');
+    } else {
+      alert('فشلت عملية التحديث');
+    }
+  };
+
+  const openEditModal = (user: User) => {
+    setModalMode('edit');
+    setEditingUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role,
+    });
+    setShowModal(true);
+  };
+
+  const openAddModal = () => {
+    setModalMode('add');
+    setEditingUser(null);
+    setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '' });
+    setShowModal(true);
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (window.confirm('هل أنت متأكد؟')) {
+      const success = await onDelete(userId);
+      if (success) {
+        alert('تم حذف المستخدم بنجاح');
+      } else {
+        alert('فشلت عملية الحذف');
+      }
+    }
+  };
+
+  const toggleOrderLock = async (userId: string, currentActivation: boolean) => {
+    const success = await onToggleActivation(userId, !currentActivation);
+    if (!success) {
+      alert('فشلت عملية تغيير الحالة');
+    }
   };
 
   return (
@@ -73,7 +136,7 @@ const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
             />
           </div>
           <button 
-            onClick={() => setShowModal(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md text-[11px] font-black uppercase whitespace-nowrap"
           >
             <UserPlus className="w-4 h-4" />
@@ -116,14 +179,14 @@ const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
                     </span>
                   </td>
                   <td className="px-6 py-3.5">
-                    {user.role === 'confirmed_orders' ? (
+                    {user.role === 'confirmed' ? (
                       <button 
-                        onClick={() => toggleOrderLock(user.id)}
+                        onClick={() => toggleOrderLock(user.id, user.activation || false)}
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
-                          user.ordersLocked ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          user.activation === false ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
                         }`}
                       >
-                        {user.ordersLocked ? 'مغلقة' : 'مفتوحة'}
+                        {user.activation === false ? 'مغلقة' : 'مفتوحة'}
                       </button>
                     ) : (
                       <span className="text-[9px] text-slate-300 font-bold uppercase">N/A</span>
@@ -134,7 +197,7 @@ const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
                   </td>
                   <td className="px-6 py-3.5">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => openEditModal(user)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
                       <button onClick={() => deleteUser(user.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
@@ -160,26 +223,77 @@ const UsersView: React.FC<UsersViewProps> = ({ users, setUsers }) => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">إضافة مستخدم</h3>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                {modalMode === 'add' ? 'إضافة مستخدم' : 'تعديل مستخدم'}
+              </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+            <form onSubmit={modalMode === 'add' ? handleAddUser : handleEditUser} className="p-6 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم</label>
-                <input required value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" placeholder="أحمد..." />
+                <input 
+                  required 
+                  value={modalMode === 'add' ? newUser.name : editingUser?.name || ''} 
+                  onChange={(e) => modalMode === 'add' 
+                    ? setNewUser({...newUser, name: e.target.value})
+                    : setEditingUser({...editingUser, name: e.target.value})
+                  } 
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" 
+                  placeholder="أحمد..." 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">البريد</label>
-                <input required type="email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" placeholder="email@example.com" />
+                <input 
+                  required 
+                  type="email" 
+                  value={modalMode === 'add' ? newUser.email : editingUser?.email || ''} 
+                  onChange={(e) => modalMode === 'add'
+                    ? setNewUser({...newUser, email: e.target.value})
+                    : setEditingUser({...editingUser, email: e.target.value})
+                  } 
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" 
+                  placeholder="email@example.com" 
+                />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setNewUser({...newUser, role: 'confirmed_orders'})} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'confirmed_orders' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>مؤكد</button>
-                  <button type="button" onClick={() => setNewUser({...newUser, role: 'admin'})} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>أدمن</button>
-                </div>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الهاتف</label>
+                <input 
+                  type="tel" 
+                  value={modalMode === 'add' ? newUser.phone : editingUser?.phone || ''} 
+                  onChange={(e) => modalMode === 'add'
+                    ? setNewUser({...newUser, phone: e.target.value})
+                    : setEditingUser({...editingUser, phone: e.target.value})
+                  } 
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" 
+                  placeholder="05xxxxxxxx" 
+                />
               </div>
-              <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md">إنشاء الحساب</button>
+              {modalMode === 'add' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">كلمة المرور</label>
+                    <input 
+                      required 
+                      type="password" 
+                      value={newUser.password} 
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})} 
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" 
+                      placeholder="كلمة المرور..." 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setNewUser({...newUser, role: 'confirmed'})} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'confirmed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>مؤكد</button>
+                      <button type="button" onClick={() => setNewUser({...newUser, role: 'admin'})} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>أدمن</button>
+                    </div>
+                  </div>
+                </>
+              )}
+              <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md">
+                {modalMode === 'add' ? 'إنشاء الحساب' : 'حفظ التغييرات'}
+              </button>
             </form>
           </div>
         </div>

@@ -20,6 +20,7 @@ import {
   CREATE_USER,
   UPDATE_USER,
   DELETE_USER,
+  ACTIVE_USER,
   CREATE_ORDER,
   UPDATE_ORDER,
   CHANGE_STATUS_ORDER,
@@ -183,6 +184,19 @@ export const userService = {
       return { success: data?.deleteUser?.status };
     } catch (error: any) {
       console.error('Delete user error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async activeUser(id: string, activation: boolean) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: ACTIVE_USER,
+        variables: { id, activation },
+      });
+      return { success: data?.activeUser?.status };
+    } catch (error: any) {
+      console.error('Active user error:', error);
       return { success: false, error: error.message };
     }
   },
