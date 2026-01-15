@@ -14,7 +14,11 @@ import {
   GET_ALL_STORES,
   GET_DELIVERY_COMPANY,
   GET_ALL_DELIVERY_COMPANIES,
+  GET_ALL_WILAYAS,
 } from '../graphql/queries';
+import {
+  GET_ALL_DELIVERY_PRICE_COMPANY,
+} from '../graphql/queries/deliveryQueries';
 import {
   LOGOUT,
   CREATE_USER,
@@ -38,6 +42,10 @@ import {
   UPDATE_DELIVERY_COMPANY,
   DELETE_DELIVERY_COMPANY,
 } from '../graphql/mutations';
+import {
+  CREATE_DELIVERY_PRICE,
+  UPDATE_DELIVERY_PRICE,
+} from '../graphql/mutations/deliveryMutations';
 import type { User, Order, Product } from '../types';
 
 // Auth Service
@@ -601,6 +609,68 @@ export const deliveryCompanyService = {
       return { success: data?.deleteDeliveryCompany?.status };
     } catch (error: any) {
       console.error('Delete delivery company error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
+// Wilayas Service
+export const wilayasService = {
+  async getAllWilayas() {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_WILAYAS,
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, wilayas: data?.allWilayas || [] };
+    } catch (error: any) {
+      console.error('Get all wilayas error:', error);
+      return { success: false, error: error.message, wilayas: [] };
+    }
+  },
+};
+
+// Delivery Pricing Service
+export const deliveryPricingService = {
+  async getAllDeliveryPriceCompany(idCompany: string) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_DELIVERY_PRICE_COMPANY,
+        variables: { idCompany },
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, deliveryPrices: data?.allDeliveryPriceCompany?.data || [] };
+    } catch (error: any) {
+      console.error('Get all delivery prices error:', error);
+      return { success: false, error: error.message, deliveryPrices: [] };
+    }
+  },
+
+  async createDeliveryPrice(priceData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_DELIVERY_PRICE,
+        variables: { content: priceData },
+      });
+      return { success: true, deliveryPrice: data?.createDeliveryPrice };
+    } catch (error: any) {
+      console.error('Create delivery price error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateDeliveryPrice(id: string, priceData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_DELIVERY_PRICE,
+        variables: { id, content: priceData },
+      });
+      return {
+        success: data?.updateDeliveryPrice?.status,
+        deliveryPrice: data?.updateDeliveryPrice?.data,
+      };
+    } catch (error: any) {
+      console.error('Update delivery price error:', error);
       return { success: false, error: error.message };
     }
   },

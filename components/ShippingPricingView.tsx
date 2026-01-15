@@ -1,51 +1,166 @@
-
-import React, { useState } from 'react';
-import { StatePricing } from '../types';
-import { 
-  Home, Building2, Save, Search, Zap, CheckCircle2, DollarSign, MapPin, 
-  ArrowLeft, ChevronRight, ChevronLeft 
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { deliveryPricingService, wilayasService } from '../services/apiService';
+import toast from 'react-hot-toast';
+import LoadingSpinner from './common/LoadingSpinner';
+import { StatePricing, Wilaya } from '../types';
+import {
+  Home, Building2, Save, Search, Zap, CheckCircle2, DollarSign, MapPin,
+  ArrowLeft, ChevronRight, ChevronLeft
 } from 'lucide-react';
 
-const algerianStates = [
-  "أدرار", "الشلف", "الأغواط", "أم البواقي", "باتنة", "بجاية", "بسكرة", "بشار", "البليدة", "البويرة",
-  "تمنراست", "تبسة", "تلمسان", "تيارت", "تيزي وزو", "الجزائر العاصمة", "الجلفة", "جيجل", "سطيف", "سعيدة",
-  "سكيكدة", "سيدي بلعباس", "عنابة", "قالمة", "قسنطينة", "المدية", "مستغانم", "المسيلة", "معسكر", "ورقلة",
-  "وهران", "البيض", "إليزي", "برج بوعريريج", "بومرداس", "الطارف", "تندوف", "تيسمسيلت", "الوادي", "خنشلة",
-  "سوق أهراس", "تيبازة", "ميلة", "عين الدفلى", "النعامة", "عين تموشنت", "غرداية", "غليزان", "تيميمون", "برج باجي مختار",
-  "أولاد جلال", "بني عباس", "عين صالح", "عين قزام", "تقرت", "جانت", "المغير", "المنيعة"
-];
+// Initial static list removed in favor of API fetching
 
 const ShippingPricingView: React.FC = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [pricings, setPricings] = useState<StatePricing[]>(
-    algerianStates.map((name, index) => ({
-      id: index + 1,
-      name,
-      homePrice: 500,
-      officePrice: 300
-    }))
-  );
+  const [pricings, setPricings] = useState<StatePricing[]>([]);
+  const [pricingId, setPricingId] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const loadData = async () => {
+    if (!user?.company?.id) return;
+
+    setLoading(true);
+    try {
+      // Fetch both Wilayas and Pricing in parallel
+      const [wilayasResult, pricingResult] = await Promise.all([
+        wilayasService.getAllWilayas(),
+        deliveryPricingService.getAllDeliveryPriceCompany(user.company.id)
+      ]);
+
+      let allWilayas: Wilaya[] = [];
+      if (wilayasResult.success && wilayasResult.wilayas) {
+        allWilayas = [...wilayasResult.wilayas];
+        // Ensure they are sorted by Code/ID
+        allWilayas.sort((a, b) => Number(a.code) - Number(b.code));
+      } else {
+        toast.error('فشل تحميل قائمة الولايات');
+      }
+
+      if (pricingResult.success && pricingResult.deliveryPrices && pricingResult.deliveryPrices.length > 0) {
+        const existingData = pricingResult.deliveryPrices[0];
+        setPricingId(existingData.id);
+
+        const mergedPricings = allWilayas.map((wilaya) => {
+          // Find price by code (preferred) or name
+          const found = existingData.prices?.find((p: any) =>
+            p.code === wilaya.code || p.name === wilaya.name || p.name === wilaya.arName
+          );
+
+          return {
+            id: Number(wilaya.code),
+            name: wilaya.arName || wilaya.name,
+            homePrice: found ? (found.home || 0) : 0,
+            officePrice: found ? (found.desk || 0) : 0
+          };
+        });
+        setPricings(mergedPricings);
+      } else {
+        // No existing pricing, create default structure from Wilayas
+        const defaultPricings = allWilayas.map((wilaya) => ({
+          id: Number(wilaya.code),
+          name: wilaya.arName || wilaya.name,
+          homePrice: 0,
+          officePrice: 0
+        }));
+        setPricings(defaultPricings);
+        setPricingId(null);
+      }
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('حدث خطأ أثناء تحميل البيانات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
 
   const [globalHomePrice, setGlobalHomePrice] = useState<number | string>('');
   const [globalOfficePrice, setGlobalOfficePrice] = useState<number | string>('');
 
   const updatePricing = (id: number, field: keyof StatePricing, value: number) => {
     setPricings(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    setIsDirty(true);
   };
 
   const applyToAllHome = () => {
     if (globalHomePrice === '') return;
     setPricings(prev => prev.map(p => ({ ...p, homePrice: Number(globalHomePrice) })));
-    alert('تم تطبيق السعر على كافة الولايات (للمنزل)');
+    setIsDirty(true);
+    toast.success('تم تطبيق السعر على كافة الولايات (للمنزل)');
   };
 
   const applyToAllOffice = () => {
     if (globalOfficePrice === '') return;
     setPricings(prev => prev.map(p => ({ ...p, officePrice: Number(globalOfficePrice) })));
-    alert('تم تطبيق السعر على كافة الولايات (للمكتب)');
+    setIsDirty(true);
+    toast.success('تم تطبيق السعر على كافة الولايات (للمكتب)');
+  };
+
+  const handleSave = async () => {
+    if (!user?.company?.id) return;
+
+    const toastId = toast.loading('جاري حفظ الأسعار...');
+
+    // Prepare payload
+    const pricesPayload = pricings.map(p => ({
+      name: p.name,
+      code: p.id.toString().padStart(2, '0'),
+      home: Number(p.homePrice),
+      desk: Number(p.officePrice),
+      blocked: false,
+      blockedCommunes: []
+    }));
+
+    const payload = {
+      name: 'Standard Pricing', // You can make this editable if needed
+      isDefault: true,
+      idCompany: user.company.id,
+      prices: pricesPayload
+    };
+
+    try {
+      let result;
+      if (pricingId) {
+        // Update existing
+        result = await deliveryPricingService.updateDeliveryPrice(pricingId, payload);
+      } else {
+        // Create new
+        result = await deliveryPricingService.createDeliveryPrice(payload);
+      }
+
+      if (result.success) {
+        toast.success('تم حفظ الأسعار بنجاح', { id: toastId });
+        setIsDirty(false);
+        if (!pricingId && result.deliveryPrice) {
+          setPricingId(result.deliveryPrice.id);
+        }
+        // Reload to ensure sync
+        loadData();
+      } else {
+        toast.error('فشل حفظ الأسعار', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('حدث خطأ أثناء الحفظ', { id: toastId });
+    }
   };
 
   const filteredPricings = pricings.filter(p => p.name.includes(searchTerm));
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <LoadingSpinner text="جاري تحميل الأسعار..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -54,9 +169,14 @@ const ShippingPricingView: React.FC = () => {
           <h2 className="text-xl font-black text-slate-800 tracking-tight">تسعير التوصيل</h2>
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة تكاليف الشحن حسب الولايات ونوع التوصيل</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
-          <Save className="w-4 h-4" /> حفظ كافة الأسعار
-        </button>
+        {isDirty && (
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 animate-in fade-in slide-in-from-top-2"
+          >
+            <Save className="w-4 h-4" /> حفظ التغييرات
+          </button>
+        )}
       </div>
 
       {/* Global Setting Section */}
@@ -73,15 +193,15 @@ const ShippingPricingView: React.FC = () => {
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={globalHomePrice}
                   onChange={(e) => setGlobalHomePrice(e.target.value)}
-                  placeholder="مثال: 500" 
+                  placeholder="مثال: 500"
                   className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                 />
               </div>
-              <button 
+              <button
                 onClick={applyToAllHome}
                 className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
               >
@@ -97,15 +217,15 @@ const ShippingPricingView: React.FC = () => {
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={globalOfficePrice}
                   onChange={(e) => setGlobalOfficePrice(e.target.value)}
-                  placeholder="مثال: 300" 
+                  placeholder="مثال: 300"
                   className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                 />
               </div>
-              <button 
+              <button
                 onClick={applyToAllOffice}
                 className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
               >
@@ -125,9 +245,9 @@ const ShippingPricingView: React.FC = () => {
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="ابحث عن ولاية..." 
+            <input
+              type="text"
+              placeholder="ابحث عن ولاية..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pr-9 pl-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
@@ -159,8 +279,8 @@ const ShippingPricingView: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="relative w-32 group">
                       <Home className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-indigo-500" />
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={state.homePrice}
                         onChange={(e) => updatePricing(state.id, 'homePrice', Number(e.target.value))}
                         className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
@@ -170,8 +290,8 @@ const ShippingPricingView: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="relative w-32 group">
                       <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-indigo-500" />
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={state.officePrice}
                         onChange={(e) => updatePricing(state.id, 'officePrice', Number(e.target.value))}
                         className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
@@ -180,7 +300,7 @@ const ShippingPricingView: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center">
-                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     </div>
                   </td>
                 </tr>
@@ -188,18 +308,18 @@ const ShippingPricingView: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Simple Pagination Simulation */}
         <div className="p-4 bg-slate-50/30 border-t border-slate-100 flex justify-center items-center">
-           <div className="flex items-center gap-2">
-             <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-             <div className="flex items-center gap-1 mx-2">
-               <button className="w-7 h-7 rounded text-[10px] font-black bg-indigo-600 text-white shadow-sm">1</button>
-               <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">2</button>
-               <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">3</button>
-             </div>
-             <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600"><ChevronLeft className="w-4 h-4" /></button>
-           </div>
+          <div className="flex items-center gap-2">
+            <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex items-center gap-1 mx-2">
+              <button className="w-7 h-7 rounded text-[10px] font-black bg-indigo-600 text-white shadow-sm">1</button>
+              <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">2</button>
+              <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">3</button>
+            </div>
+            <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600"><ChevronLeft className="w-4 h-4" /></button>
+          </div>
         </div>
       </div>
     </div>

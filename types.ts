@@ -35,7 +35,7 @@ export interface OrderLog {
   user: string;
 }
 
-export type OrderStatus = 
+export type OrderStatus =
   | 'pending' // معلقة
   | 'failed_01' // فاشلة 01
   | 'failed_02' // فاشلة 02
@@ -130,4 +130,20 @@ export interface StatePricing {
   name: string;
   homePrice: number;
   officePrice: number;
+}
+
+export interface Commune {
+  id: string;
+  name: string;
+  arName: string;
+  postcode: number;
+}
+
+export interface Wilaya {
+  id: string;
+  code: string;
+  name: string;
+  arName: string;
+  otherNames?: string[];
+  communes?: Commune[];
 }

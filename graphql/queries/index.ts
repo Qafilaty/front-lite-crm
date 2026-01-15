@@ -36,3 +36,8 @@ export {
   GET_DELIVERY_COMPANY,
   GET_ALL_DELIVERY_COMPANIES,
 } from './deliveryCompanyQueries';
+
+// Wilayas Queries
+export {
+  GET_ALL_WILAYAS,
+} from './wilayasQueries';
