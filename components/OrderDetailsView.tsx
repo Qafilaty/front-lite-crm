@@ -8,21 +8,28 @@ import {
   CheckCircle2, RefreshCcw, Map
 } from 'lucide-react';
 import { statusLabels, statusColors } from './OrderConfirmationView';
+import DeleteConfirmationModal from './common/DeleteConfirmationModal';
+import toast from 'react-hot-toast';
 
 interface OrderDetailsViewProps {
   order: Order;
   onBack: () => void;
   onUpdate: (updatedOrder: Order) => void;
+  onDelete?: (id: string) => Promise<boolean>;
   readOnly?: boolean;
   trackingMode?: boolean;
 }
 
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
-  order, onBack, onUpdate, readOnly = false, trackingMode = false
+  order, onBack, onUpdate, onDelete, readOnly = false, trackingMode = false
 }) => {
   const [editedOrder, setEditedOrder] = useState<Order>({ ...order });
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
   const [newLog, setNewLog] = useState<{ status: OrderStatus; note: string }>({ status: order.status, note: '' });
+
+  // Delete States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const confirmationStatuses: OrderStatus[] = [
     'confirmed', 'message_sent', 'postponed', 'failed_01', 'failed_02',
@@ -52,6 +59,21 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     if (readOnly) return;
     onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar-SA') });
     alert('تم حفظ كافة البيانات بنجاح');
+  };
+
+  const executeDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    const success = await onDelete(order.id);
+    setIsDeleting(false);
+
+    if (success) {
+      toast.success('تم حذف الطلب بنجاح');
+      onBack(); // Go back to list
+    } else {
+      toast.error('فشل حذف الطلب');
+      setIsDeleteModalOpen(false);
+    }
   };
 
   const addStatusUpdate = () => {
@@ -107,6 +129,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
+          {!readOnly && onDelete && (
+            <button onClick={() => setIsDeleteModalOpen(true)} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-[11px] hover:bg-rose-100 transition-all uppercase flex items-center justify-center gap-2 border border-rose-100">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
           {!readOnly && (
             <button onClick={handleSave} className="flex-1 px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] hover:bg-slate-50 transition-all uppercase flex items-center justify-center gap-2">
               <Save className="w-4 h-4" /> حفظ البيانات
@@ -314,6 +341,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={executeDelete}
+        title="حذف الطلب"
+        description="هل أنت متأكد من أنك تريد حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
+        isDeleting={isDeleting}
+      />
 
       {/* Status Modal */}
       {isAddLogOpen && (

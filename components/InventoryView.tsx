@@ -1,15 +1,14 @@
-
-import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
-import { Product, ProductVariant } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Product } from '../types';
 import {
-  Plus, Search, Trash2, Tag, ChevronDown, ChevronUp, Save, DollarSign,
-  ChevronRight, ChevronLeft, Package, Edit3, X, Layers, PlusCircle, PackageX, Briefcase
+  Plus, Search, Edit3, Trash2,
+  Box, Tag, Filter, ChevronLeft,
+  ChevronRight, Copy, AlertCircle, ChevronDown, ChevronUp, PackageOpen, CheckCircle2
 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import LoadingSpinner from './common/LoadingSpinner';
-import EmptyState from './common/EmptyState';
+import ProductModal from './ProductModal';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
+import EmptyState from './common/EmptyState';
+import toast from 'react-hot-toast';
 
 interface InventoryViewProps {
   inventory: Product[];
@@ -28,31 +27,86 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onDelete,
   isLoading = false
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft'>('all');
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
-  // State for Add/Edit Modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  // Extended product type for the form to include cost
-  const [editingProduct, setEditingProduct] = useState<Partial<Product> & { cost?: number }>({});
+  // Modal States
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
 
-  // State for Delete Confirmation
+  // Delete States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const toggleRow = (id: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) newExpanded.delete(id);
-    else newExpanded.add(id);
-    setExpandedRows(newExpanded);
+  // --- Computed ---
+
+  const filteredProducts = useMemo(() => {
+    return inventory.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = filterStatus === 'all'
+        ? true
+        : filterStatus === 'active' ? p.status !== false
+          : p.status === false;
+      return matchesSearch && matchesStatus;
+    });
+  }, [inventory, searchQuery, filterStatus]);
+
+  // Helpers for display
+  const getStockInfo = (p: Product) => {
+    if (p.variantsProbability && p.variantsProbability.length > 0) {
+      const total = p.variantsProbability.reduce((acc, v) => acc + (v.quantity || 0), 0);
+      return total;
+    }
+    return p.stock || 0;
   };
 
-  const confirmDelete = (id: string) => {
+  const getPriceDisplay = (p: Product) => {
+    if (p.variantsProbability && p.variantsProbability.length > 0) {
+      const prices = p.variantsProbability.map(v => v.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (min === max) return <span className="font-bold text-slate-900">{min} ر.س</span>;
+      return (
+        <div className="flex flex-col text-xs">
+          <span className="font-bold text-slate-900">{min} - {max} ر.س</span>
+          <span className="text-gray-400">حسب الخيار</span>
+        </div>
+      );
+    }
+    return <span className="font-bold text-slate-900">{p.price} ر.س</span>;
+  };
+
+  // --- Actions ---
+
+  const handleProductSuccess = (savedProduct: any) => {
+    if (savedProduct) {
+      if (selectedProduct) {
+        // Update
+        setInventory(prev => prev.map(p => p.id === savedProduct.id ? savedProduct : p));
+      } else {
+        // Add
+        setInventory(prev => [savedProduct, ...prev]);
+      }
+    }
+    setIsProductModalOpen(false);
+    setSelectedProduct(undefined);
+  };
+
+  const openAddModal = () => {
+    setSelectedProduct(undefined);
+    setIsProductModalOpen(true);
+  };
+
+  const openEditModal = (product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedProduct(product);
+    setIsProductModalOpen(true);
+  };
+
+  const confirmDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setProductToDelete(id);
     setIsDeleteModalOpen(true);
   };
@@ -68,278 +122,261 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       toast.success('تم حذف المنتج بنجاح');
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
+      setInventory(prev => prev.filter(p => p.id !== productToDelete));
     } else {
       toast.error('فشل حذف المنتج');
     }
   };
 
-  const openAddModal = () => {
-    setModalMode('add');
-    setEditingProduct({
-      id: Math.random().toString(36).substr(2, 9),
-      name: '',
-      sku: '',
-      category: 'عام',
-      price: 0,
-      cost: 0,
-      stock: 0,
-      variants: []
-    });
-    setIsModalOpen(true);
+  const toggleExpand = (id: string) => {
+    setExpandedProductId(prev => prev === id ? null : id);
   };
 
-  const openEditModal = (product: Product) => {
-    setModalMode('edit');
-    // We assume backend might return cost, if not we default to 0 or calculate it
-    setEditingProduct({
-      ...product,
-      cost: product.cost || 0
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSaveProduct = async () => {
-    if (!editingProduct.name || !editingProduct.sku) {
-      toast.error('يرجى إكمال البيانات الأساسية (الاسم والـ SKU)');
-      return;
-    }
-
-    // Prepare product data for backend
-    // logic to handle variantsProbability as per API expectation
-    const variantsProbability = editingProduct.variants && editingProduct.variants.length > 0
-      ? editingProduct.variants.map(v => ({
-        name: v.name,
-        sku: v.sku,
-        price: Number(v.price),
-        pricePurchase: Number(v.cost || editingProduct.cost || 0), // Use variant cost or fallback to product cost
-        quantity: Number(v.stock),
-      }))
-      : [];
-
-    const productData = {
-      name: editingProduct.name,
-      sku: editingProduct.sku,
-      category: editingProduct.category,
-      price: Number(editingProduct.price),
-      pricePurchase: Number(editingProduct.cost), // Product level cost
-      quantityInStock: Number(editingProduct.stock), // Main stock if no variants
-      status: true,
-      description: editingProduct.description || '',
-      note: '',
-      // Only include variantsProbability if we actually have variants
-      ...(variantsProbability.length > 0 && { variantsProbability })
-    };
-
-    const toastId = toast.loading('جاري حفظ التغييرات...');
-    let success = false;
-
-    if (modalMode === 'add') {
-      success = await onAdd(productData);
-      if (success) {
-        toast.success('تم إضافة المنتج بنجاح!', { id: toastId });
-      }
-    } else if (editingProduct.id) {
-      success = await onUpdate(editingProduct.id, productData);
-      if (success) {
-        toast.success('تم تحديث المنتج بنجاح!', { id: toastId });
-      }
-    }
-
-    if (success) {
-      setIsModalOpen(false);
-    } else {
-      toast.error('فشلت العملية. يرجى المحاولة مرة أخرى.', { id: toastId });
-    }
-  };
-
-  const addVariant = () => {
-    const newVariant: ProductVariant = {
-      id: Math.random().toString(36).substr(2, 5),
-      name: '',
-      sku: '',
-      stock: 0,
-      price: editingProduct.price || 0,
-      cost: editingProduct.cost || 0 // Default new variant cost to product cost
-    };
-    setEditingProduct({
-      ...editingProduct,
-      variants: [...(editingProduct.variants || []), newVariant]
-    });
-  };
-
-  const removeVariant = (index: number) => {
-    const newVariants = [...(editingProduct.variants || [])];
-    newVariants.splice(index, 1);
-    setEditingProduct({ ...editingProduct, variants: newVariants });
-  };
-
-  const updateVariantInModal = (index: number, field: keyof ProductVariant, value: any) => {
-    const newVariants = [...(editingProduct.variants || [])];
-    newVariants[index] = { ...newVariants[index], [field]: value };
-
-    // Auto-update total stock if variants exist (optional, but good UX)
-    const totalStock = newVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-    setEditingProduct({ ...editingProduct, variants: newVariants, stock: totalStock });
-  };
-
-  const filteredInventory = inventory.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
-  const paginatedInventory = filteredInventory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const categories = ['all', ...new Set(inventory.map(p => p.category))];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <div className="flex flex-col h-full font-sans" dir="rtl">
+
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">إدارة المخزون</h2>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إضافة وتعديل المنتجات والمتغيرات</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">إدارة المخزون</h2>
+          <p className="text-slate-500 text-sm">إدارة وإضافة وتعديل المنتجات والمتغيرات الخاصة بها</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="ابحث بالاسم أو SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-12 pl-4 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-            />
-          </div>
-          <button
-            onClick={openAddModal}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
-          >
-            <Plus className="w-4 h-4" /> إضافة منتج
-          </button>
-        </div>
+        <button
+          onClick={openAddModal}
+          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95"
+        >
+          <Plus size={20} />
+          إضافة منتج جديد
+        </button>
       </div>
 
-      <div className="flex bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm overflow-x-auto no-scrollbar gap-2 w-fit">
-        {categories.map(cat => (
+      {/* Filter Bar */}
+      <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm mb-6 flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="بحث بالاسم أو SKU..."
+            className="w-full pl-4 pr-10 py-2.5 rounded-lg border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 text-sm text-gray-600 placeholder-gray-400"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center bg-gray-50 p-1 rounded-lg">
           <button
-            key={cat}
-            onClick={() => setCategoryFilter(cat)}
-            className={`px-5 py-2 rounded-md text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-tighter ${categoryFilter === cat ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+            onClick={() => setFilterStatus('all')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            {cat === 'all' ? 'الكل' : cat}
+            الكل
           </button>
-        ))}
+          <button
+            onClick={() => setFilterStatus('active')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'active' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            نشط
+          </button>
+          <button
+            onClick={() => setFilterStatus('draft')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'draft' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            مسودة
+          </button>
+        </div>
+        <button className="p-2.5 text-gray-500 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
+          <Filter size={20} />
+        </button>
       </div>
 
-      {isLoading ? (
-        <div className="py-20">
-          <LoadingSpinner text="جاري تحميل المنتجات..." />
-        </div>
-      ) : filteredInventory.length === 0 ? (
+      {/* Products Table */}
+      {filteredProducts.length === 0 ? (
         <EmptyState
-          icon={PackageX}
-          title={searchTerm ? "لم يتم العثور على منتجات" : "المخزون فارغ"}
-          description={searchTerm ? "جرب البحث بكلمات مختلفة" : "لم تقم بإضافة أي منتجات للمخزون بعد"}
-          actionLabel={!searchTerm ? "إضافة أول منتج" : undefined}
-          onAction={!searchTerm ? openAddModal : undefined}
+          icon={Box}
+          title={searchQuery ? "لا توجد نتائج" : "المخزون فارغ"}
+          description={searchQuery ? "جرب كلمة بحث أخرى" : "ابدأ بإضافة منتجاتك"}
+          actionLabel={!searchQuery ? "إضافة منتج" : undefined}
+          onAction={!searchQuery ? openAddModal : undefined}
         />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-right border-collapse min-w-[1000px]">
-              <thead>
-                <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] w-[30%]">المنتج والقسم</th>
-                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">SKU</th>
-                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">المخزون</th>
-                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em]">السعر</th>
-                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-center">الإجراءات</th>
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-collapse">
+              <thead className="bg-gray-50/50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المنتج والقسم</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">SKU</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المخزون</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">السعر</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">الحالة</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">الإجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedInventory.map((product) => {
-                  const isExpanded = expandedRows.has(product.id);
-                  const hasVariants = product.variants && product.variants.length > 0;
+              <tbody className="divide-y divide-gray-50">
+                {filteredProducts.map((product) => {
+                  const stock = getStockInfo(product);
+                  const isLowStock = stock > 0 && stock < 10;
+                  const isOutOfStock = stock === 0;
+                  const isExpanded = expandedProductId === product.id;
+                  const hasVariants = product.variantsProbability && product.variantsProbability.length > 0;
 
                   return (
                     <React.Fragment key={product.id}>
-                      <tr className={`group hover:bg-slate-50/50 transition-all ${isExpanded ? 'bg-indigo-50/20' : ''}`}>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => toggleRow(product.id)}
-                              className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 transition-all ${hasVariants ? 'opacity-100' : 'opacity-20 cursor-default'}`}
-                              disabled={!hasVariants}
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
+                      <tr
+                        onClick={() => toggleExpand(product.id || '')}
+                        className={`group cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/40' : 'hover:bg-gray-50/80'}`}
+                      >
+                        <td className="px-6 py-4 relative">
+                          <div className="flex items-center gap-4">
+                            <div className={`text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-500' : 'rotate-0 group-hover:text-indigo-500'}`}>
+                              {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </div>
+
+                            <div className="h-12 w-12 rounded-lg border border-gray-100 bg-gray-50 p-0.5 overflow-hidden shrink-0">
+                              {product.thumbnail ? (
+                                <img src={product.thumbnail} alt="" className="h-full w-full object-cover rounded-md" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-gray-300">
+                                  <Box size={20} />
+                                </div>
+                              )}
+                            </div>
                             <div>
-                              <p className="text-[13px] font-black text-slate-800">{product.name}</p>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1 mt-0.5">
-                                <Tag className="w-2.5 h-2.5" /> {product.category}
+                              <h4 className={`font-bold text-sm mb-0.5 transition-colors ${isExpanded ? 'text-indigo-700' : 'text-slate-800 group-hover:text-indigo-700'}`}>
+                                {product.name}
+                              </h4>
+                              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                <Tag size={10} />
+                                {product.category || 'عام'}
                               </span>
                             </div>
                           </div>
+                          {hasVariants && !isExpanded && (
+                            <div className="absolute left-1/2 bottom-1 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] text-indigo-500 bg-white shadow-sm border px-2 py-0.5 rounded-full border-indigo-100">
+                                {product.variantsProbability?.length} خيارات
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-[10px] font-black text-slate-500 font-mono tracking-wider bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                            {product.sku}
-                          </span>
+                          <button
+                            className="group/sku flex items-center gap-1.5 text-xs font-mono font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 hover:border-indigo-200 hover:text-indigo-600 transition-all shadow-sm"
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(product.sku); }}
+                            title="نسخ"
+                          >
+                            {product.sku || '---'}
+                            <Copy size={10} className="opacity-0 group-hover/sku:opacity-100" />
+                          </button>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[12px] font-black ${product.stock < 10 ? 'text-rose-500' : 'text-slate-700'}`}>
-                              {product.stock} {hasVariants && <span className="text-[9px] text-slate-400 mr-1">(إجمالي)</span>}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-bold ${isOutOfStock ? 'text-red-500' : isLowStock ? 'text-orange-500' : 'text-slate-700'}`}>
+                                {stock}
+                              </span>
+                              <span className="text-xs text-gray-400">قطعة</span>
+                            </div>
+                            {isLowStock && (
+                              <span className="text-[10px] text-orange-600 flex items-center gap-1">
+                                <AlertCircle size={10} /> مخزون منخفض
+                              </span>
+                            )}
+                            {isOutOfStock && (
+                              <span className="text-[10px] text-red-600 flex items-center gap-1">
+                                <AlertCircle size={10} /> نفد المخزون
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-[13px] font-black text-indigo-600">{product.price} ر.س</span>
+                          {getPriceDisplay(product)}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.status !== false ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
+                            {product.status !== false ? 'نشط' : 'مسودة'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-left">
+                          <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => openEditModal(product)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              onClick={(e) => openEditModal(product, e)}
+                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                              title="تعديل"
                             >
-                              <Edit3 className="w-4 h-4" />
+                              <Edit3 size={18} />
                             </button>
                             <button
-                              onClick={() => confirmDelete(product.id)}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                              onClick={(e) => confirmDelete(product.id, e)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                              title="حذف"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                      {isExpanded && hasVariants && (
-                        <tr className="bg-slate-50/40 animate-in slide-in-from-top-2">
-                          <td colSpan={5} className="px-10 py-4">
-                            <div className="bg-white rounded-lg border border-indigo-100 overflow-hidden shadow-sm">
-                              <table className="w-full text-right text-[10px]">
-                                <thead className="bg-indigo-50/30">
-                                  <tr className="font-black text-indigo-400 uppercase tracking-widest">
-                                    <th className="px-4 py-2">المتغير</th>
-                                    <th className="px-4 py-2">SKU</th>
-                                    <th className="px-4 py-2">الكمية</th>
-                                    <th className="px-4 py-2">السعر</th>
-                                    <th className="px-4 py-2">التكلفة</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-indigo-50/30">
-                                  {product.variants?.map((v) => (
-                                    <tr key={v.id}>
-                                      <td className="px-4 py-2 font-black text-slate-700">{v.name}</td>
-                                      <td className="px-4 py-2 font-mono text-slate-500">{v.sku}</td>
-                                      <td className="px-4 py-2 font-black text-slate-700">{v.stock}</td>
-                                      <td className="px-4 py-2 font-black text-indigo-600">{v.price || product.price} ر.س</td>
-                                      <td className="px-4 py-2 font-black text-slate-500">{v.cost || 0} ر.س</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+
+                      {/* EXPANDED ROW FOR VARIANTS */}
+                      {isExpanded && (
+                        <tr className="bg-indigo-50/20 shadow-inner">
+                          <td colSpan={6} className="px-6 pb-6 pt-0">
+                            <div className="relative">
+                              {/* Connector Line */}
+                              <div className="absolute top-0 right-8 w-px h-4 bg-gray-200"></div>
+                              <div className="absolute top-4 right-8 w-4 h-px bg-gray-200"></div>
+
+                              <div className="mr-12 mt-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                {!hasVariants ? (
+                                  <div className="p-6 text-center text-gray-400 flex flex-col items-center">
+                                    <PackageOpen size={32} className="mb-2 opacity-50" />
+                                    <p className="text-sm">هذا المنتج بسيط وليس له متغيرات (مثل اللون أو المقاس).</p>
+                                  </div>
+                                ) : (
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-right">
+                                      <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
+                                        <tr>
+                                          <th className="px-4 py-3 font-medium text-xs">خيار المنتج</th>
+                                          <th className="px-4 py-3 font-medium text-xs">SKU</th>
+                                          <th className="px-4 py-3 font-medium text-xs">السعر</th>
+                                          <th className="px-4 py-3 font-medium text-xs">التكلفة</th>
+                                          <th className="px-4 py-3 font-medium text-xs">الكمية المتوفرة</th>
+                                          <th className="px-4 py-3 font-medium text-xs text-center">الافتراضي</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-50">
+                                        {product.variantsProbability?.map((variant, idx) => (
+                                          <tr key={idx} className="hover:bg-gray-50/50">
+                                            <td className="px-4 py-3 font-medium text-slate-700">{variant.name}</td>
+                                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{variant.sku}</td>
+                                            <td className="px-4 py-3 text-slate-700 font-bold">{variant.price} ر.س</td>
+                                            <td className="px-4 py-3 text-gray-500">{variant.cost} ر.س</td>
+                                            <td className="px-4 py-3">
+                                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variant.quantity > 5 ? 'bg-green-50 text-green-700' : variant.quantity > 0 ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
+                                                {variant.quantity} قطعة
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                              {variant.isDefault && (
+                                                <div className="flex justify-center">
+                                                  <CheckCircle2 size={16} className="text-indigo-600" />
+                                                </div>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -351,220 +388,41 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             </table>
           </div>
 
-          <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
-            <div className="flex items-center gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-              <div className="flex items-center gap-1 mx-2">
-                {[...Array(totalPages)].map((_, i) => (
-                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-7 h-7 rounded text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-                ))}
+          {/* Pagination - Placeholder for now or implement if data allows */}
+          {inventory.length > 20 && (
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
+              <span className="text-xs text-gray-500">
+                عرض <span className="font-bold text-slate-800">{filteredProducts.length}</span> من أصل <span className="font-bold text-slate-800">{inventory.length}</span> منتج
+              </span>
+              <div className="flex items-center gap-2">
+                <button className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-400 disabled:opacity-50" disabled>
+                  <ChevronRight size={16} />
+                </button>
+                <button className="w-8 h-8 rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/30">1</button>
+                <button className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-slate-800 hover:bg-gray-50">
+                  <ChevronLeft size={16} />
+                </button>
               </div>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      <ProductModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSuccess={handleProductSuccess}
+        product={selectedProduct}
+      />
+
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={executeDelete}
         title="حذف المنتج"
-        description="هل أنت متأكد من أنك تريد حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف جميع البيانات المرتبطة به."
+        description="هل أنت متأكد من حذف هذا المنتج؟"
         isDeleting={isDeleting}
       />
-
-      {/* Add/Edit Product Modal */}
-      {isModalOpen && (
-        <React.Fragment>
-          {typeof document !== 'undefined' && ReactDOM.createPortal(
-            <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto py-10 px-4">
-              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={() => setIsModalOpen(false)}></div>
-              <div className="relative z-10 bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto max-h-none">
-                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
-                      {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                    </div>
-                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                      {modalMode === 'add' ? 'إضافة منتج جديد' : 'تعديل بيانات المنتج'}
-                    </h4>
-                  </div>
-                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
-                </div>
-
-                <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم المنتج</label>
-                      <input
-                        type="text"
-                        value={editingProduct.name}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                        placeholder="اسم المنتج..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القسم</label>
-                      <select
-                        value={editingProduct.category}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                      >
-                        <option value="إلكترونيات">إلكترونيات</option>
-                        <option value="أزياء">أزياء</option>
-                        <option value="إكسسوارات">إكسسوارات</option>
-                        <option value="منزل">منزل</option>
-                        <option value="عام">عام</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الـ SKU الأساسي</label>
-                      <input
-                        type="text"
-                        value={editingProduct.sku}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
-                        placeholder="PRD-123..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">السعر (سعر البيع)</label>
-                      <div className="relative">
-                        <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                        <input
-                          type="number"
-                          value={editingProduct.price}
-                          onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
-                          className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التكلفة (سعر الشراء)</label>
-                      <div className="relative">
-                        <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                        <input
-                          type="number"
-                          value={editingProduct.cost}
-                          onChange={(e) => setEditingProduct({ ...editingProduct, cost: Number(e.target.value) })}
-                          className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Variants Section */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-indigo-500" />
-                        <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">المتغيرات (Variants)</h5>
-                      </div>
-                      <button
-                        onClick={addVariant}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5" /> إضافة متغير
-                      </button>
-                    </div>
-
-                    {editingProduct.variants && editingProduct.variants.length > 0 ? (
-                      <div className="space-y-3">
-                        {editingProduct.variants.map((variant, idx) => (
-                          <div key={variant.id} className="grid grid-cols-12 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group animate-in slide-in-from-right-4 duration-200">
-                            <div className="col-span-3 space-y-1">
-                              <label className="text-[8px] font-black text-slate-400 uppercase">الاسم</label>
-                              <input
-                                value={variant.name}
-                                onChange={(e) => updateVariantInModal(idx, 'name', e.target.value)}
-                                placeholder="مثلاً: أحمر - XL"
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-bold"
-                              />
-                            </div>
-                            <div className="col-span-3 space-y-1">
-                              <label className="text-[8px] font-black text-slate-400 uppercase">SKU</label>
-                              <input
-                                value={variant.sku}
-                                onChange={(e) => updateVariantInModal(idx, 'sku', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-mono"
-                              />
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <label className="text-[8px] font-black text-slate-400 uppercase">الكمية</label>
-                              <input
-                                type="number"
-                                value={variant.stock}
-                                onChange={(e) => updateVariantInModal(idx, 'stock', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
-                              />
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <label className="text-[8px] font-black text-slate-400 uppercase">السعر</label>
-                              <input
-                                type="number"
-                                value={variant.price || editingProduct.price}
-                                onChange={(e) => updateVariantInModal(idx, 'price', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black text-indigo-600"
-                              />
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <label className="text-[8px] font-black text-slate-400 uppercase">التكلفة</label>
-                              <input
-                                type="number"
-                                value={variant.cost || editingProduct.cost}
-                                onChange={(e) => updateVariantInModal(idx, 'cost', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black"
-                              />
-                            </div>
-                            <button
-                              onClick={() => removeVariant(idx)}
-                              className="absolute -top-2 -left-2 p-1 bg-white border border-rose-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all shadow-sm opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الكمية المتوفرة (بدون متغيرات)</label>
-                        <div className="relative">
-                          <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                          <input
-                            type="number"
-                            value={editingProduct.stock}
-                            onChange={(e) => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })}
-                            className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-[10px] uppercase hover:bg-slate-100 transition-all"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    onClick={handleSaveProduct}
-                    className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-black text-[10px] uppercase shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-3.5 h-3.5" /> {modalMode === 'add' ? 'إضافة للمخزون' : 'حفظ التغييرات'}
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )}
-        </React.Fragment>
-      )}
     </div>
   );
 };

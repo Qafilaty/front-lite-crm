@@ -26,7 +26,6 @@ export const UPDATE_DELIVERY_COMPANY = gql`
       data {
         id
         name
-        active
       }
     }
   }

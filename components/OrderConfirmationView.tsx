@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { Order, OrderStatus, OrderItem } from '../types';
-import { 
-  Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft, 
+import {
+  Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft,
   Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye
 } from 'lucide-react';
 import OrderDetailsView from './OrderDetailsView';
+import CreateOrderModal from './CreateOrderModal';
 
 interface OrderConfirmationViewProps {
   orders: Order[];
@@ -73,7 +74,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
   const [stateFilter, setStateFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const itemsPerPage = 8;
@@ -121,9 +122,9 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
 
   if (selectedOrder) {
     return (
-      <OrderDetailsView 
-        order={selectedOrder} 
-        onBack={() => setSelectedOrderId(null)} 
+      <OrderDetailsView
+        order={selectedOrder}
+        onBack={() => setSelectedOrderId(null)}
         onUpdate={handleUpdateOrder}
         readOnly={false} // تفعيل وضع التعديل الكامل
         trackingMode={false} // استخدام حالات التأكيد
@@ -132,134 +133,143 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
   }
 
   const allStatuses: (OrderStatus | 'all')[] = [
-    'all', 'pending', 'confirmed', 'message_sent', 'postponed', 
-    'failed_01', 'failed_02', 'failed_03', 'failed_04', 'failed_05', 
+    'all', 'pending', 'confirmed', 'message_sent', 'postponed',
+    'failed_01', 'failed_02', 'failed_03', 'failed_04', 'failed_05',
     'duplicate', 'wrong_number', 'wrong_order', 'out_of_stock', 'cancelled'
   ];
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="animate-in slide-in-from-right duration-500">
-           <h2 className="text-xl font-black text-slate-800 tracking-tight">تأكيد الطلبيات</h2>
-           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة وتحرير الطلبات (DZD)</p>
+    <>
+      <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="animate-in slide-in-from-right duration-500">
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">تأكيد الطلبيات</h2>
+            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة وتحرير الطلبات (DZD)</p>
+          </div>
+          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all w-full lg:w-auto">
+            <Plus className="w-4 h-4" /> إضافة طلب يدوي
+          </button>
         </div>
-        <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all w-full lg:w-auto">
-          <Plus className="w-4 h-4" /> إضافة طلب يدوي
-        </button>
-      </div>
 
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 animate-in slide-in-from-top-4 duration-500">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="w-4 h-4 text-indigo-500" />
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">فرز وتصفية الطلبات</h3>
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-2 mb-2">
+            <Filter className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">فرز وتصفية الطلبات</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">المتجر</label>
+              <select value={storeFilter} onChange={e => setStoreFilter(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all">
+                {stores.map(s => <option key={s} value={s}>{s === 'all' ? 'جميع المتاجر' : s}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
+              <select value={stateFilter} onChange={e => setStateFilter(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all">
+                {states.map(s => <option key={s} value={s}>{s === 'all' ? 'جميع الولايات' : s}</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">بحث نصي</label>
+              <div className="relative">
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input
+                  type="text"
+                  placeholder="ابحث بالاسم، الهاتف أو الكود..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pr-12 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-50 flex flex-wrap gap-2">
+            {allStatuses.map(f => {
+              const colors = statusColors[f] || statusColors.default;
+              const isActive = statusFilter === f;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border uppercase tracking-widest 
+                  ${isActive
+                      ? `${colors.active} text-white border-transparent shadow-lg scale-105`
+                      : `${colors.bg} ${colors.text} ${colors.border} hover:bg-slate-100 shadow-sm`}`}
+                >
+                  {f === 'all' ? 'الكل' : statusLabels[f as OrderStatus]}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">المتجر</label>
-            <select value={storeFilter} onChange={e => setStoreFilter(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all">
-              {stores.map(s => <option key={s} value={s}>{s === 'all' ? 'جميع المتاجر' : s}</option>)}
-            </select>
+
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-right border-collapse min-w-[1100px]">
+              <thead>
+                <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلب</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedOrders.map((order) => {
+                  const colors = statusColors[order.status] || statusColors.default;
+                  return (
+                    <tr key={order.id} onClick={() => setSelectedOrderId(order.id)} className="group hover:bg-slate-50 transition-all cursor-pointer">
+                      <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">#{order.id}</td>
+                      <td className="px-6 py-5">
+                        <div className="space-y-0.5">
+                          <p className="text-[12px] font-black text-slate-800">{order.customer}</p>
+                          <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-[11px] font-bold text-slate-600">{order.state}</td>
+                      <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">{order.amount} دج</td>
+                      <td className="px-6 py-5">
+                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${colors.bg} ${colors.text} ${colors.border}`}>
+                          {statusLabels[order.status]}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
+                          مراجعة <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
-            <select value={stateFilter} onChange={e => setStateFilter(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all">
-              {states.map(s => <option key={s} value={s}>{s === 'all' ? 'جميع الولايات' : s}</option>)}
-            </select>
-          </div>
-          <div className="sm:col-span-2 space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">بحث نصي</label>
-            <div className="relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input 
-                type="text" 
-                placeholder="ابحث بالاسم، الهاتف أو الكود..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 transition-all"
-              />
+
+          <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
+            <div className="flex items-center gap-2">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronRight className="w-5 h-5" /></button>
+              <div className="flex items-center gap-1.5 mx-3">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
+                ))}
+              </div>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronLeft className="w-5 h-5" /></button>
             </div>
           </div>
         </div>
-
-        <div className="pt-2 border-t border-slate-50 flex flex-wrap gap-2">
-          {allStatuses.map(f => {
-            const colors = statusColors[f] || statusColors.default;
-            const isActive = statusFilter === f;
-            return (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border uppercase tracking-widest 
-                  ${isActive 
-                    ? `${colors.active} text-white border-transparent shadow-lg scale-105` 
-                    : `${colors.bg} ${colors.text} ${colors.border} hover:bg-slate-100 shadow-sm`}`}
-              >
-                {f === 'all' ? 'الكل' : statusLabels[f as OrderStatus]}
-              </button>
-            );
-          })}
-        </div>
       </div>
-
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-right border-collapse min-w-[1100px]">
-            <thead>
-              <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلب</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedOrders.map((order) => {
-                const colors = statusColors[order.status] || statusColors.default;
-                return (
-                  <tr key={order.id} onClick={() => setSelectedOrderId(order.id)} className="group hover:bg-slate-50 transition-all cursor-pointer">
-                    <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">#{order.id}</td>
-                    <td className="px-6 py-5">
-                      <div className="space-y-0.5">
-                        <p className="text-[12px] font-black text-slate-800">{order.customer}</p>
-                        <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-[11px] font-bold text-slate-600">{order.state}</td>
-                    <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">{order.amount} دج</td>
-                    <td className="px-6 py-5">
-                      <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${colors.bg} ${colors.text} ${colors.border}`}>
-                        {statusLabels[order.status]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                       <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
-                          مراجعة <Eye className="w-3.5 h-3.5" />
-                       </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
-           <div className="flex items-center gap-2">
-             <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronRight className="w-5 h-5" /></button>
-             <div className="flex items-center gap-1.5 mx-3">
-               {[...Array(totalPages)].map((_, i) => (
-                 <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-               ))}
-             </div>
-             <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronLeft className="w-5 h-5" /></button>
-           </div>
-        </div>
-      </div>
-    </div>
+      <CreateOrderModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
+    </>
   );
 };
 

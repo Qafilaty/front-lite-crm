@@ -11,6 +11,8 @@
   "dependencies": {
     "@apollo/client": "^3.11.10",
     "@google/genai": "^1.35.0",
+    "@types/apollo-upload-client": "^19.0.0",
+    "apollo-upload-client": "^17.0.0",
     "clsx": "^2.1.1",
     "graphql": "^16.10.0",
     "lucide-react": "^0.562.0",

@@ -8,6 +8,10 @@ export const GET_ALL_WILAYAS = gql`
       name
       arName
       otherNames
+      communes {
+        id
+        name
+      }
     }
   }
 `;

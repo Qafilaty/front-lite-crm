@@ -100,12 +100,39 @@ export interface User {
   activation?: boolean;
 }
 
+export interface VariantValue {
+  name: string;
+  value: string;
+}
+
+// Corresponds to 'VariantsProduct' in backend (e.g. Color, Size definitions)
+export interface ProductVariantDefinition {
+  id?: string;
+  name: string;
+  type: string;
+  value: VariantValue[];
+}
+
+// Corresponds to 'VariantsProbabilityProduct' in backend (e.g. Red-XL)
+export interface ProductVariantProbability {
+  _id?: string; // Backend uses _id for input sometimes, check schema
+  id?: string;
+  name: string;
+  sku: string;
+  price: number;
+  cost: number;
+  quantity: number; // Mapped to quantityInStock or allQuantity
+  isDefault?: boolean;
+}
+
 export interface ProductVariant {
   id: string;
   name: string;
   sku: string;
   stock: number;
   price?: number;
+  cost?: number;
+  pricePurchase?: number;
 }
 
 export interface Product {
@@ -115,7 +142,16 @@ export interface Product {
   stock: number;
   price: number;
   category: string;
-  variants?: ProductVariant[];
+  thumbnail?: string; // Added
+  variants?: ProductVariantDefinition[]; // New structure
+  variantsProbability?: ProductVariantProbability[]; // New structure
+  // Legacy or simplified variants for list view if needed
+  oldVariants?: ProductVariant[];
+  cost?: number;
+  pricePurchase?: number;
+  description?: string;
+  note?: string;
+  status?: boolean;
 }
 
 export interface Stats {
@@ -162,4 +198,22 @@ export interface Store {
   createdAt?: string;
   updatedAt?: string;
   typeStore?: string;
+}
+
+export interface AvailableDeliveryCompany {
+  id: string;
+  name: string;
+  logo?: string;
+  fields?: string[];
+}
+
+export interface DeliveryCompany {
+  id: string;
+  name: string;
+  active: boolean;
+  logo?: string;
+  originalName?: string;
+  availableDeliveryCompany?: AvailableDeliveryCompany;
+  // Dynamic fields will be stored here or handled via a specific property
+  [key: string]: any;
 }

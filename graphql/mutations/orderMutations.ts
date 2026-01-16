@@ -11,7 +11,6 @@ export const CREATE_ORDER = gql`
       numberOrder
       fullName
       phone
-      status
       totalPrice
       createdAt
     }
