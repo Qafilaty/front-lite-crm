@@ -80,7 +80,8 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
   const itemsPerPage = 8;
 
   const stores = useMemo(() => ['all', ...new Set(orders.map(o => o.storeName))], [orders]);
-  const states = useMemo(() => ['all', ...new Set(orders.map(o => o.state))], [orders]);
+  // Use safe access for state as well in case it becomes object later, though unlikely for now
+  const states = useMemo(() => ['all', ...new Set(orders.map(o => typeof o.state === 'object' ? (o.state as any).name : o.state))], [orders]);
 
   const [newManualOrder, setNewManualOrder] = useState<Partial<Order>>({
     customer: '', phone: '', state: '', municipality: '', address: '',
@@ -89,11 +90,35 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
     shippingCost: 0, amount: 0, status: 'pending'
   });
 
+  // Helper to extract status key
+  const getStatusKey = (s: any): string => {
+    if (typeof s === 'object' && s !== null) return s.nameEN || 'pending';
+    return s || 'pending';
+  };
+
+  // Helper to extract status label
+  const getStatusLabel = (s: any): string => {
+    if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'pending';
+    return statusLabels[s as OrderStatus] || s || 'pending';
+  };
+
+  // Helper to get status color (dynamic or fallback)
+  const getStatusStyle = (s: any) => {
+    if (typeof s === 'object' && s !== null && s.color) {
+      return {
+        backgroundColor: `${s.color}15`, // 15 is hex opacity ~8%
+        color: s.color,
+        borderColor: `${s.color}30` // 30 is hex opacity ~19%
+      };
+    }
+    return null;
+  };
+
   const filteredOrders = orders.filter(o => {
     const matchesSearch = o.customer.toLowerCase().includes(searchTerm.toLowerCase()) || o.id.includes(searchTerm) || o.phone.includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || getStatusKey(o.status) === statusFilter;
     const matchesStore = storeFilter === 'all' || o.storeName === storeFilter;
-    const matchesState = stateFilter === 'all' || o.state === stateFilter;
+    const matchesState = stateFilter === 'all' || (typeof o.state === 'string' ? o.state : (o.state as any).name) === stateFilter;
     return matchesSearch && matchesStatus && matchesStore && matchesState;
   });
 
@@ -220,7 +245,10 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedOrders.map((order) => {
-                  const colors = statusColors[order.status] || statusColors.default;
+                  const statusKey = getStatusKey(order.status);
+                  const colors = statusColors[statusKey] || statusColors.default;
+                  const statusStyle = getStatusStyle(order.status);
+
                   return (
                     <tr key={order.id} onClick={() => setSelectedOrderId(order.id)} className="group hover:bg-slate-50 transition-all cursor-pointer">
                       <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">#{order.id}</td>
@@ -230,11 +258,14 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders, s
                           <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-[11px] font-bold text-slate-600">{order.state}</td>
+                      <td className="px-6 py-5 text-[11px] font-bold text-slate-600">{typeof order.state === 'object' ? (order.state as any).name : order.state}</td>
                       <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">{order.amount} دج</td>
                       <td className="px-6 py-5">
-                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${colors.bg} ${colors.text} ${colors.border}`}>
-                          {statusLabels[order.status]}
+                        <span
+                          className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${colors.bg} ${colors.text} ${colors.border}` : ''}`}
+                          style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                        >
+                          {getStatusLabel(order.status)}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-center">

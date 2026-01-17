@@ -67,6 +67,15 @@ export type OrderStatus =
   | 'paid' // تم الدفع
   | 'shipped';
 
+export interface StatusOrderObject {
+  id?: string;
+  nameAR?: string;
+  nameEN?: string;
+  nameFR?: string;
+  color?: string;
+  group?: string;
+}
+
 export interface Order {
   id: string;
   customer: string;
@@ -78,7 +87,7 @@ export interface Order {
   items: OrderItem[];
   shippingCost: number;
   amount: number;
-  status: OrderStatus;
+  status: OrderStatus | StatusOrderObject;
   storeName: string;
   notes?: string;
   createdAt: string;

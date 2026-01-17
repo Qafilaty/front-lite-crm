@@ -41,3 +41,8 @@ export {
 export {
   GET_ALL_WILAYAS,
 } from './wilayasQueries';
+
+// Company Queries
+export {
+  GET_ALL_STATUS_COMPANY,
+} from './companyQueries';

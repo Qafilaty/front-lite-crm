@@ -26,7 +26,11 @@ export const UPDATE_ORDER = gql`
         numberOrder
         fullName
         phone
-        status
+        status {
+          nameEN
+          nameAR
+          color
+        }
         totalPrice
       }
     }
@@ -39,7 +43,11 @@ export const CHANGE_STATUS_ORDER = gql`
       status
       data {
         id
-        status
+        status {
+          nameEN
+          nameAR
+          color
+        }
         timeLine {
           id
           status

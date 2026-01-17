@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ShoppingCart, X, User, MapPinned, Home, Building2, ShoppingBag,
     PlusCircle, ChevronDown, Search, Package, MinusCircle, Trash2,
@@ -67,7 +68,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
     // --- Effects & Logic ---
 
+    const [mounted, setMounted] = useState(false);
+
     useEffect(() => {
+        setMounted(true);
         const handleClickOutside = (event: MouseEvent) => {
             if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
                 setIsProductPickerOpen(false);
@@ -156,7 +160,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         deliveryPrice: newOrder.shippingCost,
 
                         note: newOrder.notes,
-                        status: 'pending', // Default status
 
                         totalPrice,
                         subTotalPrice,
@@ -197,10 +200,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
     const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + (newOrder.shippingCost || 0);
     const selectedWilaya = wilayas.find(w => w.name === newOrder.state);
 
-    if (!isOpen) return null;
+    // Ensure we don't render until client-side (mounted) to access document.body safely
+    if (!isOpen || !mounted) return null;
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300" dir="rtl">
+    return createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300" dir="rtl">
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] border border-slate-200">
 
                 {/* Header */}
@@ -418,7 +422,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

@@ -1,15 +1,17 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
+import { useQuery, useMutation } from '@apollo/client';
 import { Order, OrderLog, OrderItem, OrderStatus } from '../types';
 import {
   ArrowRight, Save, X, History,
   User, Phone, MapPin, ShoppingBag, PlusCircle, Trash2, Plus, Clock, Truck, Home, Building2, Store, Check,
-  CheckCircle2, RefreshCcw, Map
+  CheckCircle2, RefreshCcw, Map, Loader2
 } from 'lucide-react';
 import { statusLabels, statusColors } from './OrderConfirmationView';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import toast from 'react-hot-toast';
+import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
+import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
 
 interface OrderDetailsViewProps {
   order: Order;
@@ -31,18 +33,41 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const confirmationStatuses: OrderStatus[] = [
-    'confirmed', 'message_sent', 'postponed', 'failed_01', 'failed_02',
-    'failed_03', 'failed_04', 'failed_05', 'duplicate', 'wrong_number',
-    'wrong_order', 'out_of_stock', 'cancelled'
-  ];
+  const { data: userData } = useQuery(GET_CURRENT_USER);
+  const idCompany = userData?.currentUser?.company?.id;
+  const idUser = userData?.currentUser?.id;
 
-  const trackingStatuses: OrderStatus[] = [
-    'en_preparation', 'ramasse', 'sorti_livraison', 'delivered', 'annule',
-    'tentative_01', 'tentative_02', 'tentative_03', 'reporte_01',
-    'wrong_number', 'client_absent', 'wrong_address', 'retour_vendeur',
-    'retourne_vendeur', 'paid'
-  ];
+  const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY, {
+    variables: { idCompany },
+    skip: !idCompany
+  });
+
+  const [updateOrder, { loading: isUpdating }] = useMutation(UPDATE_ORDER);
+  const [changeStatusOrder, { loading: isStatusUpdating }] = useMutation(CHANGE_STATUS_ORDER);
+
+  // Derive statuses from backend data or fall back to defaults
+  const confirmationStatuses = useMemo(() => {
+    if (!statusData?.allStatusCompany) return ['pending', 'confirmed', 'cancelled']; // Fallback
+    const group = statusData.allStatusCompany.find((g: any) => g.group === 'Confirmation Group');
+    return group?.listStatus || [];
+  }, [statusData]);
+
+  const trackingStatuses = useMemo(() => {
+    if (!statusData?.allStatusCompany) return [];
+    const group = statusData.allStatusCompany.find((g: any) => g.group === 'Tracking Group');
+    return group?.listStatus?.map((s: any) => s.nameEN) || [];
+  }, [statusData]);
+
+  const statusMap = useMemo(() => {
+    if (!statusData?.allStatusCompany) return statusLabels;
+    const map: Record<string, string> = {};
+    statusData.allStatusCompany.forEach((group: any) => {
+      group.listStatus.forEach((s: any) => {
+        map[s.nameEN] = s.nameAR;
+      });
+    });
+    return { ...statusLabels, ...map };
+  }, [statusData]);
 
   const statusesToDisplay = trackingMode ? trackingStatuses : confirmationStatuses;
 
@@ -55,10 +80,96 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }));
   }, [editedOrder.items, editedOrder.shippingCost]);
 
-  const handleSave = () => {
+  const isDirty = JSON.stringify(order) !== JSON.stringify(editedOrder);
+
+  const handleSave = async () => {
     if (readOnly) return;
-    onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar-SA') });
-    alert('تم حفظ كافة البيانات بنجاح');
+    try {
+      const content = {
+        fullName: editedOrder.customer,
+        phone: editedOrder.phone,
+        state: { name: typeof editedOrder.state === 'string' ? editedOrder.state : (editedOrder.state as any).name }, // Handle state safely
+        city: editedOrder.municipality,
+        address: editedOrder.address,
+        deliveryType: editedOrder.deliveryType,
+        deliveryPrice: editedOrder.shippingCost,
+        totalPrice: editedOrder.amount,
+        // Ensure status is NOT sent if it's not part of updateOrder input, OR if it is, send only key
+        // The previous error suggested updateOrder might be receiving status in content if I'm not careful.
+        // But scanning valid inputs, status isn't in contentOrder usually. 
+        // IF invalid value error came from updateOrder, it means I might have spread something or backend expects it.
+        // However, looking at the code I read before, 'content' object definition didn't have status. 
+        // The ERROR log "Variable "$content" got invalid value ... at "content.status"" suggests status WAS present.
+        // I will ensure I am NOT sending status in updateOrder if it's not needed, or if it is, send string.
+
+        // Map items
+        products: editedOrder.items.map(item => ({
+          name: item.name,
+          price: Number(item.price),
+          quantity: Number(item.quantity)
+        }))
+      };
+
+      await updateOrder({
+        variables: {
+          id: order.id,
+          content
+        }
+      });
+
+      toast.success('تم حفظ التغييرات بنجاح');
+      onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar-SA') });
+    } catch (error: any) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء الحفظ');
+    }
+  };
+
+  const addStatusUpdate = async () => {
+    if (!newLog.status) return;
+    const statusKey = getStatusKey(newLog.status); // Extract string key
+
+    try {
+      await changeStatusOrder({
+        variables: {
+          id: order.id,
+          content: {
+            status: statusKey, // Send string
+            note: newLog.note,
+            idUser: idUser
+          }
+        }
+      });
+
+      toast.success('تم تحديث الحالة بنجاح');
+
+      // Optimistic update
+      const now = new Date().toLocaleString('ar-SA');
+      const log: OrderLog = {
+        status: newLog.status, // We can keep object in local state for immediate display if we want
+        date: now,
+        note: newLog.note || `تغيير الحالة`,
+        user: userData?.currentUser?.name || 'مستخدم'
+      };
+
+      // Update local state, keeping the structure consistent
+      const updated = {
+        ...editedOrder,
+        status: newLog.status, // Update main status
+        lastStatusDate: now,
+        history: [...(editedOrder.history || []), log],
+        updatedAt: now
+      };
+
+      setEditedOrder(updated);
+      onUpdate(updated);
+      setIsAddLogOpen(false);
+      setNewLog({ status: updated.status, note: '' });
+
+    } catch (error: any) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء تحديث الحالة');
+    }
   };
 
   const executeDelete = async () => {
@@ -76,21 +187,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }
   };
 
-  const addStatusUpdate = () => {
-    const now = new Date().toLocaleString('ar-SA');
-    const log: OrderLog = {
-      status: newLog.status,
-      date: now,
-      note: newLog.note || `تغيير الحالة لـ: ${statusLabels[newLog.status]}`,
-      user: 'أحمد محمد'
-    };
-    const updated = { ...editedOrder, status: newLog.status, lastStatusDate: now, history: [...(editedOrder.history || []), log], updatedAt: now };
-    setEditedOrder(updated);
-    onUpdate(updated);
-    setIsAddLogOpen(false);
-    setNewLog({ status: updated.status, note: '' });
-  };
-
   const updateItem = (index: number, field: keyof OrderItem, value: any) => {
     if (readOnly) return;
     const newItems = [...editedOrder.items];
@@ -100,8 +196,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const removeItem = (index: number) => {
     if (readOnly) return;
-    const newItems = editedOrder.items.filter((_, i) => i !== index);
-    setEditedOrder({ ...editedOrder, items: newItems });
+    const items = [...editedOrder.items];
+    items.splice(index, 1);
+    setEditedOrder({ ...editedOrder, items });
   };
 
   const addItem = () => {
@@ -110,7 +207,35 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setEditedOrder({ ...editedOrder, items: [...editedOrder.items, newItem] });
   };
 
-  const currentColors = statusColors[editedOrder.status] || statusColors.default;
+  // Helper to extract status key (nameEN or string)
+  const getStatusKey = (s: any): string => {
+    if (typeof s === 'object' && s !== null) return s.nameEN || 'pending';
+    return s || 'pending';
+  };
+
+  // Helper to extract status label (nameAR or mapped string)
+  const getStatusLabel = (s: any): string => {
+    if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'pending';
+    return statusMap[s] || s || 'pending';
+  };
+
+  // Helper to get status color (dynamic or fallback)
+  const getStatusStyle = (s: any) => {
+    if (typeof s === 'object' && s !== null && s.color) {
+      return {
+        backgroundColor: `${s.color}15`, // 15 is hex opacity ~8%
+        color: s.color,
+        borderColor: `${s.color}30` // 30 is hex opacity ~19%
+      };
+    }
+    const key = getStatusKey(s);
+    const fallback = statusColors[key] || statusColors.default;
+    return null; // Return null to signal usage of Tailwind classes instead
+  };
+
+  const statusKey = getStatusKey(editedOrder.status);
+  const statusStyle = getStatusStyle(editedOrder.status);
+  const fallbackColors = statusColors[statusKey] || statusColors.default;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
@@ -121,8 +246,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-black text-slate-800">الطلب <span className="text-indigo-600">#{order.id}</span></h2>
-              <span className={`px-3 py-1 rounded-xl text-[10px] font-black border uppercase ${currentColors.bg} ${currentColors.text} ${currentColors.border}`}>
-                {statusLabels[editedOrder.status]}
+              <span
+                className={`px-3 py-1 rounded-xl text-[10px] font-black border uppercase ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+              >
+                {getStatusLabel(editedOrder.status)}
               </span>
             </div>
             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{editedOrder.storeName}</p>
@@ -135,8 +263,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </button>
           )}
           {!readOnly && (
-            <button onClick={handleSave} className="flex-1 px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] hover:bg-slate-50 transition-all uppercase flex items-center justify-center gap-2">
-              <Save className="w-4 h-4" /> حفظ البيانات
+            <button
+              onClick={handleSave}
+              disabled={!isDirty || isUpdating}
+              className={`flex-1 px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] transition-all uppercase flex items-center justify-center gap-2 ${!isDirty || isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+            >
+              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isUpdating ? 'جاري الحفظ...' : 'حفظ البيانات'}
             </button>
           )}
           <button onClick={() => setIsAddLogOpen(true)} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center justify-center gap-2">
@@ -326,7 +459,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 return (
                   <div key={idx} className="bg-slate-50/60 rounded-[1.5rem] p-5 border border-slate-100 space-y-2 relative">
                     <div className="flex justify-between items-start">
-                      <span className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${logColors.bg} ${logColors.text} ${logColors.border}`}>{statusLabels[log.status]}</span>
+                      <span className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${logColors.bg} ${logColors.text} ${logColors.border}`}>{getStatusLabel(log.status)}</span>
                       <span className="text-[8px] font-bold text-slate-400 font-mono">{log.date}</span>
                     </div>
                     <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
@@ -371,18 +504,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <div className="space-y-4">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">اختر الحالة</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {statusesToDisplay.map(statusKey => {
-                        const colors = statusColors[statusKey] || statusColors.default;
-                        const isSelected = newLog.status === statusKey;
+                      {statusesToDisplay.map((statusObj: any, idx: number) => {
+                        const isSelected = getStatusKey(newLog.status) === getStatusKey(statusObj);
+                        const statusStyle = getStatusStyle(statusObj);
+                        const fallbackColors = statusColors[getStatusKey(statusObj)] || statusColors.default;
+
                         return (
                           <button
-                            key={statusKey}
-                            onClick={() => setNewLog({ ...newLog, status: statusKey })}
+                            key={idx}
+                            onClick={() => setNewLog({ ...newLog, status: statusObj })}
                             className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center group h-full
-                          ${isSelected ? `border-indigo-600 ${colors.bg} ring-4 ring-indigo-500/10` : `border-slate-50 bg-slate-50 ${colors.hover}`} `}
+                          ${isSelected ? `border-indigo-600 ring-4 ring-indigo-500/10` : `border-slate-50 bg-slate-50 hover:bg-slate-100`} `}
+                            style={isSelected && statusStyle ? { backgroundColor: statusStyle.backgroundColor } : {}}
                           >
-                            <div className={`w-3 h-3 rounded-full border shadow-sm ${colors.bg} ${colors.border}`}></div>
-                            <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${colors.text}`}>{statusLabels[statusKey]}</span>
+                            <div
+                              className={`w-3 h-3 rounded-full border shadow-sm ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.border}` : ''}`}
+                              style={statusStyle ? { backgroundColor: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                            ></div>
+                            <span
+                              className={`text-[10px] font-black uppercase tracking-tight leading-tight ${!statusStyle ? fallbackColors.text : ''}`}
+                              style={statusStyle ? { color: statusStyle.color } : {}}
+                            >
+                              {getStatusLabel(statusObj)}
+                            </span>
                             {isSelected && <div className="absolute top-1 left-1 bg-indigo-600 rounded-full p-0.5 shadow-sm"><Check className="w-2.5 h-2.5 text-white" /></div>}
                           </button>
                         );
