@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import OrdersPage from './pages/OrdersPage';
+import OrderDetailsPage from './pages/OrderDetailsPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import InventoryPage from './pages/InventoryPage';
 import ShippingCarriersPage from './pages/ShippingCarriersPage';
@@ -19,6 +20,9 @@ import StoreLinkingPage from './pages/StoreLinkingPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import WooCommerceSuccess from './pages/WooCommerceSuccess';
+import FinancesPage from './pages/FinancesPage';
+import FinancialStatsPage from './pages/FinancialStatsPage';
+import SalariesPage from './pages/SalariesPage';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -42,13 +46,18 @@ const AppRoutes: React.FC = () => {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/:id" element={<OrderDetailsPage />} />
         <Route path="tracking" element={<OrderTrackingPage />} />
+        <Route path="tracking/:id" element={<OrderDetailsPage trackingMode={true} />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="carriers" element={<ShippingCarriersPage />} />
         <Route path="pricing" element={<ShippingPricingPage />} />
         <Route path="stores" element={<StoreLinkingPage />} />
         <Route path="api-docs" element={<ApiDocsPage />} />
         <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="finances" element={<FinancesPage />} />
+        <Route path="financial-stats" element={<FinancialStatsPage />} />
+        <Route path="salaries" element={<SalariesPage />} />
       </Route>
 
       {/* Catch all - redirect to dashboard */}

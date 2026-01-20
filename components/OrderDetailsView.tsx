@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { Order, OrderLog, OrderItem, OrderStatus } from '../types';
+import { Order, OrderLog, OrderItem, OrderStatus, StatusOrderObject } from '../types';
 import {
   ArrowRight, Save, X, History,
   User, Phone, MapPin, ShoppingBag, PlusCircle, Trash2, Plus, Clock, Truck, Home, Building2, Store, Check,
-  CheckCircle2, RefreshCcw, Map, Loader2
+  CheckCircle2, RefreshCcw, Map, Loader2, Copy, AlertCircle
 } from 'lucide-react';
-import { statusLabels, statusColors } from './OrderConfirmationView';
+import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
+import { deliveryCompanyService } from '../services/apiService';
+import { DeliveryCompany } from '../types';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import toast from 'react-hot-toast';
 import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
+import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
+import { ModernSelect } from './common';
 
 interface OrderDetailsViewProps {
   order: Order;
@@ -27,11 +31,26 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 }) => {
   const [editedOrder, setEditedOrder] = useState<Order>({ ...order });
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
-  const [newLog, setNewLog] = useState<{ status: OrderStatus; note: string }>({ status: order.status, note: '' });
+
+  // Use status object or ID directly
+  const [newLog, setNewLog] = useState<{ status: OrderStatus | StatusOrderObject | null; note: string }>({
+    status: typeof order.status === 'object' ? order.status : null,
+    note: ''
+  });
 
   // Delete States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Send to Delivery States
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [deliveryCompanies, setDeliveryCompanies] = useState<DeliveryCompany[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [isSendingToDelivery, setIsSendingToDelivery] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successTrackingCode, setSuccessTrackingCode] = useState<string | null>(null);
+  const [successCompanyName, setSuccessCompanyName] = useState<string | null>(null);
 
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const idCompany = userData?.currentUser?.company?.id;
@@ -41,6 +60,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     variables: { idCompany },
     skip: !idCompany
   });
+
+  const { data: wilayasData } = useQuery(GET_ALL_WILAYAS);
 
   const [updateOrder, { loading: isUpdating }] = useMutation(UPDATE_ORDER);
   const [changeStatusOrder, { loading: isStatusUpdating }] = useMutation(CHANGE_STATUS_ORDER);
@@ -54,8 +75,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const trackingStatuses = useMemo(() => {
     if (!statusData?.allStatusCompany) return [];
-    const group = statusData.allStatusCompany.find((g: any) => g.group === 'Tracking Group');
-    return group?.listStatus?.map((s: any) => s.nameEN) || [];
+    const group = statusData.allStatusCompany.find((g: any) =>
+      g.group === 'Tracking Group' ||
+      g.group?.toLowerCase().trim() === 'tracking group' ||
+      g.group?.toLowerCase().includes('tracking')
+    );
+    return group?.listStatus || [];
   }, [statusData]);
 
   const statusMap = useMemo(() => {
@@ -73,7 +98,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   // Recalculate total amount whenever items or shipping cost change
   useEffect(() => {
-    const totalItemsPrice = editedOrder.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const items = editedOrder.items || [];
+    const totalItemsPrice = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     setEditedOrder(prev => ({
       ...prev,
       amount: totalItemsPrice + (Number(prev.shippingCost) || 0)
@@ -89,19 +115,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         fullName: editedOrder.customer,
         phone: editedOrder.phone,
         state: { name: typeof editedOrder.state === 'string' ? editedOrder.state : (editedOrder.state as any).name }, // Handle state safely
-        city: editedOrder.municipality,
+        city: editedOrder.city,
         address: editedOrder.address,
         deliveryType: editedOrder.deliveryType,
         deliveryPrice: editedOrder.shippingCost,
         totalPrice: editedOrder.amount,
-        // Ensure status is NOT sent if it's not part of updateOrder input, OR if it is, send only key
-        // The previous error suggested updateOrder might be receiving status in content if I'm not careful.
-        // But scanning valid inputs, status isn't in contentOrder usually. 
-        // IF invalid value error came from updateOrder, it means I might have spread something or backend expects it.
-        // However, looking at the code I read before, 'content' object definition didn't have status. 
-        // The ERROR log "Variable "$content" got invalid value ... at "content.status"" suggests status WAS present.
-        // I will ensure I am NOT sending status in updateOrder if it's not needed, or if it is, send string.
-
         // Map items
         products: editedOrder.items.map(item => ({
           name: item.name,
@@ -127,14 +145,18 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const addStatusUpdate = async () => {
     if (!newLog.status) return;
-    const statusKey = getStatusKey(newLog.status); // Extract string key
+
+    // Use ID if available (DB status), otherwise fallback to name/key
+    const statusValue = (typeof newLog.status === 'object' && newLog.status !== null)
+      ? newLog.status.id
+      : newLog.status;
 
     try {
       await changeStatusOrder({
         variables: {
           id: order.id,
           content: {
-            status: statusKey, // Send string
+            status: statusValue,
             note: newLog.note,
             idUser: idUser
           }
@@ -144,20 +166,28 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       toast.success('تم تحديث الحالة بنجاح');
 
       // Optimistic update
-      const now = new Date().toLocaleString('ar-SA');
+      const now = new Date().toLocaleString('en-GB'); // Standard numerals
       const log: OrderLog = {
-        status: newLog.status, // We can keep object in local state for immediate display if we want
+        status: newLog.status,
         date: now,
         note: newLog.note || `تغيير الحالة`,
         user: userData?.currentUser?.name || 'مستخدم'
       };
 
       // Update local state, keeping the structure consistent
+      const statusKey = getStatusKey(newLog.status);
+      const isDelivery = trackingStatuses.includes(statusKey);
+
+      const updatedConfirmation = isDelivery ? (editedOrder.confirmationTimeLine || []) : [...(editedOrder.confirmationTimeLine || []), log];
+      const updatedDelivery = isDelivery ? [...(editedOrder.deliveryTimeLine || []), log] : (editedOrder.deliveryTimeLine || []);
+
       const updated = {
         ...editedOrder,
         status: newLog.status, // Update main status
         lastStatusDate: now,
         history: [...(editedOrder.history || []), log],
+        confirmationTimeLine: updatedConfirmation,
+        deliveryTimeLine: updatedDelivery,
         updatedAt: now
       };
 
@@ -229,13 +259,72 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       };
     }
     const key = getStatusKey(s);
-    const fallback = statusColors[key] || statusColors.default;
     return null; // Return null to signal usage of Tailwind classes instead
   };
 
   const statusKey = getStatusKey(editedOrder.status);
   const statusStyle = getStatusStyle(editedOrder.status);
   const fallbackColors = statusColors[statusKey] || statusColors.default;
+
+
+
+  // Delivery Handlers
+  const openDeliveryModal = async () => {
+    setIsDeliveryModalOpen(true);
+
+    if (deliveryCompanies.length === 0 && idCompany) {
+      setLoadingCompanies(true);
+      try {
+        const result = await deliveryCompanyService.getAllDeliveryCompanies(idCompany);
+        if (result.success && result.deliveryCompanies) {
+          setDeliveryCompanies(result.deliveryCompanies);
+        }
+      } catch (err) {
+        console.error("Error fetching companies", err);
+        toast.error("فشل تحميل شركات التوصيل");
+      } finally {
+        setLoadingCompanies(false);
+      }
+    }
+  };
+
+  const handleSendToDelivery = async () => {
+    if (!selectedCompanyId || !idCompany) return;
+
+    setIsSendingToDelivery(true);
+    const result = await deliveryCompanyService.addOrderToDeliveryCompany(
+      idCompany,
+      selectedCompanyId,
+      [order.id]
+    );
+
+    setIsSendingToDelivery(false);
+
+    if (result.success && result.data?.successOrder?.length > 0) {
+      const successOrder = result.data.successOrder[0];
+      const tracking = successOrder.deliveryCompany?.trackingCode || 'Unknown';
+      const companyName = deliveryCompanies.find(c => c.id === selectedCompanyId)?.name || 'الشركة';
+
+      setSuccessTrackingCode(tracking);
+      setSuccessCompanyName(companyName);
+      setIsDeliveryModalOpen(false);
+      setIsSuccessModalOpen(true);
+
+      toast.success('تم إرسال الطلب بنجاح');
+
+      // Update local order tracking if needed, 
+      // but ideally we should trigger a refresh or update local state
+    } else {
+      toast.error('فشل إرسال الطلب');
+    }
+  };
+
+  const copyTracking = () => {
+    if (successTrackingCode) {
+      navigator.clipboard.writeText(successTrackingCode);
+      toast.success('تم نسخ كود التتبع');
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
@@ -245,7 +334,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <button onClick={onBack} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100"><ArrowRight className="w-6 h-6" /></button>
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-black text-slate-800">الطلب <span className="text-indigo-600">#{order.id}</span></h2>
+              <h2 className="text-xl font-black text-slate-800">الطلب <span className="text-indigo-600">#{order.numberOrder || order.id?.slice(-8)}</span></h2>
               <span
                 className={`px-3 py-1 rounded-xl text-[10px] font-black border uppercase ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                 style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
@@ -272,11 +361,59 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               {isUpdating ? 'جاري الحفظ...' : 'حفظ البيانات'}
             </button>
           )}
-          <button onClick={() => setIsAddLogOpen(true)} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center justify-center gap-2">
+          <button onClick={() => { setIsAddLogOpen(true); }} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center justify-center gap-2">
             <RefreshCcw className="w-4 h-4" /> تحديث الحالة
           </button>
+          {!readOnly && !order.deliveryCompany?.trackingCode && (
+            <button
+              onClick={openDeliveryModal}
+              className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center justify-center gap-2"
+            >
+              <Truck className="w-4 h-4" /> إرسال للتوصيل
+            </button>
+          )}
         </div>
       </div>
+
+      {order.deliveryCompany?.trackingCode && (
+        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm overflow-hidden">
+              {order.deliveryCompany?.deliveryCompany?.availableDeliveryCompany?.logo ? (
+                <img
+                  src={`${import.meta.env.VITE_Images_Url}/${order.deliveryCompany.deliveryCompany.availableDeliveryCompany.logo}`}
+                  alt={order.deliveryCompany?.deliveryCompany?.name || "Delivery Company"}
+                  className="w-full h-full object-contain p-2"
+                />
+              ) : (
+                <Truck className="w-8 h-8" />
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">يتم التوصيل عبر</p>
+              <h3 className="text-xl font-black text-slate-800">{order.deliveryCompany?.deliveryCompany?.name || 'شركة التوصيل'}</h3>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${order.deliveryCompany.status ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-600'}`}>
+                  {order.deliveryCompany.status || 'جاري التوصيل'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">كود التتبع</p>
+            <div onClick={() => {
+              navigator.clipboard.writeText(order.deliveryCompany?.trackingCode || '');
+              toast.success('تم نسخ كود التتبع');
+            }} className="group cursor-pointer flex items-center gap-4 bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-slate-100 transition-all pr-5 pl-2 py-3 rounded-2xl w-full md:min-w-[300px] justify-between">
+              <span className="font-mono text-lg font-bold text-slate-700 tracking-wider">{order.deliveryCompany?.trackingCode}</span>
+              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
+                <Copy className="w-5 h-5" />
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Customer Info Card */}
@@ -311,20 +448,60 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
-                <input
+                <ModernSelect
                   disabled={readOnly}
-                  value={editedOrder.state}
-                  onChange={e => setEditedOrder({ ...editedOrder, state: e.target.value })}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
+                  value={(() => {
+                    const currentVal = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                      ? (editedOrder.state as any).name
+                      : editedOrder.state;
+                    return currentVal || '';
+                  })()}
+                  onChange={(val) => {
+                    setEditedOrder({ ...editedOrder, state: val, city: '' });
+                  }}
+                  options={[
+                    { value: '', label: 'اختر الولاية' },
+                    ...(wilayasData?.allWilayas?.map((w: any) => ({
+                      value: w.name,
+                      label: `${w.code} - ${w.name} / ${w.arName || w.name}`
+                    })) || [])
+                  ]}
+                  placeholder="اختر الولاية"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
-                <input
-                  disabled={readOnly}
-                  value={editedOrder.municipality}
-                  onChange={e => setEditedOrder({ ...editedOrder, municipality: e.target.value })}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all disabled:opacity-70"
+                <ModernSelect
+                  disabled={readOnly || !editedOrder.state}
+                  value={(() => {
+                    let savedMunc = typeof editedOrder.city === 'object' && editedOrder.city !== null
+                      ? (editedOrder.city as any).name
+                      : editedOrder.city;
+                    savedMunc = (savedMunc || '').trim();
+                    return savedMunc;
+                  })()}
+                  onChange={(val) => setEditedOrder({ ...editedOrder, city: val })}
+                  options={[
+                    { value: '', label: 'اختر البلدية' },
+                    ...(() => {
+                      const currentStateName = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                        ? (editedOrder.state as any).name
+                        : editedOrder.state;
+
+                      if (!currentStateName) return [];
+
+                      const wilaya = wilayasData?.allWilayas?.find((w: any) =>
+                        w.name?.toLowerCase() === currentStateName.toLowerCase() ||
+                        w.code == currentStateName
+                      );
+
+                      return wilaya?.communes?.map((c: any) => ({
+                        value: c.name,
+                        label: c.name + (c.arName ? ` - ${c.arName}` : '')
+                      })) || [];
+                    })()
+                  ]}
+                  placeholder="اختر البلدية"
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
@@ -373,7 +550,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </div>
 
             <div className="space-y-4">
-              {editedOrder.items.map((item, idx) => (
+              {editedOrder.items?.map((item, idx) => (
                 <div key={idx} className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-in slide-in-from-right-4">
                   <div className="md:col-span-5">
                     <input
@@ -421,7 +598,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   )}
                 </div>
               ))}
-              {editedOrder.items.length === 0 && (
+              {editedOrder.items?.length === 0 && (
                 <div className="py-12 text-center text-slate-300 italic text-xs">سلة المشتريات فارغة</div>
               )}
             </div>
@@ -447,20 +624,64 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
         {/* Timeline Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full max-h-[800px]">
+          {/* Confirmation Timeline */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col max-h-[400px]">
             <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
-              <History className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تاريخ الحالات</h3>
+              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تاريخ التأكيد</h3>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {editedOrder.history?.length === 0 && <p className="text-center py-10 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل حركات بعد</p>}
-              {editedOrder.history?.map((log, idx) => {
-                const logColors = statusColors[log.status] || statusColors.default;
+              {(!editedOrder.confirmationTimeLine || editedOrder.confirmationTimeLine.length === 0) && <p className="text-center py-10 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل تأكيد بعد</p>}
+              {editedOrder.confirmationTimeLine?.map((log, idx) => {
+                const logStyle = getStatusStyle(log.status);
+                const logKey = getStatusKey(log.status);
+                const logColors = statusColors[logKey] || statusColors.default;
+
                 return (
                   <div key={idx} className="bg-slate-50/60 rounded-[1.5rem] p-5 border border-slate-100 space-y-2 relative">
                     <div className="flex justify-between items-start">
-                      <span className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${logColors.bg} ${logColors.text} ${logColors.border}`}>{getStatusLabel(log.status)}</span>
-                      <span className="text-[8px] font-bold text-slate-400 font-mono">{log.date}</span>
+                      <span
+                        className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
+                        style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
+                      >
+                        {getStatusLabel(log.status)}
+                      </span>
+                      <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                      <span className="text-[8px] font-black text-slate-400 uppercase">{log.user}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Delivery Timeline */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col max-h-[400px]">
+            <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+              <Truck className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && <p className="text-center py-10 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>}
+              {editedOrder.deliveryTimeLine?.map((log, idx) => {
+                const logStyle = getStatusStyle(log.status);
+                const logKey = getStatusKey(log.status);
+                const logColors = statusColors[logKey] || statusColors.default;
+
+                return (
+                  <div key={idx} className="bg-slate-50/60 rounded-[1.5rem] p-5 border border-slate-100 space-y-2 relative">
+                    <div className="flex justify-between items-start">
+                      <span
+                        className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
+                        style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
+                      >
+                        {getStatusLabel(log.status)}
+                      </span>
+                      <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
                     </div>
                     <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
                     <div className="flex items-center gap-1.5 pt-1">
@@ -485,75 +706,178 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         isDeleting={isDeleting}
       />
 
-      {/* Status Modal */}
+      {/* Status Modal - 2 Step Process */}
       {isAddLogOpen && (
         <React.Fragment>
           {typeof document !== 'undefined' && ReactDOM.createPortal(
             <div className="fixed inset-0 z-[250] grid place-items-center overflow-y-auto py-10 px-4">
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsAddLogOpen(false)}></div>
-              <div className="relative z-10 bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col my-auto">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div className="relative z-10 bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col my-auto h-[600px]">
+                <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><CheckCircle2 className="w-5 h-5" /></div>
-                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">تحديث الحالة</h4>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">تحديث الحالة</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">
+                        قم بتغيير حالة الطلب وإضافة ملاحظة
+                      </p>
+                    </div>
                   </div>
                   <button onClick={() => setIsAddLogOpen(false)} className="text-slate-400 hover:text-rose-500"><X className="w-8 h-8" /></button>
                 </div>
 
-                <div className="p-10 space-y-8">
-                  <div className="space-y-4">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">اختر الحالة</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {statusesToDisplay.map((statusObj: any, idx: number) => {
-                        const isSelected = getStatusKey(newLog.status) === getStatusKey(statusObj);
-                        const statusStyle = getStatusStyle(statusObj);
-                        const fallbackColors = statusColors[getStatusKey(statusObj)] || statusColors.default;
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الحالة الجديدة</label>
+                    <ModernSelect
+                      value={(() => {
+                        const currentKey = getStatusKey(newLog.status);
+                        // Find the full object from statusesToDisplay to ensure we have the correct label
+                        const foundStatus = statusesToDisplay.find((s: any) => getStatusKey(s) === currentKey);
+                        return foundStatus ? (foundStatus.id || foundStatus.nameEN) : subStatusKey(newLog.status);
 
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => setNewLog({ ...newLog, status: statusObj })}
-                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center group h-full
-                          ${isSelected ? `border-indigo-600 ring-4 ring-indigo-500/10` : `border-slate-50 bg-slate-50 hover:bg-slate-100`} `}
-                            style={isSelected && statusStyle ? { backgroundColor: statusStyle.backgroundColor } : {}}
-                          >
-                            <div
-                              className={`w-3 h-3 rounded-full border shadow-sm ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.border}` : ''}`}
-                              style={statusStyle ? { backgroundColor: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                            ></div>
-                            <span
-                              className={`text-[10px] font-black uppercase tracking-tight leading-tight ${!statusStyle ? fallbackColors.text : ''}`}
-                              style={statusStyle ? { color: statusStyle.color } : {}}
-                            >
-                              {getStatusLabel(statusObj)}
-                            </span>
-                            {isSelected && <div className="absolute top-1 left-1 bg-indigo-600 rounded-full p-0.5 shadow-sm"><Check className="w-2.5 h-2.5 text-white" /></div>}
-                          </button>
-                        );
-                      })}
-                    </div>
+                        function subStatusKey(s: any) {
+                          if (typeof s === 'object' && s !== null) return s.id; // prefer ID for value
+                          return s || '';
+                        }
+                      })()}
+                      onChange={(val) => {
+                        // Find the full status object based on the selected value (ID or Name)
+                        const selectedStatus = statusesToDisplay.find((s: any) => s.id === val || s.nameEN === val);
+                        setNewLog({ ...newLog, status: selectedStatus || val });
+                      }}
+                      options={statusesToDisplay.map((s: any) => ({
+                        value: s.id || s.nameEN, // Use ID if available
+                        label: s.nameAR || s.nameEN,
+                        color: s.color // Pass color
+                      }))}
+                      placeholder="اختر الحالة..."
+                    />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">الملاحظة</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة (اختياري)</label>
                     <textarea
                       value={newLog.note}
                       onChange={e => setNewLog({ ...newLog, note: e.target.value })}
                       placeholder="اكتب ملاحظة التغيير..."
-                      className="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
+                      className="w-full min-h-[120px] px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
                     />
                   </div>
                 </div>
 
-                <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
-                  <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest">إلغاء</button>
-                  <button onClick={addStatusUpdate} className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30">حفظ الحالة الجديدة</button>
+                <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4 shrink-0">
+                  <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100">إلغاء</button>
+                  <button onClick={addStatusUpdate} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700">تأكيد التحديث</button>
                 </div>
               </div>
             </div>,
             document.body
           )}
         </React.Fragment>
+      )}
+
+      {/* Select Delivery Company Modal */}
+      {isDeliveryModalOpen && (
+        <div className="fixed inset-0 z-[250] grid place-items-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsDeliveryModalOpen(false)}></div>
+          <div className="relative z-10 bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">إرسال للتوصيل</h4>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">اختر شركة التوصيل لإسناد الطلب</p>
+                </div>
+              </div>
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+
+            <div className="p-8">
+              {loadingCompanies ? (
+                <div className="py-12 flex justify-center">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                </div>
+              ) : deliveryCompanies.length === 0 ? (
+                <div className="text-center py-12">
+                  <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+                  <p className="text-xs font-bold text-slate-500">لا توجد شركات توصيل متاحة</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+                  {deliveryCompanies.map(company => (
+                    <label key={company.id} className={`flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+                          {company.logo ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-2" /> : <Truck className="w-6 h-6 text-slate-300" />}
+                        </div>
+                        <span className="font-black text-sm text-slate-700">{company.name}</span>
+                      </div>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 bg-white'}`}>
+                        {selectedCompanyId === company.id && <Check className="w-4 h-4 text-white" />}
+                      </div>
+                      <input
+                        type="radio"
+                        name="deliveryCompany"
+                        value={company.id}
+                        checked={selectedCompanyId === company.id}
+                        onChange={() => setSelectedCompanyId(company.id)}
+                        className="hidden"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100 transition-all">إلغاء</button>
+              <button
+                onClick={handleSendToDelivery}
+                disabled={!selectedCompanyId || isSendingToDelivery}
+                className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                {isSendingToDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Truck className="w-4 h-4" /> إرسال الطلب</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 z-[300] grid place-items-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsSuccessModalOpen(false)}></div>
+          <div className="relative z-10 bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="bg-emerald-500 py-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-5 ring-4 ring-white/10 shadow-lg">
+                <CheckCircle2 className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-white font-black text-2xl tracking-tight">تم الإرسال بنجاح!</h3>
+              <p className="text-emerald-100 text-xs font-bold mt-2 uppercase tracking-widest">تم إسناد الطلب لشركة {successCompanyName}</p>
+            </div>
+
+            <div className="p-10">
+              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center group relative hover:border-indigo-300 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">كود التتبع / Tracking Code</p>
+                <div className="flex items-center justify-center gap-3">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-wider font-mono select-all cursor-pointer" onClick={copyTracking}>{successTrackingCode}</h2>
+                  <button onClick={copyTracking} className="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-xl hover:bg-indigo-50"><Copy className="w-5 h-5" /></button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsSuccessModalOpen(false)}
+                className="w-full mt-8 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                موافق، إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

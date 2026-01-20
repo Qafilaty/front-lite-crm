@@ -8,6 +8,7 @@ import {
 import ProductModal from './ProductModal';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import EmptyState from './common/EmptyState';
+import TableSkeleton from './common/TableSkeleton';
 import toast from 'react-hot-toast';
 
 interface InventoryViewProps {
@@ -132,13 +133,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     setExpandedProductId(prev => prev === id ? null : id);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex flex-col h-full font-sans" dir="rtl">
@@ -196,7 +191,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       </div>
 
       {/* Products Table */}
-      {filteredProducts.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden p-6">
+          <TableSkeleton columns={6} rows={8} />
+        </div>
+      ) : filteredProducts.length === 0 ? (
         <EmptyState
           icon={Box}
           title={searchQuery ? "لا توجد نتائج" : "المخزون فارغ"}

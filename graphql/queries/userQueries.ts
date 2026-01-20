@@ -44,8 +44,8 @@ export const GET_CURRENT_USER = gql`
 `;
 
 export const GET_ALL_USERS = gql`
-  query GetAllUsers {
-    allUser {
+  query GetAllUsers($idCompany: ID) {
+    allUser(idCompany: $idCompany) {
       id
       name
       email
@@ -53,6 +53,8 @@ export const GET_ALL_USERS = gql`
       role
       activation
       createdAt
+      numberDeliveredOrder
+      orderPrice
     }
   }
 `;

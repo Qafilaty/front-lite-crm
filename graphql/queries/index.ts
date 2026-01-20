@@ -46,3 +46,16 @@ export {
 export {
   GET_ALL_STATUS_COMPANY,
 } from './companyQueries';
+
+// Invoice Queries
+export {
+  GET_INVOICE,
+  GET_ALL_INVOICES,
+} from './invoiceQueries';
+
+// Coupon Queries
+export {
+  GET_COUPON,
+  GET_COUPON_BY_CODE,
+  GET_ALL_COUPONS,
+} from './couponQueries';

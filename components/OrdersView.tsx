@@ -1,23 +1,28 @@
 
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { Order, OrderItem } from '../types';
-import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3 } from 'lucide-react';
+import { Order, OrderItem, DeliveryCompany } from '../types';
+import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3, Truck, Copy, AlertCircle } from 'lucide-react';
+import { deliveryCompanyService } from '../services/apiService';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './common/LoadingSpinner';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import toast from 'react-hot-toast';
+import TableSkeleton from './common/TableSkeleton';
 
 interface OrdersViewProps {
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   onCreateOrder?: (orderData: any) => Promise<boolean>;
-  onDeleteOrder?: (id: string) => Promise<boolean>;
+  isLoading?: boolean;
 }
 
 const OrdersView: React.FC<OrdersViewProps> = ({
   orders,
   setOrders,
   onCreateOrder,
-  onDeleteOrder
+  onDeleteOrder,
+  isLoading = false
 }) => {
   // --- States ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -27,6 +32,28 @@ const OrdersView: React.FC<OrdersViewProps> = ({
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const { user } = useAuth(); // Auth Hook
+
+  // Send to Delivery States
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState<string | null>(null);
+  const [deliveryCompanies, setDeliveryCompanies] = useState<DeliveryCompany[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false); // Added missing state
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [isSendingToDelivery, setIsSendingToDelivery] = useState(false);
+
+  // Success Modal States
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successTrackingCode, setSuccessTrackingCode] = useState<string | null>(null);
+  const [successCompanyName, setSuccessCompanyName] = useState<string | null>(null);
+
+  // ... (rest of state items are unchanged, skipping them in replacement chunk if possible? No, replace tool needs contiguous block. I'll include state definitions or use larger context if needed, but wait, I can just replace the interface and destructuring first, then the render part separately.)
+
+  // Splitting this into two tool calls is safer/cleaner.
+  // Call 1: Interface and Destructuring.
+  // Call 2: The Render block.
+
+
   // New Order Form State
   const initialOrderState = {
     firstName: '',
@@ -34,7 +61,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     phone: '',
     address: '',
     state: '',
-    commune: '', // municipality
+    city: '', // city
     deliveryType: 'home', // 'home' | 'stopdesk'
     items: [] as OrderItem[],
     note: ''
@@ -96,7 +123,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
       fullName: `${newOrder.firstName} ${newOrder.lastName}`,
       phone: newOrder.phone,
       address: newOrder.address,
-      municipality: newOrder.commune, // Assuming API expects this or similar
+      city: newOrder.city, // Assuming API expects this or similar
       wilaya: newOrder.state, // Map 'state' to 'wilaya' if needed
       deliveryType: newOrder.deliveryType,
       note: newOrder.note,
@@ -148,6 +175,66 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     }
   };
 
+  // --- Delivery Handlers ---
+  const openDeliveryModal = async (orderId: string) => {
+    setSelectedOrderForDelivery(orderId);
+    setIsDeliveryModalOpen(true);
+
+    // Load companies if not loaded
+    if (deliveryCompanies.length === 0 && user?.company?.id) {
+      setLoadingCompanies(true);
+      try {
+        const result = await deliveryCompanyService.getAllDeliveryCompanies(user.company.id);
+        if (result.success && result.deliveryCompanies) {
+          setDeliveryCompanies(result.deliveryCompanies);
+        }
+      } catch (err) {
+        console.error("Error fetching companies", err);
+        toast.error("فشل تحميل شركات التوصيل");
+      } finally {
+        setLoadingCompanies(false);
+      }
+    }
+  };
+
+  const handleSendToDelivery = async () => {
+    if (!selectedCompanyId || !selectedOrderForDelivery || !user?.company?.id) return;
+
+    setIsSendingToDelivery(true);
+    const result = await deliveryCompanyService.addOrderToDeliveryCompany(
+      user.company.id,
+      selectedCompanyId,
+      [selectedOrderForDelivery]
+    );
+
+    setIsSendingToDelivery(false);
+
+    if (result.success && result.data?.successOrder?.length > 0) {
+      const successOrder = result.data.successOrder[0];
+      const tracking = successOrder.deliveryCompany?.trackingCode || 'Unknown';
+      const companyName = deliveryCompanies.find(c => c.id === selectedCompanyId)?.name || 'الشركة';
+
+      setSuccessTrackingCode(tracking);
+      setSuccessCompanyName(companyName);
+      setIsDeliveryModalOpen(false);
+      setIsSuccessModalOpen(true);
+
+      toast.success('تم إرسال الطلب بنجاح');
+
+      // Update local order status if needed
+      // setOrders(...)
+    } else {
+      toast.error('فشل إرسال الطلب. تحقق من البيانات.');
+    }
+  };
+
+  const copyTracking = () => {
+    if (successTrackingCode) {
+      navigator.clipboard.writeText(successTrackingCode);
+      toast.success('تم نسخ كود التتبع');
+    }
+  };
+
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -168,50 +255,63 @@ const OrdersView: React.FC<OrdersViewProps> = ({
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المعرف</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">العميل</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المنتج</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">القيمة</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الحالة</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">التاريخ</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50/50 transition-all group">
-                  <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">#{order.id}</td>
-                  <td className="px-6 py-4 text-[12px] text-slate-800 font-black">{order.customer}</td>
-                  <td className="px-6 py-4 text-[11px] text-slate-500 font-medium">{order.product}</td>
-                  <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} ر.س</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${getStatusStyle(order.status)}`}>
-                      {getStatusLabel(order.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-[10px] text-slate-400 font-bold">{order.date}</td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => confirmDelete(order.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+        {isLoading ? (
+          <div className="p-6">
+            <TableSkeleton columns={7} rows={8} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المعرف</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">العميل</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المنتج</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">القيمة</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الحالة</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">التاريخ</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
                 </tr>
-              ))}
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-400 text-xs font-bold">لا توجد طلبات لعرضها</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50/50 transition-all group">
+                    <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">#{order.id}</td>
+                    <td className="px-6 py-4 text-[12px] text-slate-800 font-black">{order.customer}</td>
+                    <td className="px-6 py-4 text-[11px] text-slate-500 font-medium">{order.product}</td>
+                    <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} ر.س</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${getStatusStyle(order.status)}`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-[10px] text-slate-400 font-bold">{order.date}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => openDeliveryModal(order.id)}
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        title="إرسال للتوصيل"
+                      >
+                        <Truck className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => confirmDelete(order.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-10 text-slate-400 text-xs font-bold">لا توجد طلبات لعرضها</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Create Order Modal */}
@@ -302,8 +402,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
                         <input
                           type="text"
-                          value={newOrder.commune}
-                          onChange={e => setNewOrder({ ...newOrder, commune: e.target.value })}
+                          value={newOrder.city}
+                          onChange={e => setNewOrder({ ...newOrder, city: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                           placeholder="البلدية..."
                         />
@@ -458,6 +558,106 @@ const OrdersView: React.FC<OrdersViewProps> = ({
         description="هل أنت متأكد من أنك تريد حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
         isDeleting={isDeleting}
       />
+
+      {/* Select Delivery Company Modal */}
+      {isDeliveryModalOpen && (
+        <div className="fixed inset-0 z-[100] grid place-items-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setIsDeliveryModalOpen(false)}></div>
+          <div className="relative z-10 bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">إرسال للتوصيل</h4>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">اختر شركة التوصيل لإسناد الطلب</p>
+                </div>
+              </div>
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="p-6">
+              {loadingCompanies ? (
+                <div className="py-8 flex justify-center">
+                  <LoadingSpinner size="md" />
+                </div>
+              ) : deliveryCompanies.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-500">لا توجد شركات توصيل متاحة</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {deliveryCompanies.map(company => (
+                    <label key={company.id} className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 hover:border-slate-200'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-100 flex items-center justify-center">
+                          {company.logo ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-1" /> : <Truck className="w-5 h-5 text-slate-300" />}
+                        </div>
+                        <span className="font-black text-xs text-slate-700">{company.name}</span>
+                      </div>
+                      <input
+                        type="radio"
+                        name="deliveryCompany"
+                        value={company.id}
+                        checked={selectedCompanyId === company.id}
+                        onChange={() => setSelectedCompanyId(company.id)}
+                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-100 transition-all">إلغاء</button>
+              <button
+                onClick={handleSendToDelivery}
+                disabled={!selectedCompanyId || isSendingToDelivery}
+                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSendingToDelivery ? <LoadingSpinner size="sm" color="white" /> : <><Truck className="w-4 h-4" /> إرسال الطلب</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 z-[100] grid place-items-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setIsSuccessModalOpen(false)}></div>
+          <div className="relative z-10 bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="bg-emerald-500 py-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 ring-4 ring-white/10">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-white font-black text-xl tracking-tight">تم الإرسال بنجاح!</h3>
+              <p className="text-emerald-100 text-[11px] font-bold mt-1 uppercase tracking-widest">تم إسناد الطلب لشركة {successCompanyName}</p>
+            </div>
+
+            <div className="p-8">
+              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center group relative hover:border-indigo-300 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">كود التتبع / Tracking Code</p>
+                <div className="flex items-center justify-center gap-2">
+                  <h2 className="text-2xl font-black text-slate-800 tracking-wider font-mono select-all" onClick={copyTracking}>{successTrackingCode}</h2>
+                  <button onClick={copyTracking} className="text-slate-400 hover:text-indigo-600 transition-colors p-1"><Copy className="w-5 h-5" /></button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsSuccessModalOpen(false)}
+                className="w-full mt-6 py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                موافق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -18,7 +18,7 @@ const OrderTrackingPage: React.FC = () => {
         const result = await orderService.getAllOrders(user.company.id, {
           pagination: { limit: 100, page: 1 }
         });
-        
+
         if (result.success) {
           // تحويل البيانات من Backend إلى نوع Order
           const transformedOrders = result.orders.map((order: any) => ({
@@ -26,7 +26,7 @@ const OrderTrackingPage: React.FC = () => {
             customer: order.fullName || '',
             phone: order.phone || '',
             state: order.state?.name || '',
-            municipality: order.city || '',
+            city: order.city || '',
             address: order.address || '',
             deliveryType: order.deliveryType === 'home' ? 'home' : 'office',
             items: order.products?.map((p: any) => ({

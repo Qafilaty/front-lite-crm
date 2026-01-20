@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { View } from '../types';
-import { LayoutDashboard, Users, CheckCircle2, Truck, Box, LogOut, Zap, ChevronLeft, ChevronRight, Share2, Store, Map, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, Truck, Box, LogOut, Zap, ChevronLeft, ChevronRight, Share2, Store, Map, BookOpen, Wallet, Banknote } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 interface SidebarProps {
   currentView: View;
@@ -30,6 +30,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       ]
     },
     {
+      title: 'المالية',
+      items: [
+        { id: View.FINANCES, label: 'العمليات المالية', icon: Wallet },
+        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard }, // User called it Order Stats
+        { id: View.SALARIES, label: 'الرواتب والعمولات', icon: Banknote },
+      ]
+    },
+    {
       title: 'الربط والتقنية',
       items: [
         { id: View.SHIPPING_CARRIERS, label: 'شركات التوصيل', icon: Share2 },
@@ -47,13 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       md:translate-x-0
     `}>
-      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0">
-            <Zap className="w-5 h-5 text-white fill-current" />
-          </div>
-          {!isCollapsed && <h1 className="text-lg font-black text-white tracking-tight truncate">داش آي</h1>}
-        </div>
+      <div className={`h-16 flex items-center border-b border-slate-800/50 ${isCollapsed ? 'justify-center' : 'justify-between px-6'}`}>
+        {/* Logo and Pro Badge */}
+        {!isCollapsed ? (
+          <>
+            <img src={logo} alt="Logo" className="w-16 h-auto object-contain" />
+            <div className="bg-amber-400/10 text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-amber-400/20 tracking-wider">PRO</div>
+          </>
+        ) : (
+          <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
+        )}
       </div>
 
       <nav className="flex-1 px-3 mt-4 space-y-6 overflow-y-auto custom-scrollbar">
@@ -90,21 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         ))}
       </nav>
 
-      <div className="p-4 space-y-2 border-t border-slate-800/50">
-        <button 
-          onClick={onLogout}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all duration-200 group ${isCollapsed ? 'justify-center' : ''}`}>
-          <LogOut className="w-5 h-5 flex-shrink-0 group-hover:rotate-12 transition-transform" />
-          {!isCollapsed && <span className="text-[12px] font-bold">خروج</span>}
-        </button>
 
-        <button 
-          onClick={onToggleCollapse}
-          className="hidden md:flex w-full items-center justify-center py-2 text-slate-600 hover:text-indigo-400 transition-colors"
-        >
-          {isCollapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-        </button>
-      </div>
     </aside>
   );
 };

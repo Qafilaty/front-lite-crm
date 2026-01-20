@@ -17,6 +17,14 @@ import {
   GET_ALL_WILAYAS,
 } from '../graphql/queries';
 import {
+  GET_ALL_FINANCIAL_TRANSACTIONS,
+  GET_FINANCIAL_TRANSACTION,
+} from '../graphql/queries/financialTransactionQueries';
+import {
+  GET_ALL_SALARIES,
+  GET_SALARY,
+} from '../graphql/queries/salaryQueries';
+import {
   GET_ALL_DELIVERY_PRICE_COMPANY,
 } from '../graphql/queries/deliveryQueries';
 import {
@@ -41,11 +49,38 @@ import {
   CREATE_DELIVERY_COMPANY,
   UPDATE_DELIVERY_COMPANY,
   DELETE_DELIVERY_COMPANY,
+  ADD_ORDER_TO_DELIVERY_COMPANY,
 } from '../graphql/mutations';
+import {
+  CREATE_FINANCIAL_TRANSACTION,
+  UPDATE_FINANCIAL_TRANSACTION,
+  DELETE_FINANCIAL_TRANSACTION,
+} from '../graphql/mutations/financialTransactionMutations';
+import {
+  CREATE_SALARY,
+  UPDATE_SALARY,
+  DELETE_SALARY,
+} from '../graphql/mutations/salaryMutations';
 import {
   CREATE_DELIVERY_PRICE,
   UPDATE_DELIVERY_PRICE,
 } from '../graphql/mutations/deliveryMutations';
+import {
+  GET_INVOICE,
+  GET_ALL_INVOICES,
+  GET_COUPON,
+  GET_COUPON_BY_CODE,
+  GET_ALL_COUPONS,
+} from '../graphql/queries';
+import {
+  CREATE_INVOICE,
+  UPDATE_INVOICE,
+  CHANGE_STATUS_INVOICE,
+  DELETE_INVOICE,
+  CREATE_COUPON,
+  UPDATE_COUPON,
+  DELETE_COUPON,
+} from '../graphql/mutations';
 import type { User, Order, Product } from '../types';
 
 // Auth Service
@@ -130,10 +165,11 @@ export const authService = {
 
 // User Service
 export const userService = {
-  async getAllUsers() {
+  async getAllUsers(idCompany?: string) {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_USERS,
+        variables: { idCompany },
         fetchPolicy: 'network-only',
       });
       return { success: true, users: data?.allUser || [] };
@@ -612,6 +648,26 @@ export const deliveryCompanyService = {
       return { success: false, error: error.message };
     }
   },
+
+  async addOrderToDeliveryCompany(idCompany: string, idDeliveryCompany: string, orderIds: string[]) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: ADD_ORDER_TO_DELIVERY_COMPANY,
+        variables: {
+          idCompany,
+          idDeliveryCompany,
+          ids: orderIds
+        }
+      });
+      return {
+        success: true,
+        data: data?.addOrderToDeliveryCompany
+      };
+    } catch (error: any) {
+      console.error('Add order to delivery company error:', error);
+      return { success: false, error: error.message };
+    }
+  },
 };
 
 // Wilayas Service
@@ -671,6 +727,320 @@ export const deliveryPricingService = {
       };
     } catch (error: any) {
       console.error('Update delivery price error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
+// Financial Transaction Service
+export const financialTransactionService = {
+  async getAllFinancialTransactions(idCompany: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_FINANCIAL_TRANSACTIONS,
+        variables: { idCompany, ...options },
+        fetchPolicy: 'network-only',
+      });
+      return {
+        success: true,
+        financialTransactions: data?.allFinancialTransactions?.data || [],
+        total: data?.allFinancialTransactions?.total || 0,
+        totalIncome: data?.allFinancialTransactions?.totalIncome || 0,
+        totalExpense: data?.allFinancialTransactions?.totalExpense || 0,
+        balance: data?.allFinancialTransactions?.balance || 0,
+      };
+    } catch (error: any) {
+      console.error('Get all financial transactions error:', error);
+      return { success: false, error: error.message, financialTransactions: [] };
+    }
+  },
+
+  async createFinancialTransaction(transactionData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_FINANCIAL_TRANSACTION,
+        variables: { content: transactionData },
+      });
+      return { success: true, financialTransaction: data?.createFinancialTransaction };
+    } catch (error: any) {
+      console.error('Create financial transaction error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateFinancialTransaction(id: string, transactionData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_FINANCIAL_TRANSACTION,
+        variables: { id, content: transactionData },
+      });
+      return {
+        success: data?.updateFinancialTransaction?.status,
+        financialTransaction: data?.updateFinancialTransaction?.data,
+      };
+    } catch (error: any) {
+      console.error('Update financial transaction error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async deleteFinancialTransaction(id: string) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DELETE_FINANCIAL_TRANSACTION,
+        variables: { id },
+      });
+      return { success: data?.deleteFinancialTransaction?.status };
+    } catch (error: any) {
+      console.error('Delete financial transaction error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
+// Salary Service
+export const salaryService = {
+  async getAllSalaries(idCompany: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_SALARIES,
+        variables: { idCompany, ...options },
+        fetchPolicy: 'network-only',
+      });
+      return {
+        success: true,
+        salaries: data?.allSalaries?.data || [],
+        total: data?.allSalaries?.total || 0,
+        totalAmount: data?.allSalaries?.totalAmount || 0,
+      };
+    } catch (error: any) {
+      console.error('Get all salaries error:', error);
+      return { success: false, error: error.message, salaries: [] };
+    }
+  },
+
+  async createSalary(salaryData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_SALARY,
+        variables: { content: salaryData },
+      });
+      return { success: true, salary: data?.createSalary };
+    } catch (error: any) {
+      console.error('Create salary error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateSalary(id: string, salaryData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_SALARY,
+        variables: { id, content: salaryData },
+      });
+      return {
+        success: data?.updateSalary?.status,
+        salary: data?.updateSalary?.data,
+      };
+    } catch (error: any) {
+      console.error('Update salary error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async deleteSalary(id: string) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DELETE_SALARY,
+        variables: { id },
+      });
+      return { success: data?.deleteSalary?.status };
+    } catch (error: any) {
+      console.error('Delete salary error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
+// Invoice Service
+export const invoiceService = {
+  async getAllInvoices(idCompany?: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_INVOICES,
+        variables: { idCompany, ...options },
+        fetchPolicy: 'network-only',
+      });
+      return {
+        success: true,
+        invoices: data?.allInvoice?.data || [],
+        total: data?.allInvoice?.total || 0,
+      };
+    } catch (error: any) {
+      console.error('Get all invoices error:', error);
+      return { success: false, error: error.message, invoices: [] };
+    }
+  },
+
+  async getInvoice(id: string) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_INVOICE,
+        variables: { id },
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, invoice: data?.invoice };
+    } catch (error: any) {
+      console.error('Get invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async createInvoice(invoiceData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_INVOICE,
+        variables: { content: invoiceData },
+      });
+      return { success: true, invoice: data?.createInvoice };
+    } catch (error: any) {
+      console.error('Create invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateInvoice(id: string, invoiceData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_INVOICE,
+        variables: { id, content: invoiceData },
+      });
+      return {
+        success: data?.updateInvoice?.status,
+        invoice: data?.updateInvoice?.data,
+      };
+    } catch (error: any) {
+      console.error('Update invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async changeStatusInvoice(id: string, status: string) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CHANGE_STATUS_INVOICE,
+        variables: { id, status },
+      });
+      return {
+        success: data?.changeStatusInvoice?.status,
+        invoice: data?.changeStatusInvoice?.data,
+      };
+    } catch (error: any) {
+      console.error('Change status invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async deleteInvoice(id: string) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DELETE_INVOICE,
+        variables: { id },
+      });
+      return { success: data?.deleteInvoice?.status };
+    } catch (error: any) {
+      console.error('Delete invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
+// Coupon Service
+export const couponService = {
+  async getAllCoupons(options?: { pagination?: { limit: number; page: number } }) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_ALL_COUPONS,
+        variables: { ...options },
+        fetchPolicy: 'network-only',
+      });
+      return {
+        success: true,
+        coupons: data?.allCoupon?.data || [],
+        total: data?.allCoupon?.total || 0,
+      };
+    } catch (error: any) {
+      console.error('Get all coupons error:', error);
+      return { success: false, error: error.message, coupons: [] };
+    }
+  },
+
+  async getCoupon(id: string) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_COUPON,
+        variables: { id },
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, coupon: data?.coupon };
+    } catch (error: any) {
+      console.error('Get coupon error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async getCouponByCode(code: string) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_COUPON_BY_CODE,
+        variables: { code },
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, coupon: data?.couponByCode };
+    } catch (error: any) {
+      console.error('Get coupon by code error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async createCoupon(couponData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_COUPON,
+        variables: { content: couponData },
+      });
+      return { success: true, coupon: data?.createCoupon };
+    } catch (error: any) {
+      console.error('Create coupon error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateCoupon(id: string, couponData: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_COUPON,
+        variables: { id, content: couponData },
+      });
+      return {
+        success: data?.updateCoupon?.status,
+        coupon: data?.updateCoupon?.data,
+      };
+    } catch (error: any) {
+      console.error('Update coupon error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  async deleteCoupon(id: string) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DELETE_COUPON,
+        variables: { id },
+      });
+      return { success: data?.deleteCoupon?.status };
+    } catch (error: any) {
+      console.error('Delete coupon error:', error);
       return { success: false, error: error.message };
     }
   },

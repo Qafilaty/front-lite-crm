@@ -11,6 +11,7 @@ export const GET_ALL_WILAYAS = gql`
       communes {
         id
         name
+        arName
       }
     }
   }

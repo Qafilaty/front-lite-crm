@@ -24,6 +24,8 @@ const UsersPage: React.FC = () => {
           joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar-SA') : new Date().toLocaleDateString('ar-SA'),
           ordersLocked: u.role === 'confirmed' ? false : undefined,
           activation: u.activation,
+          numberDeliveredOrder: u.numberDeliveredOrder || 0,
+          orderPrice: u.orderPrice || 0
         }));
         setUsers(transformedUsers);
       }
@@ -44,7 +46,7 @@ const UsersPage: React.FC = () => {
         ...userData,
         idCompany: currentUser?.company?.id,
       });
-      
+
       if (result.success) {
         await loadUsers(); // Reload users
         return true;
@@ -59,7 +61,7 @@ const UsersPage: React.FC = () => {
   const handleUpdateUser = async (id: string, userData: any) => {
     try {
       const result = await userService.updateUser(id, userData);
-      
+
       if (result.success) {
         await loadUsers(); // Reload users
         return true;
@@ -74,7 +76,7 @@ const UsersPage: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
     try {
       const result = await userService.deleteUser(id);
-      
+
       if (result.success) {
         await loadUsers(); // Reload users
         return true;
@@ -89,7 +91,7 @@ const UsersPage: React.FC = () => {
   const handleToggleActivation = async (id: string, activation: boolean) => {
     try {
       const result = await userService.activeUser(id, activation);
-      
+
       if (result.success) {
         await loadUsers(); // Reload users
         return true;
@@ -101,25 +103,15 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600 font-bold">جاري تحميل المستخدمين...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <UsersView 
-      users={users} 
+    <UsersView
+      users={users}
       setUsers={setUsers}
       onAdd={handleAddUser}
       onUpdate={handleUpdateUser}
       onDelete={handleDeleteUser}
       onToggleActivation={handleToggleActivation}
+      isLoading={loading}
     />
   );
 };

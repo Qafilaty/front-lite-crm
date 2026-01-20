@@ -6,10 +6,13 @@ import { Order } from '../types';
 export const transformBackendOrder = (order: any): Order => {
   return {
     id: order.id,
+    numberOrder: order.numberOrder,
     customer: order.fullName || '',
+    fullName: order.fullName,
     phone: order.phone || '',
-    state: order.state?.name || '',
-    municipality: order.city || '',
+    phone2: order.phone2,
+    state: order.state || '', // Changed to allow object if backend sends it
+    city: order.city || '',
     address: order.address || '',
     deliveryType: order.deliveryType === 'home' ? 'home' : 'office',
     items: order.products?.map((p: any) => ({
@@ -19,7 +22,11 @@ export const transformBackendOrder = (order: any): Order => {
       price: p.price || 0,
     })) || [],
     shippingCost: order.deliveryPrice || 0,
+    deliveryPrice: order.deliveryPrice,
     amount: order.totalPrice || 0,
+    totalPrice: order.totalPrice,
+    subTotalPrice: order.subTotalPrice,
+    totalQuantity: order.totalQuantity,
     status: order.status || 'pending',
     storeName: order.store?.store?.name || '',
     notes: order.note,
@@ -34,6 +41,7 @@ export const transformBackendOrder = (order: any): Order => {
     })) || [],
     trackingNumber: order.deliveryCompany?.trackingCode,
     carrier: order.deliveryCompany?.deliveryCompany?.name,
+    deliveryCompany: order.deliveryCompany,
   };
 };
 

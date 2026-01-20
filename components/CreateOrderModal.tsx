@@ -8,6 +8,7 @@ import {
 import { useMutation, useQuery } from '@apollo/client';
 import { GET_ALL_WILAYAS } from '../graphql/queries';
 import { CREATE_ORDER } from '../graphql/mutations/orderMutations';
+import { ModernSelect } from './common';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
 import { Product, Wilaya } from '../types';
@@ -28,7 +29,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         phone: '',
         state: '', // ID or Name depending on needs, logic below maps it
         stateCode: '',
-        municipality: '', // City
+        city: '', // City
         address: '',
         deliveryType: 'home' as 'home' | 'office',
         shippingCost: 0,
@@ -153,7 +154,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             name: selectedWilaya?.name,
                             code: selectedWilaya?.code
                         },
-                        city: newOrder.municipality,
+                        city: newOrder.city,
                         address: newOrder.address,
 
                         deliveryType: newOrder.deliveryType, // 'home' or 'office'
@@ -186,7 +187,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
             onClose();
             // Reset form
             setNewOrder({
-                customer: '', phone: '', state: '', stateCode: '', municipality: '',
+                customer: '', phone: '', state: '', stateCode: '', city: '',
                 address: '', deliveryType: 'home', shippingCost: 0, notes: ''
             });
             setCart([]);
@@ -263,26 +264,28 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
-                                <select
+                                <ModernSelect
                                     value={newOrder.state}
-                                    onChange={e => setNewOrder({ ...newOrder, state: e.target.value, municipality: '' })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white outline-none transition-all"
-                                >
-                                    <option value="">اختر الولاية...</option>
-                                    {wilayas.map(w => <option key={w.id} value={w.name}>{w.code} - {w.name}</option>)}
-                                </select>
+                                    onChange={(val) => setNewOrder({ ...newOrder, state: val, city: '' })}
+                                    options={[
+                                        { value: '', label: 'اختر الولاية...' },
+                                        ...wilayas.map(w => ({ value: w.name, label: `${w.code} - ${w.name}` }))
+                                    ]}
+                                    placeholder="اختر الولاية..."
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
-                                <select
+                                <ModernSelect
                                     disabled={!newOrder.state}
-                                    value={newOrder.municipality}
-                                    onChange={e => setNewOrder({ ...newOrder, municipality: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white outline-none transition-all disabled:opacity-50"
-                                >
-                                    <option value="">اختر البلدية...</option>
-                                    {selectedWilaya?.communes?.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                </select>
+                                    value={newOrder.city}
+                                    onChange={(val) => setNewOrder({ ...newOrder, city: val })}
+                                    options={[
+                                        { value: '', label: 'اختر البلدية...' },
+                                        ...(selectedWilaya?.communes?.map(c => ({ value: c.name, label: c.name })) || [])
+                                    ]}
+                                    placeholder="اختر البلدية..."
+                                />
                             </div>
                             <div className="col-span-full space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>

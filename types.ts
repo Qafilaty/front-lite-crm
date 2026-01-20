@@ -18,7 +18,10 @@ export enum View {
   API_DOCS = 'api_docs',
   SUBSCRIPTIONS = 'subscriptions',
   LOGIN = 'login',
-  REGISTER = 'register'
+  REGISTER = 'register',
+  FINANCES = 'finances',
+  FINANCIAL_STATS = 'financial_stats',
+  SALARIES = 'salaries'
 }
 
 export interface OrderItem {
@@ -78,15 +81,22 @@ export interface StatusOrderObject {
 
 export interface Order {
   id: string;
-  customer: string;
+  numberOrder?: string;
+  customer: string; // derived from fullName
+  fullName?: string; // backend field
   phone: string;
-  state: string;
-  municipality: string;
+  phone2?: string;
+  state: string | { name: string; code?: string; idState?: string };
+  city: string;
   address: string;
   deliveryType: 'home' | 'office';
   items: OrderItem[];
-  shippingCost: number;
-  amount: number;
+  shippingCost: number; // deliveryPrice
+  deliveryPrice?: number; // backend field
+  amount: number; // totalPrice
+  totalPrice?: number; // backend field
+  subTotalPrice?: number;
+  totalQuantity?: number;
   status: OrderStatus | StatusOrderObject;
   storeName: string;
   notes?: string;
@@ -94,8 +104,15 @@ export interface Order {
   updatedAt: string;
   lastStatusDate: string;
   history?: OrderLog[];
+  confirmationTimeLine?: OrderLog[];
+  deliveryTimeLine?: OrderLog[];
   trackingNumber?: string;
   carrier?: string;
+  deliveryCompany?: {
+    deliveryCompany: DeliveryCompany;
+    status?: string;
+    trackingCode?: string;
+  };
 }
 
 export interface User {
@@ -107,6 +124,8 @@ export interface User {
   joinedDate: string;
   ordersLocked?: boolean;
   activation?: boolean;
+  numberDeliveredOrder?: number;
+  orderPrice?: number;
 }
 
 export interface VariantValue {
@@ -225,4 +244,36 @@ export interface DeliveryCompany {
   availableDeliveryCompany?: AvailableDeliveryCompany;
   // Dynamic fields will be stored here or handled via a specific property
   [key: string]: any;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  date: string;
+  note: string;
+  user: string;
+}
+
+export interface Coupon {
+  id: string;
+  name: string;
+  code: string;
+  discount: number;
+}
+
+export interface Invoice {
+  id: string;
+  plan: string;
+  price: number;
+  discount: number;
+  amount: number; // For UI display mostly
+  currency: string;
+  status: 'paid' | 'pending' | 'failed';
+  date: string; // createdAt or dateExpiry? Usually createdAt for history
+  createdAt: string;
+  paymentMethod: string;
+  proof?: string;
+  coupon?: Coupon;
 }

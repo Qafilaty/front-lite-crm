@@ -48,7 +48,13 @@ export const CHANGE_STATUS_ORDER = gql`
           nameAR
           color
         }
-        timeLine {
+        confirmationTimeLine {
+          id
+          status
+          note
+          createdAt
+        }
+        deliveryTimeLine {
           id
           status
           note

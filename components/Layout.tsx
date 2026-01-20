@@ -26,6 +26,9 @@ const Layout: React.FC = () => {
     if (path.includes('/stores')) return View.STORE_LINKING;
     if (path.includes('/api-docs')) return View.API_DOCS;
     if (path.includes('/subscriptions')) return View.SUBSCRIPTIONS;
+    if (path.includes('/finances')) return View.FINANCES;
+    if (path.includes('/financial-stats')) return View.FINANCIAL_STATS;
+    if (path.includes('/salaries')) return View.SALARIES;
     return View.DASHBOARD;
   };
 
@@ -43,6 +46,9 @@ const Layout: React.FC = () => {
       [View.STORE_LINKING]: '/stores',
       [View.API_DOCS]: '/api-docs',
       [View.SUBSCRIPTIONS]: '/subscriptions',
+      [View.FINANCES]: '/finances',
+      [View.FINANCIAL_STATS]: '/financial-stats',
+      [View.SALARIES]: '/salaries',
       [View.LOGIN]: '/login',
       [View.REGISTER]: '/register',
     };
@@ -60,7 +66,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] font-['Tajawal'] text-slate-900 overflow-hidden" dir="rtl">
+    <div className="flex h-screen bg-[#F8FAFC] font-['Tajawal'] text-slate-900 overflow-hidden" dir="rtl">
       <ToastNotifications />
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
@@ -73,7 +79,7 @@ const Layout: React.FC = () => {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onLogout={handleLogout}
       />
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
         <Header
           currentUser={user as any}
           onUpdateUser={updateCurrentUser}
@@ -84,7 +90,7 @@ const Layout: React.FC = () => {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onLogout={handleLogout}
         />
-        <main className="p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-[1600px] mx-auto custom-scrollbar">
           <Outlet />
         </main>
       </div>

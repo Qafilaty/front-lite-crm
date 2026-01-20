@@ -52,6 +52,9 @@ export const GET_ORDER = gql`
         deliveryCompany {
           id
           name
+          availableDeliveryCompany {
+            logo
+          }
         }
         status
         trackingCode
@@ -72,7 +75,29 @@ export const GET_ORDER = gql`
         price
         quantity
       }
-      timeLine {
+
+      confirmationTimeLine {
+        id
+        status
+        oreginalStatus {
+          id
+          nameAR
+          nameFR
+          nameEN
+          color
+          group
+          style
+          order
+        }
+        note
+        user {
+          id
+          name
+        }
+        deleted
+        createdAt
+      }
+      deliveryTimeLine {
         id
         status
         oreginalStatus {
@@ -119,14 +144,12 @@ export const GET_ORDER = gql`
 export const GET_ALL_ORDERS = gql`
   query GetAllOrders(
     $idCompany: ID!
-    $filter: [Filter]
     $pagination: Pagination
     $advancedFilter: JSON
     $advancedSort: JSON
   ) {
     allOrder(
       idCompany: $idCompany
-      filter: $filter
       pagination: $pagination
       advancedFilter: $advancedFilter
       advancedSort: $advancedSort
@@ -175,6 +198,9 @@ export const GET_ALL_ORDERS = gql`
           deliveryCompany {
             id
             name
+            availableDeliveryCompany {
+              logo
+            }
           }
           status
           trackingCode
@@ -239,6 +265,35 @@ export const SEARCH_ORDER = gql`
         deliveryCompany {
           trackingCode
         }
+      }
+    }
+  }
+`;
+
+export const SPOTLIGHT_SEARCH = gql`
+  query SpotlightSearch(
+    $idCompany: ID!
+    $pagination: Pagination
+    $advancedFilter: JSON
+  ) {
+    allOrder(
+      idCompany: $idCompany
+      pagination: $pagination
+      advancedFilter: $advancedFilter
+    ) {
+      data {
+        id
+        numberOrder
+        fullName
+        phone
+        totalPrice
+        status {
+          id
+          nameAR
+          nameEN
+          color
+        }
+        createdAt
       }
     }
   }

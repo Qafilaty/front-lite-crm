@@ -19,7 +19,7 @@ const DashboardPage: React.FC = () => {
 
       try {
         setLoading(true);
-        
+
         // جلب الطلبات
         const ordersResult = await orderService.getAllOrders(user.company.id, {
           pagination: { limit: 50, page: 1 }
@@ -31,7 +31,7 @@ const DashboardPage: React.FC = () => {
             customer: order.fullName || '',
             phone: order.phone || '',
             state: order.state?.name || '',
-            municipality: order.city || '',
+            city: order.city || '',
             address: order.address || '',
             deliveryType: order.deliveryType === 'home' ? 'home' : 'office',
             items: order.products?.map((p: any) => ({
@@ -82,17 +82,6 @@ const DashboardPage: React.FC = () => {
     lowStockItems: inventory.filter(p => p.stock < 10).length,
   }), [users, orders, inventory]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600 font-bold">جاري تحميل البيانات...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <DashboardView
       stats={stats}
@@ -103,6 +92,7 @@ const DashboardPage: React.FC = () => {
         // يمكن إضافة منطق الترقية هنا
         console.log('Upgrade clicked');
       }}
+      isLoading={loading}
     />
   );
 };

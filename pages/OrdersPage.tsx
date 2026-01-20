@@ -18,7 +18,7 @@ const OrdersPage: React.FC = () => {
         const result = await orderService.getAllOrders(user.company.id, {
           pagination: { limit: 100, page: 1 }
         });
-        
+
         if (result.success) {
           // تحويل البيانات من Backend إلى نوع Order
           const transformedOrders = result.orders.map((order: any) => ({
@@ -26,7 +26,7 @@ const OrdersPage: React.FC = () => {
             customer: order.fullName || '',
             phone: order.phone || '',
             state: order.state?.name || '',
-            municipality: order.city || '',
+            city: order.city || '',
             address: order.address || '',
             deliveryType: order.deliveryType === 'home' ? 'home' : 'office',
             items: order.products?.map((p: any) => ({
@@ -69,16 +69,7 @@ const OrdersPage: React.FC = () => {
     // يمكن إضافة منطق لحفظ التغييرات في Backend هنا
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600 font-bold">جاري تحميل الطلبات...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return <OrderConfirmationView orders={orders} setOrders={handleSetOrders} />;
 };

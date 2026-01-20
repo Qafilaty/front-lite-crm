@@ -58,3 +58,18 @@ export {
   DELETE_DELIVERY_COMPANY,
   ADD_ORDER_TO_DELIVERY_COMPANY,
 } from './deliveryCompanyMutations';
+
+// Invoice Mutations
+export {
+  CREATE_INVOICE,
+  UPDATE_INVOICE,
+  CHANGE_STATUS_INVOICE,
+  DELETE_INVOICE,
+} from './invoiceMutations';
+
+// Coupon Mutations
+export {
+  CREATE_COUPON,
+  UPDATE_COUPON,
+  DELETE_COUPON,
+} from './couponMutations';

@@ -53,11 +53,17 @@ export const ADD_ORDER_TO_DELIVERY_COMPANY = gql`
       successOrder {
         id
         numberOrder
+        deliveryCompany {
+          trackingCode
+        }
       }
       failedOrder {
         data {
           id
           numberOrder
+          deliveryCompany {
+            trackingCode
+          }
         }
         errors
       }

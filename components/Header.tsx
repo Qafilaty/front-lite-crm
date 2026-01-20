@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { Search, Menu, Calendar, PanelRightOpen, PanelRightClose, CreditCard, User, Mail, Phone, Shield, X, LogOut, Save, Settings, ChevronDown } from 'lucide-react';
 import { View, User as UserType } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { useLazyQuery } from '@apollo/client';
+import { SPOTLIGHT_SEARCH } from '../graphql/queries/orderQueries';
+import { useDebounce } from '../hooks/useDebounce';
+import { Loader2 } from 'lucide-react';
 
 interface HeaderProps {
   currentUser: UserType;
@@ -20,6 +25,39 @@ const Header: React.FC<HeaderProps> = ({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType>({ ...currentUser });
+
+  // Spotlight Search Logic
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSpotlight, setShowSpotlight] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const [searchOrders, { data: searchData, loading: isSearching }] = useLazyQuery(SPOTLIGHT_SEARCH, {
+    fetchPolicy: 'network-only' // Ensure fresh results
+  });
+
+  React.useEffect(() => {
+    if (debouncedSearch && debouncedSearch.length > 1 && currentUser?.company?.id) {
+      // Construct advanced filter similar to OrderConfirmationView
+      const regex = { $regex: debouncedSearch, $options: 'i' };
+      const advancedFilter = {
+        $or: [
+          { fullName: regex },
+          { phone: regex },
+          { numberOrder: regex },
+          { "deliveryCompany.trackingCode": regex }
+        ]
+      };
+
+      searchOrders({
+        variables: {
+          idCompany: currentUser.company.id,
+          pagination: { page: 1, limit: 5 }, // Limit results
+          advancedFilter
+        }
+      });
+    }
+  }, [debouncedSearch, currentUser?.company?.id]);
 
   const getViewTitle = () => {
     switch (currentView) {
@@ -45,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-300">
+    <header className="h-16 bg-white border-b border-slate-200/50 flex items-center justify-between px-4 md:px-6 z-30 transition-all duration-300 shrink-0">
       <div className="flex items-center gap-2 md:gap-4">
         <button
           onClick={onMenuClick}
@@ -75,9 +113,76 @@ const Header: React.FC<HeaderProps> = ({
           <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
           <input
             type="text"
-            placeholder="البحث السريع..."
-            className="w-full pr-10 pl-4 py-2 bg-slate-100/50 border-transparent border focus:border-indigo-500/30 focus:bg-white rounded-lg focus:outline-none transition-all text-xs font-medium placeholder:text-slate-400"
+            placeholder="البحث السريع (الاسم، الهاتف، المعرف)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setShowSpotlight(true)}
+            onBlur={() => setTimeout(() => setShowSpotlight(false), 200)} // Delay to allow click
+            className="w-full pr-10 pl-10 py-2 bg-slate-100/50 border-transparent border focus:border-indigo-500/30 focus:bg-white rounded-lg focus:outline-none transition-all text-xs font-medium placeholder:text-slate-400"
           />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setShowSpotlight(false);
+              }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Spotlight Results */}
+          {showSpotlight && searchQuery.length > 1 && (
+            <div className="absolute top-full mt-2 w-full sm:w-[500px] left-1/2 -translate-x-1/2 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-3 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                <span className="text-[10px] font-black text-slate-400 uppercase">نتائج البحث</span>
+                {isSearching && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />}
+              </div>
+
+              <div className="max-h-[350px] overflow-y-auto custom-scrollbar p-1">
+                {searchData?.allOrder?.data?.length === 0 && !isSearching && (
+                  <div className="py-8 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
+                    <Search className="w-6 h-6 opacity-20" />
+                    لا توجد نتائج مطابقة
+                  </div>
+                )}
+
+                {searchData?.allOrder?.data?.map((order: any) => (
+                  <button
+                    key={order.id}
+                    onClick={() => navigate(`/orders/${order.id}`)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition-all group text-right border-b border-slate-50 last:border-0"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] shrink-0 font-mono">
+                      #{order.numberOrder || order.id?.slice(-4)}
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <h5 className="text-[11px] font-black text-slate-700 truncate group-hover:text-indigo-600">{order.fullName || 'بدون اسم'}</h5>
+                      <p className="text-[10px] text-slate-400 font-bold truncate tracking-wide flex items-center gap-2">
+                        <span>{order.phone}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span>{new Date(order.createdAt).toLocaleDateString('ar-EG')}</span>
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${!order.status.color ? 'bg-slate-100 text-slate-500' : ''}`}
+                        style={order.status.color ? { backgroundColor: `${order.status.color}15`, color: order.status.color } : {}}
+                      >
+                        {order.status.nameAR || 'غير محدد'}
+                      </span>
+                      <span className="text-[10px] font-black text-slate-800">{order.totalPrice?.toLocaleString()} د.ج</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Footer hint */}
+              <div className="p-2 bg-slate-50 border-t border-slate-100 text-[9px] font-bold text-center text-slate-400">
+                اضغط Enter لعرض كل النتائج
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
