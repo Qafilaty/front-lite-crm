@@ -10,10 +10,23 @@ export const CREATE_PRODUCT = gql`
       id
       name
       sku
+      thumbnail
+      price
+      cost
+      status
+      note
       allQuantity
       quantityInStock
-      status
       createdAt
+      variantsProbability {
+        id
+        name
+        sku
+        price
+        cost
+        quantity: quantityInStock
+        isDefault
+      }
     }
   }
 `;
@@ -26,9 +39,22 @@ export const UPDATE_PRODUCT = gql`
         id
         name
         sku
+        thumbnail
+        price
+        cost
+        status
+        note
         allQuantity
         quantityInStock
-        status
+        variantsProbability {
+          id
+          name
+          sku
+          price
+          cost
+          quantity: quantityInStock
+          isDefault
+        }
       }
     }
   }

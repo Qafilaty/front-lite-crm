@@ -6,6 +6,7 @@ import { storeService } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { Store } from '../types';
 import LoadingSpinner from './common/LoadingSpinner';
+import { CardGridSkeleton } from './common';
 
 // Fixed list of supported stores
 const SUPPORTED_STORES = [
@@ -28,6 +29,13 @@ const SUPPORTED_STORES = [
     name: 'Shopify',
     logo: 'https://cdn.worldvectorlogo.com/logos/shopify.svg',
     color: '#96bf48',
+    description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+  },
+  {
+    key: 'ayor',
+    name: 'Ayor',
+    logo: '/assets/ayor-logo.webp',
+    color: '#7269f8',
     description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
   }
 ];
@@ -207,11 +215,7 @@ const StoreLinkingView: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <LoadingSpinner text="جاري تحميل المتاجر..." />
-      </div>
-    );
+    return <CardGridSkeleton count={3} />;
   }
 
   return (
@@ -377,7 +381,11 @@ const StoreLinkingView: React.FC = () => {
                                 disabled={isProcessing || !storeDomain}
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-sm"
                               >
-                                {isProcessing ? 'جاري الربط...' : 'ربط الآن'}
+                                {isProcessing ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  'ربط الآن'
+                                )}
                               </button>
                             </div>
                           </div>

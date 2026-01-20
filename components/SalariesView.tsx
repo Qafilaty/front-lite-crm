@@ -9,6 +9,7 @@ import {
   ClipboardCheck, Sparkles, LayoutList, ArrowRight, ListOrdered, Trophy,
   Loader2
 } from 'lucide-react';
+import TableSkeleton from './common/TableSkeleton';
 import { salaryService, userService, orderService } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -128,6 +129,8 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [payouts, searchTerm]);
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // Handle Logic for Payment Processing
   const handleProcessPayment = async (userId: string) => {
     // @ts-ignore
@@ -138,8 +141,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       return;
     }
 
-    // Confirmation handled by modal UI
-
+    setIsProcessing(true);
     try {
       const companyId = user?.company?.id;
 
@@ -165,6 +167,8 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     } catch (error) {
       console.error(error);
       toast.error('حدث خطأ أثناء المعالجة');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -214,13 +218,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
   const totalPages = Math.ceil((activeTab === 'due' ? (salariesData.length || 0) : filteredPayouts.length) / itemsPerPage);
 
-  if (loading && users.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pb-20 no-scrollbar">
@@ -291,67 +289,73 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
         </div>
 
         <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200">
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{activeTab === 'due' ? 'الموظف' : 'رقم الراتب'}</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">الكمية</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">سعر الطلب</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">إجمالي المستحق</th>
-                {activeTab === 'history' && <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">التاريخ</th>}
-                <th className="px-8 py-5 text-center">الإجراء</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedData.map((data: any) => (
-                <tr key={data.id || data.user?.id} className="hover:bg-slate-50 transition-all group">
-                  <td className="px-8 py-5">
-                    {activeTab === 'due' ? (
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg">{data.user.name.charAt(0)}</div>
-                        <div>
-                          <p className="text-sm font-black text-slate-800 leading-none">{data.user.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase italic">{data.user.email}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm shadow-sm"><FileText className="w-5 h-5" /></div>
-                        <div>
-                          <span className="font-mono text-xs font-black text-indigo-600 tracking-widest">#{data.id.substring(data.id.length - 6)}</span>
-                          <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase">{data.user?.name}</p>
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-5 text-center">
-                    <span className="text-xs font-black text-slate-700">{(activeTab === 'due' ? data.deliveredCount : data.ordersCount).toLocaleString()} طلب</span>
-                  </td>
-                  <td className="px-6 py-5 text-center">
-                    <span className="text-xs font-black text-slate-400">{(activeTab === 'due' ? data.orderPrice : data.orderPrice).toLocaleString()} دج</span>
-                  </td>
-                  <td className="px-6 py-5 text-center font-black text-indigo-600 font-mono">{(activeTab === 'due' ? data.unpaidAmount : (data.total || data.amount)).toLocaleString()} دج</td>
-                  {activeTab === 'history' && (
-                    <td className="px-6 py-5 text-center text-[10px] font-black text-slate-500">{new Date(data.date).toLocaleDateString('ar-SA')}</td>
-                  )}
-                  <td className="px-8 py-5 text-center">
-                    {activeTab === 'due' ? (
-                      <button onClick={() => setSelectedUserForPayout(data.user)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                        صرف العمولات
-                      </button>
-                    ) : (
-                      <div className="text-[10px] font-bold text-emerald-500">تم الدفع</div>
-                    )}
-                  </td>
+          {loading && users.length === 0 ? (
+            <div className="p-6">
+              <TableSkeleton columns={6} rows={8} />
+            </div>
+          ) : (
+            <table className="w-full text-right border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200">
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{activeTab === 'due' ? 'الموظف' : 'رقم الراتب'}</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">الكمية</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">سعر الطلب</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">إجمالي المستحق</th>
+                  {activeTab === 'history' && <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">التاريخ</th>}
+                  <th className="px-8 py-5 text-center">الإجراء</th>
                 </tr>
-              ))}
-              {paginatedData.length === 0 && (
-                <tr>
-                  <td colSpan={activeTab === 'history' ? 6 : 5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedData.map((data: any) => (
+                  <tr key={data.id || data.user?.id} className="hover:bg-slate-50 transition-all group">
+                    <td className="px-8 py-5">
+                      {activeTab === 'due' ? (
+                        <div className="flex items-center gap-4">
+                          <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg">{data.user.name.charAt(0)}</div>
+                          <div>
+                            <p className="text-sm font-black text-slate-800 leading-none">{data.user.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase italic">{data.user.email}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm shadow-sm"><FileText className="w-5 h-5" /></div>
+                          <div>
+                            <span className="font-mono text-xs font-black text-indigo-600 tracking-widest">#{data.id.substring(data.id.length - 6)}</span>
+                            <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase">{data.user?.name}</p>
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-xs font-black text-slate-700">{(activeTab === 'due' ? data.deliveredCount : data.ordersCount).toLocaleString()} طلب</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-xs font-black text-slate-400">{(activeTab === 'due' ? data.orderPrice : data.orderPrice).toLocaleString()} دج</span>
+                    </td>
+                    <td className="px-6 py-5 text-center font-black text-indigo-600 font-mono">{(activeTab === 'due' ? data.unpaidAmount : (data.total || data.amount)).toLocaleString()} دج</td>
+                    {activeTab === 'history' && (
+                      <td className="px-6 py-5 text-center text-[10px] font-black text-slate-500">{new Date(data.date).toLocaleDateString('ar-SA')}</td>
+                    )}
+                    <td className="px-8 py-5 text-center">
+                      {activeTab === 'due' ? (
+                        <button onClick={() => setSelectedUserForPayout(data.user)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                          صرف العمولات
+                        </button>
+                      ) : (
+                        <div className="text-[10px] font-bold text-emerald-500">تم الدفع</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {paginatedData.length === 0 && (
+                  <tr>
+                    <td colSpan={activeTab === 'history' ? 6 : 5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {totalPages > 1 && (
@@ -417,9 +421,13 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
             </div>
 
             <div className="p-8 border-t border-slate-200 bg-white shrink-0 flex gap-4">
-              <button onClick={() => setSelectedUserForPayout(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all">إلغاء</button>
-              <button onClick={() => handleProcessPayment(selectedUserForPayout.id)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
-                تأكيد وتصفير العداد <Check className="w-5 h-5" />
+              <button disabled={isProcessing} onClick={() => setSelectedUserForPayout(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-50">إلغاء</button>
+              <button disabled={isProcessing} onClick={() => handleProcessPayment(selectedUserForPayout.id)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed">
+                {isProcessing ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>تأكيد وتصفير العداد <Check className="w-5 h-5" /></>
+                )}
               </button>
             </div>
           </div>

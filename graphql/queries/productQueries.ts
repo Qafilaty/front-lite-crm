@@ -32,7 +32,7 @@ export const GET_PRODUCT = gql`
         price
         cost
         allQuantity
-        quantityInStock
+        quantity: quantityInStock
       }
       company {
         id
@@ -71,7 +71,7 @@ export const GET_ALL_PRODUCTS = gql`
           price
           cost
           allQuantity
-          quantityInStock
+          quantity: quantityInStock
         }
         createdAt
         updatedAt

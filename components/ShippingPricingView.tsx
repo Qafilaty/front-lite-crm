@@ -108,10 +108,13 @@ const ShippingPricingView: React.FC = () => {
     toast.success('تم تطبيق السعر على كافة الولايات (للمكتب)');
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSave = async () => {
     if (!user?.company?.id) return;
 
-    const toastId = toast.loading('جاري حفظ الأسعار...');
+    setIsSubmitting(true);
+    // const toastId = toast.loading('جاري حفظ الأسعار...');
 
     // Prepare payload
     const pricesPayload = pricings.map(p => ({
@@ -140,7 +143,7 @@ const ShippingPricingView: React.FC = () => {
       }
 
       if (result.success) {
-        toast.success('تم حفظ الأسعار بنجاح', { id: toastId });
+        toast.success('تم حفظ الأسعار بنجاح');
         setIsDirty(false);
         if (!pricingId && result.deliveryPrice) {
           setPricingId(result.deliveryPrice.id);
@@ -148,11 +151,13 @@ const ShippingPricingView: React.FC = () => {
         // Reload to ensure sync
         loadData();
       } else {
-        toast.error('فشل حفظ الأسعار', { id: toastId });
+        toast.error('فشل حفظ الأسعار');
       }
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('حدث خطأ أثناء الحفظ', { id: toastId });
+      toast.error('حدث خطأ أثناء الحفظ');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -170,9 +175,16 @@ const ShippingPricingView: React.FC = () => {
         {isDirty && !loading && (
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 animate-in fade-in slide-in-from-top-2"
+            disabled={isSubmitting}
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 animate-in fade-in slide-in-from-top-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <Save className="w-4 h-4" /> حفظ التغييرات
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <>
+                <Save className="w-4 h-4" /> حفظ التغييرات
+              </>
+            )}
           </button>
         )}
       </div>

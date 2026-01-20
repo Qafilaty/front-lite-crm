@@ -9,6 +9,7 @@ import { DeliveryCompany, AvailableDeliveryCompany } from '../types';
 import LoadingSpinner from './common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { authService } from '../services/apiService';
+import { CardGridSkeleton } from './common';
 
 const ShippingCarriersView: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -130,6 +131,9 @@ const ShippingCarriersView: React.FC = () => {
     setStep('select');
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const handleSubmit = async () => {
     if (!user?.company?.id) {
       toast.error('لم يتم العثور على بيانات الشركة');
@@ -146,7 +150,8 @@ const ShippingCarriersView: React.FC = () => {
       }
     }
 
-    const toastId = toast.loading('جاري الحفظ...');
+    setIsSubmitting(true);
+    // const toastId = toast.loading('جاري الحفظ...'); 
 
     try {
       if (editModeCarrier) {
@@ -160,7 +165,7 @@ const ShippingCarriersView: React.FC = () => {
             }
           }
         });
-        toast.success('تم تحديث الإعدادات بنجاح', { id: toastId });
+        toast.success('تم تحديث الإعدادات بنجاح');
       } else {
         // Create
         if (!selectedCarrier) return;
@@ -176,31 +181,36 @@ const ShippingCarriersView: React.FC = () => {
             }
           }
         });
-        toast.success('تم ربط شركة التوصيل بنجاح', { id: toastId });
+        toast.success('تم ربط شركة التوصيل بنجاح');
       }
 
-      refetchMyCarriers();
+      await refetchMyCarriers();
       closeModal();
 
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || 'فشلت العملية', { id: toastId });
+      toast.error(error.message || 'فشلت العملية');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteCarrier = async (carrierId: string) => {
     if (!confirm('هل أنت متأكد من حذف شركة التوصيل هذه؟')) return;
 
-    const toastId = toast.loading('جاري الحذف...');
+    setIsDeleting(carrierId);
+    // const toastId = toast.loading('جاري الحذف...');
     try {
       await deleteDeliveryCompany({
         variables: { id: carrierId }
       });
-      toast.success('تم حذف شركة التوصيل', { id: toastId });
-      refetchMyCarriers();
+      toast.success('تم حذف شركة التوصيل');
+      await refetchMyCarriers();
     } catch (error: any) {
       console.error(error);
-      toast.error('فشل حذف شركة التوصيل', { id: toastId });
+      toast.error('فشل حذف شركة التوصيل');
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -223,7 +233,7 @@ const ShippingCarriersView: React.FC = () => {
       </div>
 
       {myCarriersLoading ? (
-        <div className="py-20"><LoadingSpinner text="جاري تحميل شركات التوصيل..." /></div>
+        <CardGridSkeleton />
       ) : myCarriers.length === 0 ? (
         <div className="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
           <Truck className="w-12 h-12 text-slate-300 mx-auto mb-4" />
@@ -268,10 +278,15 @@ const ShippingCarriersView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleDeleteCarrier(carrier.id)}
-                  className="flex-none flex items-center justify-center w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all border border-rose-100"
+                  disabled={isDeleting === carrier.id}
+                  className="flex-none flex items-center justify-center w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all border border-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="حذف"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {isDeleting === carrier.id ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -426,10 +441,16 @@ const ShippingCarriersView: React.FC = () => {
                     <button onClick={closeModal} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[11px] uppercase hover:bg-slate-100 transition-all">إلغاء</button>
                     <button
                       onClick={handleSubmit}
-                      disabled={editModeCarrier ? isSubmitDisabled : !selectedCarrier}
+                      disabled={(editModeCarrier ? isSubmitDisabled : !selectedCarrier) || isSubmitting}
                       className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Save className="w-4 h-4" /> {editModeCarrier ? 'حفظ التعديلات' : 'إضافة وتفعيل'}
+                      {isSubmitting ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" /> {editModeCarrier ? 'حفظ التعديلات' : 'إضافة وتفعيل'}
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

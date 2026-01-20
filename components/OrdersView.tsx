@@ -113,12 +113,15 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     setNewOrder({ ...newOrder, items: updatedItems });
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmitOrder = async () => {
     if (!newOrder.firstName || !newOrder.lastName || !newOrder.phone || newOrder.items.length === 0) {
       toast.error('يرجى ملء جميع البيانات الإجبارية وإضافة منتج واحد على الأقل');
       return;
     }
 
+    setIsSubmitting(true);
     const orderData = {
       fullName: `${newOrder.firstName} ${newOrder.lastName}`,
       phone: newOrder.phone,
@@ -135,20 +138,42 @@ const OrdersView: React.FC<OrdersViewProps> = ({
       }))
     };
 
-    if (onCreateOrder) {
-      const toastId = toast.loading('جاري إنشاء الطلب...');
-      const success = await onCreateOrder(orderData);
-      if (success) {
-        toast.success('تم إنشاء الطلب بنجاح', { id: toastId });
-        setIsCreateModalOpen(false);
+    try {
+      if (onCreateOrder) {
+        // const toastId = toast.loading('جاري إنشاء الطلب...'); // Removed toast loading as button shows it
+        const success = await onCreateOrder(orderData);
+        if (success) {
+          toast.success('تم إنشاء الطلب بنجاح');
+          setIsCreateModalOpen(false);
+        } else {
+          toast.error('فشل إنشاء الطلب');
+        }
       } else {
-        toast.error('فشل إنشاء الطلب', { id: toastId });
+        toast.success('تمت العملية (تجريبي)');
+        setIsCreateModalOpen(false);
       }
-    } else {
-      toast.success('تمت العملية (تجريبي)');
-      setIsCreateModalOpen(false);
+    } catch (error) {
+      toast.error('حدث خطأ غير متوقع');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // ... lines 153-536 in original ...
+
+  <button
+    onClick={handleSubmitOrder}
+    disabled={isSubmitting}
+    className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+  >
+    {isSubmitting ? (
+      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+    ) : (
+      <>
+        <Save className="w-4 h-4" /> إنشاء الطلب
+      </>
+    )}
+  </button>
 
   const confirmDelete = (id: string) => {
     setOrderToDelete(id);
@@ -536,9 +561,16 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                   </button>
                   <button
                     onClick={handleSubmitOrder}
-                    className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all"
+                    disabled={isSubmitting}
+                    className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <Save className="w-4 h-4" /> إنشاء الطلب
+                    {isSubmitting ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" /> إنشاء الطلب
+                      </>
+                    )}
                   </button>
                 </div>
 

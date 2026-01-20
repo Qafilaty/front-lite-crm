@@ -11,6 +11,7 @@ import { financialTransactionService } from '../services/apiService';
 import { ModernSelect } from './common';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import TableSkeleton from './common/TableSkeleton';
 
 const FinancesView: React.FC = () => {
    const { user } = useAuth();
@@ -96,12 +97,16 @@ const FinancesView: React.FC = () => {
    const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
+   const [isSubmitting, setIsSubmitting] = useState(false);
+   const [isDeleting, setIsDeleting] = useState(false);
+
    const handleAddTransaction = async () => {
       if (!newTransaction.amount || newTransaction.amount <= 0) {
          toast.error('يرجى إدخال مبلغ صحيح');
          return;
       }
 
+      setIsSubmitting(true);
       try {
          if (!user?.company?.id) {
             toast.error('لم يتم العثور على بيانات الشركة');
@@ -118,13 +123,15 @@ const FinancesView: React.FC = () => {
             toast.success('تم إضافة العملية بنجاح');
             setIsModalOpen(false);
             setNewTransaction({ type: 'income', category: 'مبيعات', amount: 0, note: '' });
-            fetchTransactions(); // Refresh list
+            await fetchTransactions(); // Refresh list
          } else {
             toast.error('فشل حفظ العملية');
          }
       } catch (error) {
          console.error(error);
          toast.error('حدث خطأ أثناء الحفظ');
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -132,6 +139,7 @@ const FinancesView: React.FC = () => {
 
    const confirmDelete = async () => {
       if (!deleteId) return;
+      setIsDeleting(true);
       try {
          const result = await financialTransactionService.deleteFinancialTransaction(deleteId);
          if (result.success) {
@@ -144,20 +152,18 @@ const FinancesView: React.FC = () => {
       } catch (error) {
          console.error(error);
          toast.error('حدث خطأ أثناء الحذف');
+      } finally {
+         setIsDeleting(false);
       }
    };
+
+
 
    const deleteTransaction = (id: string) => {
       setDeleteId(id);
    };
 
-   if (loading && transactions.length === 0) {
-      return (
-         <div className="flex items-center justify-center h-96">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-         </div>
-      );
-   }
+
 
    return (
       <div className="space-y-6 animate-in fade-in duration-700 pb-20 no-scrollbar">
@@ -208,70 +214,78 @@ const FinancesView: React.FC = () => {
 
          {/* Main Table Content */}
          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
-               <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-full lg:w-fit shadow-sm">
-                  <button onClick={() => { setActiveTab('all'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>الكل</button>
-                  <button onClick={() => { setActiveTab('income'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المداخيل</button>
-                  <button onClick={() => { setActiveTab('expense'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المصروفات</button>
+            {loading && transactions.length === 0 ? (
+               <div className="p-6">
+                  <TableSkeleton columns={5} rows={8} />
                </div>
+            ) : (
+               <>
+                  <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                     <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-full lg:w-fit shadow-sm">
+                        <button onClick={() => { setActiveTab('all'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>الكل</button>
+                        <button onClick={() => { setActiveTab('income'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المداخيل</button>
+                        <button onClick={() => { setActiveTab('expense'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المصروفات</button>
+                     </div>
 
-               <div className="relative w-full max-w-md">
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input type="text" placeholder="البحث عن ملاحظة، فئة أو مبلغ..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm" />
-               </div>
-            </div>
+                     <div className="relative w-full max-w-md">
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input type="text" placeholder="البحث عن ملاحظة، فئة أو مبلغ..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm" />
+                     </div>
+                  </div>
 
-            <div className="overflow-x-auto no-scrollbar">
-               <table className="w-full text-right border-collapse">
-                  <thead>
-                     <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200">
-                        <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em]">البيان</th>
-                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">تاريخ العملية</th>
-                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">التصنيف</th>
-                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">المبلغ</th>
-                        <th className="px-8 py-5 text-center">إجراء</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                     {paginatedTransactions.map((trx) => (
-                        <tr key={trx.id} className="hover:bg-slate-50 transition-all group">
-                           <td className="px-8 py-6">
-                              <div className="flex items-center gap-4">
-                                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${trx.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                    {trx.type === 'income' ? <PlusCircle className="w-5 h-5" /> : <X className="w-5 h-5" />}
-                                 </div>
-                                 <div>
-                                    <p className="text-sm font-black text-slate-800 leading-none">{trx.note}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-tighter">المرجع: #{trx.id} • {trx.user}</p>
-                                 </div>
-                              </div>
-                           </td>
-                           <td className="px-6 py-6 text-center text-[10px] font-black text-slate-500">{trx.date}</td>
-                           <td className="px-6 py-6 text-center">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-[9px] font-black border border-slate-200 uppercase tracking-widest">
-                                 {trx.category}
-                              </span>
-                           </td>
-                           <td className="px-6 py-6 text-center">
-                              <span className={`text-base font-black font-mono tracking-tighter ${trx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                 {trx.type === 'income' ? '+' : '-'} {trx.amount.toLocaleString()} <span className="text-[10px] opacity-40">دج</span>
-                              </span>
-                           </td>
-                           <td className="px-8 py-6 text-center">
-                              <button onClick={() => deleteTransaction(trx.id)} className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
-                                 <Trash2 className="w-4 h-4" />
-                              </button>
-                           </td>
-                        </tr>
-                     ))}
-                     {paginatedTransactions.length === 0 && (
-                        <tr>
-                           <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
-                        </tr>
-                     )}
-                  </tbody>
-               </table>
-            </div>
+                  <div className="overflow-x-auto no-scrollbar">
+                     <table className="w-full text-right border-collapse">
+                        <thead>
+                           <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200">
+                              <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em]">البيان</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">تاريخ العملية</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">التصنيف</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">المبلغ</th>
+                              <th className="px-8 py-5 text-center">إجراء</th>
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                           {paginatedTransactions.map((trx) => (
+                              <tr key={trx.id} className="hover:bg-slate-50 transition-all group">
+                                 <td className="px-8 py-6">
+                                    <div className="flex items-center gap-4">
+                                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${trx.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                          {trx.type === 'income' ? <PlusCircle className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                                       </div>
+                                       <div>
+                                          <p className="text-sm font-black text-slate-800 leading-none">{trx.note}</p>
+                                          <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-tighter">المرجع: #{trx.id} • {trx.user}</p>
+                                       </div>
+                                    </div>
+                                 </td>
+                                 <td className="px-6 py-6 text-center text-[10px] font-black text-slate-500">{trx.date}</td>
+                                 <td className="px-6 py-6 text-center">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-[9px] font-black border border-slate-200 uppercase tracking-widest">
+                                       {trx.category}
+                                    </span>
+                                 </td>
+                                 <td className="px-6 py-6 text-center">
+                                    <span className={`text-base font-black font-mono tracking-tighter ${trx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                       {trx.type === 'income' ? '+' : '-'} {trx.amount.toLocaleString()} <span className="text-[10px] opacity-40">دج</span>
+                                    </span>
+                                 </td>
+                                 <td className="px-8 py-6 text-center">
+                                    <button onClick={() => deleteTransaction(trx.id)} className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
+                                       <Trash2 className="w-4 h-4" />
+                                    </button>
+                                 </td>
+                              </tr>
+                           ))}
+                           {paginatedTransactions.length === 0 && (
+                              <tr>
+                                 <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
+                              </tr>
+                           )}
+                        </tbody>
+                     </table>
+                  </div>
+               </>
+            )}
          </div>
 
          {isModalOpen && createPortal(
@@ -321,8 +335,16 @@ const FinancesView: React.FC = () => {
                      </div>
                   </div>
                   <div className="p-8 border-t border-slate-100 bg-white">
-                     <button onClick={handleAddTransaction} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3">
-                        حفظ الحركة <Save className="w-4 h-4" />
+                     <button
+                        onClick={handleAddTransaction}
+                        disabled={isSubmitting}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                     >
+                        {isSubmitting ? (
+                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                           <>حفظ الحركة <Save className="w-4 h-4" /></>
+                        )}
                      </button>
                   </div>
                </div>
@@ -344,11 +366,15 @@ const FinancesView: React.FC = () => {
                      </p>
 
                      <div className="flex gap-3">
-                        <button onClick={() => setDeleteId(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase hover:bg-slate-50 transition-all">
+                        <button disabled={isDeleting} onClick={() => setDeleteId(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase hover:bg-slate-50 transition-all disabled:opacity-50">
                            إلغاء
                         </button>
-                        <button onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all">
-                           نعم، حذف
+                        <button disabled={isDeleting} onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                           {isDeleting ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                           ) : (
+                              'نعم، حذف'
+                           )}
                         </button>
                      </div>
                   </div>

@@ -199,7 +199,7 @@ export const userService = {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_USERS,
-
+        fetchPolicy: 'network-only',
       });
       return { success: true, users: data?.allUser || [] };
     } catch (error: any) {
@@ -441,7 +441,7 @@ export const productService = {
         variables: {
           ...options,
         },
-
+        fetchPolicy: 'network-only',
       });
       return {
         success: true,
@@ -535,7 +535,7 @@ export const storeService = {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_STORES,
-
+        fetchPolicy: 'network-only',
       });
       return { success: true, stores: data?.allStore || [] };
     } catch (error: any) {
@@ -607,7 +607,7 @@ export const deliveryCompanyService = {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_DELIVERY_COMPANIES,
-
+        fetchPolicy: 'network-only',
       });
       return { success: true, deliveryCompanies: data?.allDeliveryCompany || [] };
     } catch (error: any) {
@@ -777,7 +777,7 @@ export const financialTransactionService = {
       const { data } = await apolloClient.query({
         query: GET_ALL_FINANCIAL_TRANSACTIONS,
         variables: { ...options },
-
+        fetchPolicy: 'network-only',
       });
       return {
         success: true,

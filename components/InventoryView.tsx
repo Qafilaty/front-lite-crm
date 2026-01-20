@@ -18,6 +18,7 @@ interface InventoryViewProps {
   onUpdate: (id: string, productData: any) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   isLoading?: boolean;
+  onRefresh: () => Promise<void>;
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -26,7 +27,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onAdd,
   onUpdate,
   onDelete,
-  isLoading = false
+  isLoading = false,
+  onRefresh
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft'>('all');
@@ -81,16 +83,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   // --- Actions ---
 
-  const handleProductSuccess = (savedProduct: any) => {
-    if (savedProduct) {
-      if (selectedProduct) {
-        // Update
-        setInventory(prev => prev.map(p => p.id === savedProduct.id ? savedProduct : p));
-      } else {
-        // Add
-        setInventory(prev => [savedProduct, ...prev]);
-      }
-    }
+  const handleProductSuccess = async (savedProduct: any) => {
+    // Robust Refresh: Reload all data from server
+    await onRefresh();
     setIsProductModalOpen(false);
     setSelectedProduct(undefined);
   };
@@ -117,16 +112,17 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
     setIsDeleting(true);
     const success = await onDelete(productToDelete);
-    setIsDeleting(false);
 
     if (success) {
+      // Robust Refresh
+      await onRefresh();
       toast.success('تم حذف المنتج بنجاح');
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
-      setInventory(prev => prev.filter(p => p.id !== productToDelete));
     } else {
       toast.error('فشل حذف المنتج');
     }
+    setIsDeleting(false);
   };
 
   const toggleExpand = (id: string) => {
@@ -136,7 +132,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
 
   return (
-    <div className="flex flex-col h-full font-sans" dir="rtl">
+    <div className="flex flex-col h-full" dir="rtl">
 
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

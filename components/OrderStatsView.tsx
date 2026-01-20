@@ -13,7 +13,7 @@ import {
 import { GET_ORDER_STATS } from '../graphql/queries/statsQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useQuery, useLazyQuery } from '@apollo/client';
-import { ModernSelect } from './common';
+import { ModernSelect, StatsSkeleton } from './common';
 import { GET_ALL_USERS } from '../graphql/queries';
 
 interface OrderStatsViewProps {
@@ -65,12 +65,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     const productsList = productsData?.allProduct?.data || [];
 
     if (loading && !data) {
-        return (
-            <div className="flex w-full h-[60vh] items-center justify-center flex-col gap-4">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                <p className="text-slate-400 text-sm font-bold animate-pulse">جاري تحليل البيانات...</p>
-            </div>
-        );
+        return <StatsSkeleton />;
     }
 
     if (error) {

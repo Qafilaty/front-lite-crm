@@ -13,7 +13,7 @@ import {
 import { getSmartInsights } from '../services/geminiService';
 import { statusLabels } from '../constants/statusConstants';
 import { StatsCard } from './StatsCard';
-import { ModernSelect } from './common';
+import { ModernSelect, StatsSkeleton } from './common';
 
 interface DashboardViewProps {
   stats: Stats;
@@ -26,6 +26,10 @@ interface DashboardViewProps {
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, backendStats }) => {
+  if (isLoading) {
+    return <StatsSkeleton />;
+  }
+
   const [insight, setInsight] = useState<string>('جاري تحليل البيانات...');
   const [dateRange, setDateRange] = useState('7days');
 

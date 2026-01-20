@@ -113,16 +113,7 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600 font-bold">جاري تحميل المخزون...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <InventoryView
@@ -132,6 +123,7 @@ const InventoryPage: React.FC = () => {
       onUpdate={handleUpdateProduct}
       onDelete={handleDeleteProduct}
       isLoading={loading}
+      onRefresh={loadInventory}
     />
   );
 };

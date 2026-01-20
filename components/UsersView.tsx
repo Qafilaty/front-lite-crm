@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { User } from '../types';
 import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, UserCog, Search, ChevronRight, ChevronLeft, Coins, ShoppingBag, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import TableSkeleton from './common/TableSkeleton';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 
@@ -45,6 +46,9 @@ const UsersView: React.FC<UsersViewProps> = ({
     orderPrice: 0
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -55,41 +59,50 @@ const UsersView: React.FC<UsersViewProps> = ({
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await onAdd({
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      role: newUser.role,
-      password: newUser.password,
-      orderPrice: newUser.role === 'confirmed' ? Number(newUser.orderPrice) : 0
-    });
+    setIsSubmitting(true);
+    try {
+      const success = await onAdd({
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+        password: newUser.password,
+        orderPrice: newUser.role === 'confirmed' ? Number(newUser.orderPrice) : 0
+      });
 
-    if (success) {
-      setShowModal(false);
-      setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0 });
-      alert('تم إضافة المستخدم بنجاح!');
-    } else {
-      alert('فشلت عملية الإضافة');
+      if (success) {
+        setShowModal(false);
+        setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0 });
+        toast.success('تم إضافة المستخدم بنجاح!');
+      } else {
+        toast.error('فشلت عملية الإضافة');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    setIsSubmitting(true);
+    try {
+      const success = await onUpdate(editingUser.id, {
+        name: editingUser.name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        orderPrice: editingUser.role === 'confirmed' ? Number(editingUser.orderPrice) : 0
+      });
 
-    const success = await onUpdate(editingUser.id, {
-      name: editingUser.name,
-      email: editingUser.email,
-      phone: editingUser.phone,
-      orderPrice: editingUser.role === 'confirmed' ? Number(editingUser.orderPrice) : 0
-    });
-
-    if (success) {
-      setShowModal(false);
-      setEditingUser(null);
-      alert('تم تحديث المستخدم بنجاح!');
-    } else {
-      alert('فشلت عملية التحديث');
+      if (success) {
+        setShowModal(false);
+        setEditingUser(null);
+        toast.success('تم تحديث المستخدم بنجاح!');
+      } else {
+        toast.error('فشلت عملية التحديث');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -127,16 +140,21 @@ const UsersView: React.FC<UsersViewProps> = ({
     if (success) {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      alert('تم حذف المستخدم بنجاح');
+      toast.success('تم حذف المستخدم بنجاح');
     } else {
-      alert('فشلت عملية الحذف');
+      toast.error('فشلت عملية الحذف');
     }
   };
 
   const toggleOrderLock = async (userId: string, currentActivation: boolean) => {
-    const success = await onToggleActivation(userId, !currentActivation);
-    if (!success) {
-      alert('فشلت عملية تغيير الحالة');
+    setTogglingId(userId);
+    try {
+      const success = await onToggleActivation(userId, !currentActivation);
+      if (!success) {
+        toast.error('فشلت عملية تغيير الحالة');
+      }
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -231,10 +249,15 @@ const UsersView: React.FC<UsersViewProps> = ({
                       {user.role === 'confirmed' ? (
                         <button
                           onClick={() => toggleOrderLock(user.id, user.activation || false)}
+                          disabled={togglingId === user.id}
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${user.activation === false ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                            }`}
+                            } ${togglingId === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          {user.activation === false ? 'مغلقة' : 'مفتوحة'}
+                          {togglingId === user.id ? (
+                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            user.activation === false ? 'مغلقة' : 'مفتوحة'
+                          )}
                         </button>
                       ) : (
                         <span className="text-[9px] text-slate-300 font-bold uppercase">N/A</span>
@@ -363,7 +386,14 @@ const UsersView: React.FC<UsersViewProps> = ({
                       </div>
                     </>
                   )}
-                  <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting && (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    )}
                     {modalMode === 'add' ? 'إنشاء الحساب' : 'حفظ التغييرات'}
                   </button>
                 </form>
