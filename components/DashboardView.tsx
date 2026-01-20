@@ -22,14 +22,25 @@ interface DashboardViewProps {
   subscriptionTier: SubscriptionTier;
   onUpgrade: () => void;
   isLoading?: boolean;
+  backendStats?: any; // Add backendStats prop
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, backendStats }) => {
   const [insight, setInsight] = useState<string>('جاري تحليل البيانات...');
   const [dateRange, setDateRange] = useState('7days');
 
-  // 1. Calculate Metrics
+  // 1. Calculate Metrics (Prefer backendStats if available)
   const metrics = useMemo(() => {
+    if (backendStats) {
+      return {
+        confRate: backendStats.confirmationRate?.toFixed(1) || '0.0',
+        delivRate: backendStats.deliveryRate?.toFixed(1) || '0.0',
+        confirmedCount: backendStats.confirmedCount || 0,
+        deliveredCount: backendStats.deliveredCount || 0
+      };
+    }
+
+    // Fallback to client-side calculation (Legacy)
     const total = orders.length || 1;
     const confirmed = orders.filter(o => ['confirmed', 'delivered', 'paid', 'en_preparation', 'ramasse', 'sorti_livraison'].includes(o.status)).length;
     const delivered = orders.filter(o => ['delivered', 'paid'].includes(o.status)).length;
@@ -40,10 +51,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       confirmedCount: confirmed,
       deliveredCount: delivered
     };
-  }, [orders]);
+  }, [orders, backendStats]);
 
   // 2. Prepare Chart Data (Last 7 Days)
   const areaData = useMemo(() => {
+    if (backendStats?.salesGrowth) {
+      return backendStats.salesGrowth;
+    }
+
     const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const today = new Date();
     const result = [];
@@ -55,7 +70,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
 
       const count = orders.filter(o => {
         if (!o.createdAt) return false;
-        // Handle both ISO string and Date object if runtime data varies
         const created = new Date(o.createdAt);
         if (isNaN(created.getTime())) return false;
         return created.toISOString().startsWith(dateStr);
@@ -64,10 +78,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       result.push({ name: dayName, total: count });
     }
     return result;
-  }, [orders]);
+  }, [orders, backendStats]);
 
   // 3. Prepare Bar Chart Data (Status Distribution)
   const barData = useMemo(() => {
+    if (backendStats?.statusDistribution) {
+      return backendStats.statusDistribution;
+    }
+
     const counts: Record<string, number> = {};
     orders.forEach(o => {
       if (!o.status) return;
@@ -76,7 +94,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       if (typeof o.status === 'string') {
         label = statusLabels[o.status] || o.status;
       } else if (typeof o.status === 'object') {
-        // Handle StatusOrderObject: prefer Arabic name, then mapped ID, then English/French names
         label = o.status.nameAR ||
           (o.status.id && statusLabels[o.status.id]) ||
           o.status.nameEN ||
@@ -86,12 +103,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
 
       counts[label] = (counts[label] || 0) + 1;
     });
-    // Top 7 statuses
     return Object.entries(counts)
       .map(([name, orders]) => ({ name, orders }))
       .sort((a, b) => b.orders - a.orders)
       .slice(0, 7);
-  }, [orders]);
+  }, [orders, backendStats]);
 
   // 4. Stock Alerts Logic (retained for insights generation)
   const stockAlerts = useMemo(() =>

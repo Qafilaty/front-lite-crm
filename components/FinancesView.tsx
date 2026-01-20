@@ -33,7 +33,7 @@ const FinancesView: React.FC = () => {
          if (!user?.company?.id) return;
          setLoading(true);
 
-         const result = await financialTransactionService.getAllFinancialTransactions(user.company.id, {
+         const result = await financialTransactionService.getAllFinancialTransactions({
             pagination: { limit: 1000, page: 1 } // Fetch all for now for client-side filtering/stats
          });
 
@@ -109,8 +109,7 @@ const FinancesView: React.FC = () => {
          }
 
          const payload = {
-            ...newTransaction,
-            idCompany: user.company.id
+            ...newTransaction
          };
 
          const result = await financialTransactionService.createFinancialTransaction(payload);

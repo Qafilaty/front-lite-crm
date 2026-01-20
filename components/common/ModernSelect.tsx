@@ -16,9 +16,10 @@ interface ModernSelectProps {
     className?: string; // Additional classes for the container
     label?: string; // Optional label text
     disabled?: boolean;
+    onOpen?: () => void;
 }
 
-export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, options, placeholder = 'Select...', className, label, disabled = false }) => {
+export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, options, placeholder = 'Select...', className, label, disabled = false, onOpen }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +64,15 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
 
             <button
                 type="button"
-                onClick={() => !disabled && setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (!disabled) {
+                        const nextState = !isOpen;
+                        setIsOpen(nextState);
+                        if (nextState && onOpen) {
+                            onOpen();
+                        }
+                    }
+                }}
                 disabled={disabled}
                 className={twMerge(
                     "w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-left transition-all",

@@ -5,7 +5,7 @@ import {
     PlusCircle, ChevronDown, Search, Package, MinusCircle, Trash2,
     Info, DollarSign, ChevronLeft, Loader2
 } from 'lucide-react';
-import { useMutation, useQuery } from '@apollo/client';
+import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_WILAYAS } from '../graphql/queries';
 import { CREATE_ORDER } from '../graphql/mutations/orderMutations';
 import { ModernSelect } from './common';
@@ -52,14 +52,15 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
     // --- Data Fetching ---
 
-    // 1. Wilayas
-    const { data: wilayasData } = useQuery(GET_ALL_WILAYAS);
+    // 1. Wilayas (Lazy)
+    const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
     const wilayas: Wilaya[] = wilayasData?.allWilayas || [];
 
-    // 2. Products (Ideally fetch on demand or pre-load lightly)
-    const { data: productsData } = useQuery(GET_ALL_PRODUCTS, {
-        variables: { idCompany: user?.company?.id, pagination: { limit: 100, page: 1 } },
-        skip: !user?.company?.id
+    // 2. Products (Lazy)
+    // Only fetch when picker opens
+    const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
+        variables: { pagination: { limit: 100, page: 1 } },
+        fetchPolicy: 'cache-first'
     });
 
     const products: Product[] = productsData?.allProduct?.data || [];
@@ -145,7 +146,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
             await createOrder({
                 variables: {
                     content: {
-                        idCompany: user?.company?.id,
                         fullName: newOrder.customer,
                         phone: newOrder.phone,
 
@@ -272,6 +272,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         ...wilayas.map(w => ({ value: w.name, label: `${w.code} - ${w.name}` }))
                                     ]}
                                     placeholder="اختر الولاية..."
+                                    onOpen={() => getWilayas()}
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -311,7 +312,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
                         <div className="relative" ref={pickerRef}>
                             <button
-                                onClick={() => setIsProductPickerOpen(!isProductPickerOpen)}
+                                onClick={() => {
+                                    if (!isProductPickerOpen) {
+                                        getProducts();
+                                    }
+                                    setIsProductPickerOpen(!isProductPickerOpen);
+                                }}
                                 className="w-full px-5 py-4 bg-slate-900 text-white rounded-xl font-bold text-[11px] uppercase flex items-center justify-between hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
                             >
                                 <div className="flex items-center gap-3">

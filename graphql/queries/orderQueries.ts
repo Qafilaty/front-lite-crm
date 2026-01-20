@@ -143,13 +143,11 @@ export const GET_ORDER = gql`
 
 export const GET_ALL_ORDERS = gql`
   query GetAllOrders(
-    $idCompany: ID!
     $pagination: Pagination
     $advancedFilter: JSON
     $advancedSort: JSON
   ) {
     allOrder(
-      idCompany: $idCompany
       pagination: $pagination
       advancedFilter: $advancedFilter
       advancedSort: $advancedSort
@@ -212,6 +210,10 @@ export const GET_ALL_ORDERS = gql`
             name
             sku
           }
+           variantsProduct {
+            id
+            name
+          }
           name
           sku
           price
@@ -272,12 +274,10 @@ export const SEARCH_ORDER = gql`
 
 export const SPOTLIGHT_SEARCH = gql`
   query SpotlightSearch(
-    $idCompany: ID!
     $pagination: Pagination
     $advancedFilter: JSON
   ) {
     allOrder(
-      idCompany: $idCompany
       pagination: $pagination
       advancedFilter: $advancedFilter
     ) {

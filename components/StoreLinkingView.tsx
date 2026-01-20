@@ -50,7 +50,7 @@ const StoreLinkingView: React.FC = () => {
     if (!user?.company?.id) return;
     setLoading(true);
     try {
-      const result = await storeService.getAllStores(user.company.id);
+      const result = await storeService.getAllStores();
       if (result.success) {
         setStores(result.stores);
       } else {
@@ -162,7 +162,6 @@ const StoreLinkingView: React.FC = () => {
         const payload = {
           name: selectedPlatform.name,
           typeStore: selectedPlatform.key,
-          idCompany: user.company.id,
           status: true, // Active by default
           // We don't have domain yet if it's just "Connect" button for webhook generation, 
           // unless user entered it (optional for non-WooCommerce based on prompt "Remove webhook field... only direct link has input")

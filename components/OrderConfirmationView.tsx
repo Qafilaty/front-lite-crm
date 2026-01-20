@@ -8,7 +8,7 @@ import {
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
 import CreateOrderModal from './CreateOrderModal';
-import { useQuery } from '@apollo/client';
+import { useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER } from '../graphql/queries';
@@ -19,15 +19,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 
 interface OrderConfirmationViewProps {
-  orders: Order[]; // Keep for compatibility if needed, but we will fetch our own
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  orders?: Order[];
+  setOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
-const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: initialOrders, setOrders: setParentOrders }) => {
+const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: initialOrders = [], setOrders: setParentOrders }) => {
   // Use GET_CURRENT_USER for reliable company ID
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const user = userData?.currentUser; // Override local user from useAuth for this context
-  const idCompany = user?.company?.id;
 
   const navigate = useNavigate(); // Add hook
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -41,10 +40,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const itemsPerPage = 8;
 
   // 1. Fetch Company Statuses (Filtered by Group: 'confirmation')
-  const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY, {
-    variables: { idCompany },
-    skip: !idCompany
-  });
+  const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY);
 
   const confirmationStatuses = useMemo(() => {
     if (!statusData?.allStatusCompany) return [];
@@ -72,13 +68,9 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     return { labels: { ...statusLabels, ...map }, colors: { ...statusColors, ...colors } };
   }, [statusData]);
 
-  // 2. Fetch Stores & Wilayas
-  const { data: storesData } = useQuery(GET_ALL_STORES, {
-    variables: { idCompany },
-    skip: !idCompany
-  });
-
-  const { data: wilayasData } = useQuery(GET_ALL_WILAYAS);
+  // 2. Fetch Stores & Wilayas (Lazy Load)
+  const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
+  const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -121,12 +113,11 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   // 4. Fetch Orders with Advanced Filter
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
     variables: {
-      idCompany,
       pagination: { page: currentPage, limit: itemsPerPage },
       advancedFilter: Object.keys(advancedFilter).length > 0 ? advancedFilter : undefined
     },
-    skip: !idCompany,
-    fetchPolicy: 'network-only' // Ensure fresh data on filter change
+    fetchPolicy: 'network-only', // Ensure fresh data on filter change
+    skip: !statusData?.allStatusCompany // Skip until statuses are loaded to prevent double fetch
   });
 
   useEffect(() => {
@@ -189,6 +180,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
                 ]}
                 className="w-full"
+                onOpen={() => getStores()}
               />
             </div>
             <div className="space-y-1.5">
@@ -201,6 +193,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
                 ]}
                 className="w-full"
+                onOpen={() => getWilayas()}
               />
             </div>
             <div className="sm:col-span-2 space-y-1.5">

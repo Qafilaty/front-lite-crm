@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { CheckCircle2, AlertCircle, Key, Lock, X, Globe, Save, Settings, Link2, Plus, Truck, AlertTriangle, ArrowRight, Trash2 } from 'lucide-react';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import { GET_ALL_DELIVERY_COMPANIES, GET_AVAILABLE_DELIVERY_COMPANIES } from '../graphql/queries/deliveryCompanyQueries';
 import { CREATE_DELIVERY_COMPANY, UPDATE_DELIVERY_COMPANY, DELETE_DELIVERY_COMPANY } from '../graphql/mutations/deliveryCompanyMutations';
 import { DeliveryCompany, AvailableDeliveryCompany } from '../types';
@@ -24,12 +24,11 @@ const ShippingCarriersView: React.FC = () => {
   }, []);
 
   const { data: myCarriersData, loading: myCarriersLoading, refetch: refetchMyCarriers } = useQuery(GET_ALL_DELIVERY_COMPANIES, {
-    variables: { idCompany: user?.company?.id },
-    skip: !user?.company?.id,
+    skip: !user,
     fetchPolicy: 'network-only' // Ensure fresh data
   });
 
-  const { data: availableCarriersData, loading: availableCarriersLoading } = useQuery(GET_AVAILABLE_DELIVERY_COMPANIES);
+  const [getAvailableCarriers, { data: availableCarriersData, loading: availableCarriersLoading }] = useLazyQuery(GET_AVAILABLE_DELIVERY_COMPANIES);
 
   const [createDeliveryCompany] = useMutation(CREATE_DELIVERY_COMPANY);
   const [updateDeliveryCompany] = useMutation(UPDATE_DELIVERY_COMPANY);
@@ -107,6 +106,7 @@ const ShippingCarriersView: React.FC = () => {
   };
 
   const openAddModal = () => {
+    getAvailableCarriers();
     setEditModeCarrier(null);
     setSelectedCarrier(null);
     setStep('select');
@@ -171,7 +171,6 @@ const ShippingCarriersView: React.FC = () => {
               name: selectedCarrier.name,
               originalName: selectedCarrier.name,
               active: true,
-              idCompany: user.company.id,
               idAvailableDeliveryCompany: selectedCarrier.id,
               ...formData
             }

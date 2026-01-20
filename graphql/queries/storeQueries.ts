@@ -26,8 +26,8 @@ export const GET_STORE = gql`
 `;
 
 export const GET_ALL_STORES = gql`
-  query GetAllStores($idCompany: ID!) {
-    allStore(idCompany: $idCompany) {
+  query GetAllStores {
+    allStore {
       id
       name
       logo

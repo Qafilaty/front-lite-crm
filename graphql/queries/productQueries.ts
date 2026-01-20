@@ -46,11 +46,10 @@ export const GET_PRODUCT = gql`
 
 export const GET_ALL_PRODUCTS = gql`
   query GetAllProducts(
-    $idCompany: ID!
     $filter: [Filter]
     $pagination: Pagination
   ) {
-    allProduct(idCompany: $idCompany, filter: $filter, pagination: $pagination) {
+    allProduct(filter: $filter, pagination: $pagination) {
       data {
         id
         thumbnail

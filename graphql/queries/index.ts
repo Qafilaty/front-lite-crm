@@ -59,3 +59,8 @@ export {
   GET_COUPON_BY_CODE,
   GET_ALL_COUPONS,
 } from './couponQueries';
+
+// General Queries
+export {
+  GET_BASIC_STATISTICS,
+} from './generalQueries';

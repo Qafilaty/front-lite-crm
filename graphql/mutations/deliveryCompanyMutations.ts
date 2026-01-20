@@ -41,12 +41,10 @@ export const DELETE_DELIVERY_COMPANY = gql`
 
 export const ADD_ORDER_TO_DELIVERY_COMPANY = gql`
   mutation AddOrderToDeliveryCompany(
-    $idCompany: ID
     $idDeliveryCompany: ID
     $ids: [ID]
   ) {
     addOrderToDeliveryCompany(
-      idCompany: $idCompany
       idDeliveryCompany: $idDeliveryCompany
       ids: $ids
     ) {

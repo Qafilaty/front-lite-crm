@@ -95,11 +95,9 @@ export const RETURNED_MULTI_ORDER = gql`
 
 export const RETURNED_MULTI_ORDER_BY_TRACKING_CODE = gql`
   mutation ReturnedMultiOrderByTrackingCode(
-    $idCompany: ID!
     $trackingCodes: [String!]!
   ) {
     returnedMultiOrderByTrackingCode(
-      idCompany: $idCompany
       trackingCodes: $trackingCodes
     ) {
       trackingCode
@@ -110,11 +108,9 @@ export const RETURNED_MULTI_ORDER_BY_TRACKING_CODE = gql`
 
 export const DELIVERED_MULTI_ORDER = gql`
   mutation DeliveredMultiOrder(
-    $idCompany: ID!
     $trackingCodes: [String]
   ) {
     delivredMultiOrder(
-      idCompany: $idCompany
       trackingCodes: $trackingCodes
     ) {
       trackingCode

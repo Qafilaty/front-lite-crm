@@ -34,8 +34,8 @@ export const GET_DELIVERY_COMPANY = gql`
 `;
 
 export const GET_ALL_DELIVERY_COMPANIES = gql`
-  query GetAllDeliveryCompanies($idCompany: ID!) {
-    allDeliveryCompany(idCompany: $idCompany) {
+  query GetAllDeliveryCompanies {
+    allDeliveryCompany {
       id
       name
       originalName

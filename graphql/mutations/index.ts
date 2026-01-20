@@ -11,6 +11,11 @@ export {
   LOGOUT,
 } from './authMutations';
 
+// Company Mutations
+export {
+  CREATE_COMPANY_WITH_ADMIN,
+} from './companyMutations';
+
 // User Mutations
 export {
   CREATE_USER,

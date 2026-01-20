@@ -26,7 +26,6 @@ interface ProductFormState {
     variantsProbability: ProductVariantProbability[];
 
     // IDs (Mocked for UI or passed from context if needed)
-    idCompany?: string;
     idDeliveryPrice?: string;
 }
 

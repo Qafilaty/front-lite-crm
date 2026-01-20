@@ -277,3 +277,18 @@ export interface Invoice {
   proof?: string;
   coupon?: Coupon;
 }
+
+export interface Payout {
+  id: string;
+  amount: number;
+  orders: number; // deliveredCount
+  note?: string;
+  status: 'pending' | 'processing' | 'paid' | 'rejected' | 'cancelled';
+  date: string; // createdAt
+  userId?: string;
+  user?: {
+    id: string;
+    name: string;
+  };
+  total?: number; // unpaidAmount or calculated total
+}

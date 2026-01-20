@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 
 // Pages
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import OrdersPage from './pages/OrdersPage';
@@ -31,6 +32,7 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="/woocommerce/success" element={<WooCommerceSuccess />} />
 
       {/* Protected Routes */}

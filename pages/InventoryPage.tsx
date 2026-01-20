@@ -14,7 +14,7 @@ const InventoryPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const result = await productService.getAllProducts(user.company.id, {
+      const result = await productService.getAllProducts({
         pagination: { limit: 100, page: 1 }
       });
 
@@ -68,7 +68,6 @@ const InventoryPage: React.FC = () => {
     try {
       const result = await productService.createProduct({
         ...productData,
-        idCompany: user?.company?.id,
       });
 
       if (result.success) {
@@ -86,7 +85,6 @@ const InventoryPage: React.FC = () => {
     try {
       const result = await productService.updateProduct(id, {
         ...productData,
-        idCompany: user?.company?.id,
       });
 
       if (result.success) {

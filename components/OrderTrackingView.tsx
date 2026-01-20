@@ -10,7 +10,7 @@ import {
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
-import { useQuery } from '@apollo/client';
+import { useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER } from '../graphql/queries';
@@ -20,15 +20,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { ModernSelect } from './common';
 
 interface OrderTrackingViewProps {
-  orders: Order[];
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  orders?: Order[];
+  setOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
-const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOrders, setOrders: setParentOrders }) => {
+const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOrders = [], setOrders: setParentOrders }) => {
   // Use GET_CURRENT_USER for reliable company ID
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const user = userData?.currentUser;
-  const idCompany = user?.company?.id;
 
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -41,8 +40,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
   // 1. Fetch Company Statuses (Filtered by Group: 'tracking')
   const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY, {
-    variables: { idCompany },
-    skip: !idCompany
+    skip: !user
   });
 
   const trackingStatuses = useMemo(() => {
@@ -56,13 +54,9 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     return group?.listStatus || [];
   }, [statusData]);
 
-  // 2. Fetch Stores & Wilayas
-  const { data: storesData } = useQuery(GET_ALL_STORES, {
-    variables: { idCompany },
-    skip: !idCompany
-  });
-
-  const { data: wilayasData } = useQuery(GET_ALL_WILAYAS);
+  // 2. Fetch Stores & Wilayas (Lazy)
+  const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
+  const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -107,11 +101,10 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   // 4. Fetch Orders
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
     variables: {
-      idCompany,
       pagination: { page: currentPage, limit: itemsPerPage },
       advancedFilter: Object.keys(advancedFilter).length > 0 ? advancedFilter : undefined
     },
-    skip: !idCompany, // Wait for user
+    skip: !user || !statusData?.allStatusCompany, // Wait for user AND statuses
     fetchPolicy: 'network-only'
   });
 
@@ -161,6 +154,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
               ]}
               className="w-full"
+              onOpen={() => getStores()}
             />
           </div>
           <div className="space-y-1.5">
@@ -173,6 +167,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
               ]}
               className="w-full"
+              onOpen={() => getWilayas()}
             />
           </div>
           <div className="space-y-1.5">

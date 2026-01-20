@@ -15,6 +15,7 @@ import {
   GET_DELIVERY_COMPANY,
   GET_ALL_DELIVERY_COMPANIES,
   GET_ALL_WILAYAS,
+  GET_BASIC_STATISTICS,
 } from '../graphql/queries';
 import {
   GET_ALL_FINANCIAL_TRANSACTIONS,
@@ -50,6 +51,7 @@ import {
   UPDATE_DELIVERY_COMPANY,
   DELETE_DELIVERY_COMPANY,
   ADD_ORDER_TO_DELIVERY_COMPANY,
+  CREATE_COMPANY_WITH_ADMIN,
 } from '../graphql/mutations';
 import {
   CREATE_FINANCIAL_TRANSACTION,
@@ -149,7 +151,7 @@ export const authService = {
     try {
       const { data } = await apolloClient.query({
         query: REFRESH_TOKEN,
-        fetchPolicy: 'network-only',
+
       });
       if (data?.refreshToken?.token) {
         localStorage.setItem('authToken', data.refreshToken.token);
@@ -161,16 +163,43 @@ export const authService = {
       return { success: false, error: error.message };
     }
   },
+
+  async signup(dataInput: any) {
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_COMPANY_WITH_ADMIN,
+        variables: { content: dataInput },
+      });
+
+      if (data?.createCompanyWithAdmin?.token) {
+        // Store token in localStorage
+        localStorage.setItem('authToken', data.createCompanyWithAdmin.token);
+        return {
+          success: true,
+          user: data.createCompanyWithAdmin.user,
+          company: data.createCompanyWithAdmin.company,
+          token: data.createCompanyWithAdmin.token,
+        };
+      }
+
+      return { success: false, error: 'Signup failed' };
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      return {
+        success: false,
+        error: error.message || 'Signup failed',
+      };
+    }
+  },
 };
 
 // User Service
 export const userService = {
-  async getAllUsers(idCompany?: string) {
+  async getAllUsers() {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_USERS,
-        variables: { idCompany },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, users: data?.allUser || [] };
     } catch (error: any) {
@@ -184,7 +213,7 @@ export const userService = {
       const { data } = await apolloClient.query({
         query: GET_USER,
         variables: { id },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, user: data?.user };
     } catch (error: any) {
@@ -249,7 +278,6 @@ export const userService = {
 // Order Service
 export const orderService = {
   async getAllOrders(
-    idCompany: string,
     options?: {
       filter?: any[];
       pagination?: { limit: number; page: number };
@@ -261,10 +289,9 @@ export const orderService = {
       const { data } = await apolloClient.query({
         query: GET_ALL_ORDERS,
         variables: {
-          idCompany,
           ...options,
         },
-        fetchPolicy: 'network-only',
+
       });
       return {
         success: true,
@@ -289,7 +316,7 @@ export const orderService = {
       const { data } = await apolloClient.query({
         query: GET_ORDER,
         variables: { id },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, order: data?.order };
     } catch (error: any) {
@@ -303,7 +330,7 @@ export const orderService = {
       const { data } = await apolloClient.query({
         query: SEARCH_ORDER,
         variables: { trackingCode },
-        fetchPolicy: 'network-only',
+
       });
       return {
         success: data?.searchOrder?.status,
@@ -403,7 +430,6 @@ export const orderService = {
 // Product Service
 export const productService = {
   async getAllProducts(
-    idCompany: string,
     options?: {
       filter?: any[];
       pagination?: { limit: number; page: number };
@@ -413,10 +439,9 @@ export const productService = {
       const { data } = await apolloClient.query({
         query: GET_ALL_PRODUCTS,
         variables: {
-          idCompany,
           ...options,
         },
-        fetchPolicy: 'network-only',
+
       });
       return {
         success: true,
@@ -439,7 +464,7 @@ export const productService = {
       const { data } = await apolloClient.query({
         query: GET_PRODUCT,
         variables: { id },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, product: data?.product };
     } catch (error: any) {
@@ -506,12 +531,11 @@ export const productService = {
 
 // Store Service
 export const storeService = {
-  async getAllStores(idCompany: string) {
+  async getAllStores() {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_STORES,
-        variables: { idCompany },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, stores: data?.allStore || [] };
     } catch (error: any) {
@@ -525,7 +549,7 @@ export const storeService = {
       const { data } = await apolloClient.query({
         query: GET_STORE,
         variables: { id },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, store: data?.store };
     } catch (error: any) {
@@ -579,12 +603,11 @@ export const storeService = {
 
 // Delivery Company Service
 export const deliveryCompanyService = {
-  async getAllDeliveryCompanies(idCompany: string) {
+  async getAllDeliveryCompanies() {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_DELIVERY_COMPANIES,
-        variables: { idCompany },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, deliveryCompanies: data?.allDeliveryCompany || [] };
     } catch (error: any) {
@@ -598,7 +621,7 @@ export const deliveryCompanyService = {
       const { data } = await apolloClient.query({
         query: GET_DELIVERY_COMPANY,
         variables: { id },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, deliveryCompany: data?.deliveryCompany };
     } catch (error: any) {
@@ -649,12 +672,11 @@ export const deliveryCompanyService = {
     }
   },
 
-  async addOrderToDeliveryCompany(idCompany: string, idDeliveryCompany: string, orderIds: string[]) {
+  async addOrderToDeliveryCompany(idDeliveryCompany: string, orderIds: string[]) {
     try {
       const { data } = await apolloClient.mutate({
         mutation: ADD_ORDER_TO_DELIVERY_COMPANY,
         variables: {
-          idCompany,
           idDeliveryCompany,
           ids: orderIds
         }
@@ -670,13 +692,30 @@ export const deliveryCompanyService = {
   },
 };
 
+
+// General Service
+export const generalService = {
+  async getBasicStatistics() {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_BASIC_STATISTICS,
+        fetchPolicy: 'network-only',
+      });
+      return { success: true, stats: data?.basicStatistics };
+    } catch (error: any) {
+      console.error('Get basic statistics error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+};
+
 // Wilayas Service
 export const wilayasService = {
   async getAllWilayas() {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_WILAYAS,
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'cache-first',
       });
       return { success: true, wilayas: data?.allWilayas || [] };
     } catch (error: any) {
@@ -688,12 +727,11 @@ export const wilayasService = {
 
 // Delivery Pricing Service
 export const deliveryPricingService = {
-  async getAllDeliveryPriceCompany(idCompany: string) {
+  async getAllDeliveryPriceCompany() {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_DELIVERY_PRICE_COMPANY,
-        variables: { idCompany },
-        fetchPolicy: 'network-only',
+
       });
       return { success: true, deliveryPrices: data?.allDeliveryPriceCompany?.data || [] };
     } catch (error: any) {
@@ -734,12 +772,12 @@ export const deliveryPricingService = {
 
 // Financial Transaction Service
 export const financialTransactionService = {
-  async getAllFinancialTransactions(idCompany: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+  async getAllFinancialTransactions(options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_FINANCIAL_TRANSACTIONS,
-        variables: { idCompany, ...options },
-        fetchPolicy: 'network-only',
+        variables: { ...options },
+
       });
       return {
         success: true,
@@ -800,11 +838,11 @@ export const financialTransactionService = {
 
 // Salary Service
 export const salaryService = {
-  async getAllSalaries(idCompany: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+  async getAllSalaries(options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_SALARIES,
-        variables: { idCompany, ...options },
+        variables: { ...options },
         fetchPolicy: 'network-only',
       });
       return {
@@ -864,11 +902,11 @@ export const salaryService = {
 
 // Invoice Service
 export const invoiceService = {
-  async getAllInvoices(idCompany?: string, options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
+  async getAllInvoices(options?: { filter?: any[]; pagination?: { limit: number; page: number } }) {
     try {
       const { data } = await apolloClient.query({
         query: GET_ALL_INVOICES,
-        variables: { idCompany, ...options },
+        variables: { ...options },
         fetchPolicy: 'network-only',
       });
       return {

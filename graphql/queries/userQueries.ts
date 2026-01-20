@@ -44,8 +44,8 @@ export const GET_CURRENT_USER = gql`
 `;
 
 export const GET_ALL_USERS = gql`
-  query GetAllUsers($idCompany: ID) {
-    allUser(idCompany: $idCompany) {
+  query GetAllUsers {
+    allUser {
       id
       name
       email

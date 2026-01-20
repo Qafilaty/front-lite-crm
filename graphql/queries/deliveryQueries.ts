@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_ALL_DELIVERY_PRICE_COMPANY = gql`
-  query AllDeliveryPriceCompany($idCompany: ID!) {
-    allDeliveryPriceCompany(idCompany: $idCompany) {
+  query AllDeliveryPriceCompany {
+    allDeliveryPriceCompany {
       data {
         id
         name

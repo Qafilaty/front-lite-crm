@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_ALL_FINANCIAL_TRANSACTIONS = gql`
-  query GetAllFinancialTransactions($idCompany: ID, $filter: [Filter], $pagination: Pagination) {
-    allFinancialTransactions(idCompany: $idCompany, filter: $filter, pagination: $pagination) {
+  query GetAllFinancialTransactions($filter: [Filter], $pagination: Pagination) {
+    allFinancialTransactions(filter: $filter, pagination: $pagination) {
       data {
         id
         amount

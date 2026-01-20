@@ -99,7 +99,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user?.company?.id) {
       alert('خطأ: معرف الشركة غير موجود');
       return;
@@ -117,7 +117,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         weight: Number(formData.weight),
         status: formData.status,
         note: formData.note,
-        idCompany: user.company.id,
         variantsProbability: variants.length > 0 ? variants.map(v => ({
           name: v.name,
           sku: v.sku,

@@ -57,7 +57,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const idUser = userData?.currentUser?.id;
 
   const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY, {
-    variables: { idCompany },
     skip: !idCompany
   });
 
@@ -275,7 +274,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     if (deliveryCompanies.length === 0 && idCompany) {
       setLoadingCompanies(true);
       try {
-        const result = await deliveryCompanyService.getAllDeliveryCompanies(idCompany);
+        const result = await deliveryCompanyService.getAllDeliveryCompanies();
         if (result.success && result.deliveryCompanies) {
           setDeliveryCompanies(result.deliveryCompanies);
         }
@@ -293,7 +292,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
     setIsSendingToDelivery(true);
     const result = await deliveryCompanyService.addOrderToDeliveryCompany(
-      idCompany,
       selectedCompanyId,
       [order.id]
     );

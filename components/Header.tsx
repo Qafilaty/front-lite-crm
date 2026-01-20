@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({
   });
 
   React.useEffect(() => {
-    if (debouncedSearch && debouncedSearch.length > 1 && currentUser?.company?.id) {
+    if (debouncedSearch && debouncedSearch.length > 1) {
       // Construct advanced filter similar to OrderConfirmationView
       const regex = { $regex: debouncedSearch, $options: 'i' };
       const advancedFilter = {
@@ -51,13 +51,12 @@ const Header: React.FC<HeaderProps> = ({
 
       searchOrders({
         variables: {
-          idCompany: currentUser.company.id,
           pagination: { page: 1, limit: 5 }, // Limit results
           advancedFilter
         }
       });
     }
-  }, [debouncedSearch, currentUser?.company?.id]);
+  }, [debouncedSearch]);
 
   const getViewTitle = () => {
     switch (currentView) {

@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_ALL_SALARIES = gql`
-  query GetAllSalaries($idCompany: ID, $filter: [Filter], $pagination: Pagination) {
-    allSalaries(idCompany: $idCompany, filter: $filter, pagination: $pagination) {
+  query GetAllSalaries($filter: [Filter], $pagination: Pagination) {
+    allSalaries(filter: $filter, pagination: $pagination) {
       data {
         id
         ordersCount

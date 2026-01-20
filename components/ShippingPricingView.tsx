@@ -25,49 +25,33 @@ const ShippingPricingView: React.FC = () => {
 
     setLoading(true);
     try {
-      // Fetch both Wilayas and Pricing in parallel
-      const [wilayasResult, pricingResult] = await Promise.all([
-        wilayasService.getAllWilayas(),
-        deliveryPricingService.getAllDeliveryPriceCompany(user.company.id)
-      ]);
-
-      let allWilayas: Wilaya[] = [];
-      if (wilayasResult.success && wilayasResult.wilayas) {
-        allWilayas = [...wilayasResult.wilayas];
-        // Ensure they are sorted by Code/ID
-        allWilayas.sort((a, b) => Number(a.code) - Number(b.code));
-      } else {
-        toast.error('فشل تحميل قائمة الولايات');
-      }
+      // 1. Fetch Pricing First
+      const pricingResult = await deliveryPricingService.getAllDeliveryPriceCompany();
 
       if (pricingResult.success && pricingResult.deliveryPrices && pricingResult.deliveryPrices.length > 0) {
+        // --- CASE A: Pricing Exists ---
         const existingData = pricingResult.deliveryPrices[0];
         setPricingId(existingData.id);
 
-        const mergedPricings = allWilayas.map((wilaya) => {
-          // Find price by code (preferred) or name
-          const found = existingData.prices?.find((p: any) =>
-            p.code === wilaya.code || p.name === wilaya.name || p.name === wilaya.arName
-          );
+        if (existingData.prices && existingData.prices.length > 0) {
+          const mappedPricings = existingData.prices.map((p: any) => ({
+            id: Number(p.code),
+            name: p.name,
+            homePrice: p.home || 0,
+            officePrice: p.desk || 0
+          }));
+          // Sort by ID/Code
+          mappedPricings.sort((a: any, b: any) => a.id - b.id);
+          setPricings(mappedPricings);
+        } else {
+          // Fallback: Pricing record exists but empty prices array? Should fetch wilayas
+          await fetchWilayasAndDefault();
+        }
 
-          return {
-            id: Number(wilaya.code),
-            name: wilaya.arName || wilaya.name,
-            homePrice: found ? (found.home || 0) : 0,
-            officePrice: found ? (found.desk || 0) : 0
-          };
-        });
-        setPricings(mergedPricings);
       } else {
-        // No existing pricing, create default structure from Wilayas
-        const defaultPricings = allWilayas.map((wilaya) => ({
-          id: Number(wilaya.code),
-          name: wilaya.arName || wilaya.name,
-          homePrice: 0,
-          officePrice: 0
-        }));
-        setPricings(defaultPricings);
-        setPricingId(null);
+        // --- CASE B: No Pricing Found ---
+        // Fetch Wilayas to build default list
+        await fetchWilayasAndDefault();
       }
 
     } catch (error) {
@@ -75,6 +59,26 @@ const ShippingPricingView: React.FC = () => {
       toast.error('حدث خطأ أثناء تحميل البيانات');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWilayasAndDefault = async () => {
+    const wilayasResult = await wilayasService.getAllWilayas();
+
+    if (wilayasResult.success && wilayasResult.wilayas) {
+      const allWilayas = [...wilayasResult.wilayas];
+      allWilayas.sort((a, b) => Number(a.code) - Number(b.code));
+
+      const defaultPricings = allWilayas.map((wilaya) => ({
+        id: Number(wilaya.code),
+        name: wilaya.arName || wilaya.name,
+        homePrice: 0,
+        officePrice: 0
+      }));
+      setPricings(defaultPricings);
+      setPricingId(null);
+    } else {
+      toast.error('فشل تحميل قائمة الولايات');
     }
   };
 
@@ -122,7 +126,6 @@ const ShippingPricingView: React.FC = () => {
     const payload = {
       name: 'Standard Pricing', // You can make this editable if needed
       isDefault: true,
-      idCompany: user.company.id,
       prices: pricesPayload
     };
 

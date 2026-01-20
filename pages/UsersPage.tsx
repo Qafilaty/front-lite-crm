@@ -44,7 +44,6 @@ const UsersPage: React.FC = () => {
     try {
       const result = await userService.createUser({
         ...userData,
-        idCompany: currentUser?.company?.id,
       });
 
       if (result.success) {

@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_ALL_STATUS_COMPANY = gql`
-  query AllStatusCompany($idCompany: ID) {
-    allStatusCompany(idCompany: $idCompany) {
+  query AllStatusCompany {
+    allStatusCompany {
       group
       listStatus {
         id

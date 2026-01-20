@@ -12,17 +12,17 @@ import {
 } from 'recharts';
 import { GET_ORDER_STATS } from '../graphql/queries/statsQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
-import { useQuery } from '@apollo/client';
+import { useQuery, useLazyQuery } from '@apollo/client';
 import { ModernSelect } from './common';
+import { GET_ALL_USERS } from '../graphql/queries';
 
 interface OrderStatsViewProps {
     currentUser: User;
-    allUsers: User[];
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#475569'];
 
-const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser, allUsers }) => {
+const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
     // Auth logic for initial states
@@ -35,22 +35,19 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser, allUsers }
     // Fetch Stats
     const { data, loading, error } = useQuery(GET_ORDER_STATS, {
         variables: {
-            idCompany: currentUser.company?.id,
             period,
             idEmployee: idEmployee || null,
             idProduct: idProduct || null
         },
-        skip: !currentUser.company?.id,
         fetchPolicy: 'cache-and-network'
     });
 
-    // Fetch Products for Filter
-    const { data: productsData } = useQuery(GET_ALL_PRODUCTS, {
+    // Fetch Products for Filter (Lazy)
+    const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
         variables: {
-            idCompany: currentUser.company?.id,
             pagination: { page: 1, limit: 100 } // Limit to 100 for dropdown efficiency
         },
-        skip: !currentUser.company?.id
+        fetchPolicy: 'cache-first'
     });
 
     const stats = data?.orderStats || {
@@ -60,7 +57,11 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser, allUsers }
         logisticsDistribution: []
     };
 
-    const confirmersList = allUsers.filter(u => ['confirmed_orders', 'admin', 'confirmed'].includes(u.role));
+    // Lazy load users for filter
+    const [getUsers, { data: usersData }] = useLazyQuery(GET_ALL_USERS);
+    const allUsers = usersData?.allUser || [];
+
+    const confirmersList = allUsers.filter((u: any) => ['confirmed_orders', 'admin', 'confirmed'].includes(u.role));
     const productsList = productsData?.allProduct?.data || [];
 
     if (loading && !data) {
@@ -130,6 +131,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser, allUsers }
                                         ...confirmersList.map(u => ({ value: u.id, label: u.name }))
                                     ]}
                                     placeholder="كل الفريق"
+                                    onOpen={() => getUsers()}
                                 />
                             </div>
                         )}
@@ -144,6 +146,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser, allUsers }
                                     ...productsList.map((p: any) => ({ value: p.id, label: p.name }))
                                 ]}
                                 placeholder="كل المنتجات"
+                                onOpen={() => getProducts()}
                             />
                         </div>
                     </div>

@@ -45,7 +45,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       setLoading(true);
 
       // 1. Fetch Users
-      const usersResult = await userService.getAllUsers(companyId);
+      const usersResult = await userService.getAllUsers();
       if (usersResult.success) {
         // Filter for confirmed users (employees)
         // Adjust role check if needed, e.g. includes or strict equality
@@ -54,7 +54,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
       // 2. Fetch Payouts (History)
       // We fetch a large limit to allow clientside stats calculation (Best Performer)
-      const salariesResult = await salaryService.getAllSalaries(companyId, { pagination: { limit: 1000, page: 1 } });
+      const salariesResult = await salaryService.getAllSalaries({ pagination: { limit: 1000, page: 1 } });
       if (salariesResult.success) {
         setPayouts(salariesResult.salaries);
       }
@@ -71,7 +71,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     if (user?.company?.id) {
       fetchData();
     }
-  }, [activeTab, user]);
+  }, [user]);
 
   // حساب البيانات الإجمالية للبطاقات
   const summaryStats = useMemo(() => {
@@ -150,7 +150,6 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
         total: data.unpaidAmount,
         note: `صرف مستحقات لـ ${data.deliveredCount} طلب (سعر الطلب: ${data.orderPrice})`,
         userId: data.user.id,
-        idCompany: companyId,
         date: new Date().toISOString()
       };
 
@@ -175,7 +174,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       const companyId = user?.company?.id;
       if (!companyId) return;
 
-      const result = await orderService.getAllOrders(companyId, {
+      const result = await orderService.getAllOrders({
         advancedFilter: { idConfirmed: userId },
         pagination: { limit: ordersPerPage, page: page }
       });
