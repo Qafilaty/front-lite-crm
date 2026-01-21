@@ -44,6 +44,7 @@ const ShippingCarriersView: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
 
   // Helper to get full image URL
@@ -103,6 +104,7 @@ const ShippingCarriersView: React.FC = () => {
     setSelectedCarrier(null);
     setEditModeCarrier(null);
     setFormData({});
+    setErrors({});
     setStep('select');
   };
 
@@ -111,6 +113,7 @@ const ShippingCarriersView: React.FC = () => {
     setEditModeCarrier(null);
     setSelectedCarrier(null);
     setStep('select');
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -118,6 +121,7 @@ const ShippingCarriersView: React.FC = () => {
     setEditModeCarrier(carrier);
     setSelectedCarrier(carrier.availableDeliveryCompany || null);
     setStep('configure');
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -134,6 +138,17 @@ const ShippingCarriersView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
+  const handleBlur = (fieldName: string, value: string) => {
+    const newErrors = { ...errors };
+    delete newErrors[fieldName];
+
+    if (!value) {
+      newErrors[fieldName] = `حقل ${fieldName} مطلوب`;
+    }
+
+    setErrors(newErrors);
+  };
+
   const handleSubmit = async () => {
     if (!user?.company?.id) {
       toast.error('لم يتم العثور على بيانات الشركة');
@@ -141,14 +156,22 @@ const ShippingCarriersView: React.FC = () => {
     }
 
     // Validate required fields
+    const newErrors: Record<string, string> = {};
     if (selectedCarrier?.fields) {
       for (const fieldName of selectedCarrier.fields) {
         if (!formData[fieldName]) {
-          toast.error(`حقل ${fieldName} مطلوب`);
-          return;
+          newErrors[fieldName] = `حقل ${fieldName} مطلوب`;
         }
       }
     }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+
+    setErrors({});
 
     setIsSubmitting(true);
     // const toastId = toast.loading('جاري الحفظ...'); 
@@ -417,10 +440,15 @@ const ShippingCarriersView: React.FC = () => {
                                 <input
                                   type="text"
                                   value={formData[name] || ''}
-                                  onChange={(e) => handleInputChange(name, e.target.value)}
+                                  onChange={(e) => {
+                                    handleInputChange(name, e.target.value);
+                                    if (errors[name]) setErrors({ ...errors, [name]: '' });
+                                  }}
+                                  onBlur={(e) => handleBlur(name, e.target.value)}
                                   placeholder={`أدخل ${name}...`}
-                                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all dir-ltr"
+                                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all dir-ltr ${errors[name] ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                                 />
+                                {errors[name] && <p className="text-red-500 text-[9px] font-bold px-1">{errors[name]}</p>}
                               </div>
                             );
                           })}

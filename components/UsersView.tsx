@@ -46,6 +46,8 @@ const UsersView: React.FC<UsersViewProps> = ({
     orderPrice: 0
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -59,6 +61,31 @@ const UsersView: React.FC<UsersViewProps> = ({
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!newUser.name) newErrors.name = 'الاسم مطلوب';
+    if (!newUser.email) newErrors.email = 'البريد مطلوب';
+    if (!newUser.phone) newErrors.phone = 'الهاتف مطلوب';
+
+    // Basic Email Validation
+    if (newUser.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
+      newErrors.email = 'بريد إلكتروني غير صالح';
+    }
+    // Basic Phone Validation
+    if (newUser.phone && !/^(0)(5|6|7)[0-9]{8}$/.test(newUser.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+    }
+    if (!newUser.password || newUser.password.length < 6) {
+      newErrors.password = 'كلمة المرور قصيرة (6 أحرف على الأقل)';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('يرجى التحقق من الحقول');
+      return;
+    }
+
+    setErrors({});
     setIsSubmitting(true);
     try {
       const success = await onAdd({
@@ -82,9 +109,55 @@ const UsersView: React.FC<UsersViewProps> = ({
     }
   };
 
+  const handleBlur = (field: string, value: string) => {
+    const newErrors = { ...errors };
+    // Clear error for this field
+    delete newErrors[field];
+
+    if (field === 'name') {
+      if (!value) newErrors.name = 'الاسم مطلوب';
+    }
+    else if (field === 'email') {
+      if (!value) newErrors.email = 'البريد مطلوب';
+      else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) newErrors.email = 'بريد إلكتروني غير صالح';
+    }
+    else if (field === 'phone') {
+      if (!value) newErrors.phone = 'الهاتف مطلوب';
+      else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+    }
+    else if (field === 'password' && modalMode === 'add') {
+      if (!value || value.length < 6) newErrors.password = 'كلمة المرور قصيرة (6 أحرف على الأقل)';
+    }
+
+    setErrors(newErrors);
+  };
+
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+
+    const newErrors: Record<string, string> = {};
+
+    if (!editingUser.name) newErrors.name = 'الاسم مطلوب';
+    if (!editingUser.email) newErrors.email = 'البريد مطلوب';
+    if (!editingUser.phone) newErrors.phone = 'الهاتف مطلوب';
+
+    // Basic Email Validation
+    if (editingUser.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingUser.email)) {
+      newErrors.email = 'بريد إلكتروني غير صالح';
+    }
+    // Basic Phone Validation
+    if (editingUser.phone && !/^(0)(5|6|7)[0-9]{8}$/.test(editingUser.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('يرجى التحقق من الحقول');
+      return;
+    }
+
+    setErrors({});
     setIsSubmitting(true);
     try {
       const success = await onUpdate(editingUser.id, {
@@ -307,42 +380,49 @@ const UsersView: React.FC<UsersViewProps> = ({
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم</label>
                     <input
-                      required
                       value={modalMode === 'add' ? newUser.name : editingUser?.name || ''}
-                      onChange={(e) => modalMode === 'add'
-                        ? setNewUser({ ...newUser, name: e.target.value })
-                        : setEditingUser({ ...editingUser, name: e.target.value })
-                      }
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                      onChange={(e) => {
+                        if (modalMode === 'add') setNewUser({ ...newUser, name: e.target.value });
+                        else setEditingUser({ ...editingUser, name: e.target.value });
+                        if (errors.name) setErrors({ ...errors, name: '' });
+                      }}
+                      onBlur={(e) => handleBlur('name', e.target.value)}
+                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                       placeholder="أحمد..."
                     />
+                    {errors.name && <p className="text-red-500 text-[9px] font-bold px-1">{errors.name}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">البريد</label>
                     <input
-                      required
                       type="email"
                       value={modalMode === 'add' ? newUser.email : editingUser?.email || ''}
-                      onChange={(e) => modalMode === 'add'
-                        ? setNewUser({ ...newUser, email: e.target.value })
-                        : setEditingUser({ ...editingUser, email: e.target.value })
-                      }
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                      onChange={(e) => {
+                        if (modalMode === 'add') setNewUser({ ...newUser, email: e.target.value });
+                        else setEditingUser({ ...editingUser, email: e.target.value });
+                        if (errors.email) setErrors({ ...errors, email: '' });
+                      }}
+                      onBlur={(e) => handleBlur('email', e.target.value)}
+                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.email ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                       placeholder="email@example.com"
                     />
+                    {errors.email && <p className="text-red-500 text-[9px] font-bold px-1">{errors.email}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الهاتف</label>
                     <input
                       type="tel"
                       value={modalMode === 'add' ? newUser.phone : editingUser?.phone || ''}
-                      onChange={(e) => modalMode === 'add'
-                        ? setNewUser({ ...newUser, phone: e.target.value })
-                        : setEditingUser({ ...editingUser, phone: e.target.value })
-                      }
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                      onChange={(e) => {
+                        if (modalMode === 'add') setNewUser({ ...newUser, phone: e.target.value });
+                        else setEditingUser({ ...editingUser, phone: e.target.value });
+                        if (errors.phone) setErrors({ ...errors, phone: '' });
+                      }}
+                      onBlur={(e) => handleBlur('phone', e.target.value)}
+                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.phone ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                       placeholder="05xxxxxxxx"
                     />
+                    {errors.phone && <p className="text-red-500 text-[9px] font-bold px-1">{errors.phone}</p>}
                   </div>
 
                   {/* Conditional Commission Field */}
@@ -369,13 +449,17 @@ const UsersView: React.FC<UsersViewProps> = ({
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">كلمة المرور</label>
                         <input
-                          required
                           type="password"
                           value={newUser.password}
-                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                          onChange={(e) => {
+                            setNewUser({ ...newUser, password: e.target.value });
+                            if (errors.password) setErrors({ ...errors, password: '' });
+                          }}
+                          onBlur={(e) => handleBlur('password', e.target.value)}
+                          className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.password ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                           placeholder="كلمة المرور..."
                         />
+                        {errors.password && <p className="text-red-500 text-[9px] font-bold px-1">{errors.password}</p>}
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>

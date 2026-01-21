@@ -98,6 +98,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         return result;
     }, [products, productSearchQuery]);
 
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
     const handleAddItemToCart = (product: Product, variant?: any) => {
         const price = variant ? variant.price : (product.variantsProbability?.[0]?.price || product.price);
         const sku = variant ? variant.sku : (product.variantsProbability?.[0]?.sku || product.sku);
@@ -124,16 +126,53 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         setIsProductPickerOpen(false);
     };
 
+    const handleBlur = (field: string, value: any) => {
+        const newErrors = { ...errors };
+        delete newErrors[field];
+
+        if (field === 'customer') {
+            if (!value) newErrors.customer = 'يرجى إدخال اسم العميل';
+        }
+        else if (field === 'phone') {
+            if (!value) newErrors.phone = 'يرجى إدخال رقم الهاتف';
+            else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
+        }
+        else if (field === 'shippingCost') {
+            if ((Number(value) || 0) < 0) newErrors.shippingCost = 'لا يمكن أن يكون سعر التوصيل أقل من 0';
+        }
+
+        setErrors(newErrors);
+    };
+
     const handleConfirmOrder = async () => {
-        if (!newOrder.customer || !newOrder.phone || !newOrder.state) {
-            toast.error('يرجى ملء جميع الحقول المطلوبة (الاسم، الهاتف، الولاية)');
-            return;
+        const newErrors: Record<string, string> = {};
+
+        if (!newOrder.customer) newErrors.customer = 'يرجى إدخال اسم العميل';
+        if (!newOrder.phone) newErrors.phone = 'يرجى إدخال رقم الهاتف';
+        if (!newOrder.state) newErrors.state = 'يرجى اختيار الولاية';
+
+        // Phone Validation (Algerian Format: 05/06/07 + 8 digits = 10 digits total)
+        const phoneRegex = /^(0)(5|6|7)[0-9]{8}$/;
+        if (newOrder.phone && !phoneRegex.test(newOrder.phone.replace(/\s/g, ''))) {
+            newErrors.phone = 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
         }
 
         if (cart.length === 0) {
             toast.error('يرجى إضافة منتج واحد على الأقل');
             return;
         }
+
+        if ((newOrder.shippingCost || 0) < 0) {
+            newErrors.shippingCost = 'لا يمكن أن يكون سعر التوصيل أقل من 0';
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            toast.error('يرجى التحقق من الحقول');
+            return;
+        }
+
+        setErrors({});
 
         const totalQuantity = cart.reduce((acc, item) => acc + item.quantity, 0);
         const subTotalPrice = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -191,6 +230,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 address: '', deliveryType: 'home', shippingCost: 0, notes: ''
             });
             setCart([]);
+            setErrors({});
 
         } catch (error: any) {
             console.error(error);
@@ -239,18 +279,28 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 <input
                                     placeholder="أحمد الجزائري..."
                                     value={newOrder.customer}
-                                    onChange={e => setNewOrder({ ...newOrder, customer: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all"
+                                    onChange={e => {
+                                        setNewOrder({ ...newOrder, customer: e.target.value });
+                                        if (errors.customer) setErrors({ ...errors, customer: '' });
+                                    }}
+                                    onBlur={(e) => handleBlur('customer', e.target.value)}
+                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all ${errors.customer ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
                                 />
+                                {errors.customer && <p className="text-red-500 text-[9px] font-bold px-1">{errors.customer}</p>}
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رقم الهاتف</label>
                                 <input
                                     placeholder="05 / 06 / 07..."
                                     value={newOrder.phone}
-                                    onChange={e => setNewOrder({ ...newOrder, phone: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all"
+                                    onChange={e => {
+                                        setNewOrder({ ...newOrder, phone: e.target.value });
+                                        if (errors.phone) setErrors({ ...errors, phone: '' });
+                                    }}
+                                    onBlur={(e) => handleBlur('phone', e.target.value)}
+                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all ${errors.phone ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
                                 />
+                                {errors.phone && <p className="text-red-500 text-[9px] font-bold px-1">{errors.phone}</p>}
                             </div>
                         </div>
                     </div>
@@ -407,8 +457,18 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
                                 <div className="relative">
                                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                    <input type="number" value={newOrder.shippingCost} onChange={e => setNewOrder({ ...newOrder, shippingCost: Number(e.target.value) })} className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-indigo-600 focus:bg-white focus:border-indigo-400 outline-none transition-all" />
+                                    <input
+                                        type="number"
+                                        value={newOrder.shippingCost}
+                                        onChange={e => {
+                                            setNewOrder({ ...newOrder, shippingCost: Number(e.target.value) });
+                                            if (errors.shippingCost) setErrors({ ...errors, shippingCost: '' });
+                                        }}
+                                        onBlur={(e) => handleBlur('shippingCost', e.target.value)}
+                                        className={`w-full pr-10 pl-4 py-3 bg-slate-50 border rounded-xl text-xs font-black text-indigo-600 transition-all ${errors.shippingCost ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-400'}`}
+                                    />
                                 </div>
+                                {errors.shippingCost && <p className="text-red-500 text-[9px] font-bold px-1">{errors.shippingCost}</p>}
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظات (اختياري)</label>

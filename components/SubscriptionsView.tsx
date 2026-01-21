@@ -42,6 +42,7 @@ const SubscriptionsView: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ccp');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Coupon State
   const [couponCode, setCouponCode] = useState('');
@@ -225,6 +226,15 @@ const SubscriptionsView: React.FC = () => {
 
     setIsSubmitting(true);
     // const toastId = toast.loading('جاري إنشاء الفاتورة...');
+
+    if ((paymentMethod === 'ccp' || paymentMethod === 'baridimob') && !proofPreview && !isPayLater) {
+      setErrors({ ...errors, proof: 'يرجى إرفاق صورة وصل الدفع' });
+      toast.error('يرجى إرفاق صورة وصل الدفع لإتمام العملية');
+      setIsSubmitting(false); // Reset submitting state
+      return;
+    }
+
+    setErrors({});
 
     // Build invoice data
     const invoiceData = {

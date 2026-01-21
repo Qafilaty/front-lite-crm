@@ -87,6 +87,8 @@ const FinancesView: React.FC = () => {
       note: ''
    });
 
+   const [errors, setErrors] = useState<Record<string, string>>({});
+
    const filteredTransactions = transactions.filter(t => {
       const matchesSearch = t.note.toLowerCase().includes(searchTerm.toLowerCase()) ||
          t.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -100,11 +102,43 @@ const FinancesView: React.FC = () => {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isDeleting, setIsDeleting] = useState(false);
 
+   const handleBlur = (field: string, value: any) => {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+
+      if (field === 'amount') {
+         if (!value || Number(value) <= 0) newErrors.amount = 'يرجى إدخال مبلغ صحيح (أكبر من 0)';
+      }
+      else if (field === 'category') {
+         if (!value) newErrors.category = 'يرجى اختيار التصنيف';
+      }
+      else if (field === 'note') {
+         if (!value) newErrors.note = 'يرجى كتابة ملاحظة توضيحية';
+      }
+
+      setErrors(newErrors);
+   };
+
    const handleAddTransaction = async () => {
+      const newErrors: Record<string, string> = {};
+
       if (!newTransaction.amount || newTransaction.amount <= 0) {
-         toast.error('يرجى إدخال مبلغ صحيح');
+         newErrors.amount = 'يرجى إدخال مبلغ صحيح (أكبر من 0)';
+      }
+      if (!newTransaction.category) {
+         newErrors.category = 'يرجى اختيار التصنيف';
+      }
+      if (!newTransaction.note) {
+         newErrors.note = 'يرجى كتابة ملاحظة توضيحية';
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+         setErrors(newErrors);
+         toast.error('يرجى التحقق من الحقول');
          return;
       }
+
+      setErrors({});
 
       setIsSubmitting(true);
       try {
@@ -309,29 +343,54 @@ const FinancesView: React.FC = () => {
                      </div>
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القيمة (دج)</label>
-                        <input type="number" value={newTransaction.amount} onChange={e => setNewTransaction({ ...newTransaction, amount: Number(e.target.value) })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black text-slate-800 focus:bg-white outline-none focus:border-indigo-400 transition-all" />
+                        <input
+                           type="number"
+                           value={newTransaction.amount}
+                           onChange={e => {
+                              setNewTransaction({ ...newTransaction, amount: Number(e.target.value) });
+                              if (errors.amount) setErrors({ ...errors, amount: '' });
+                           }}
+                           onBlur={(e) => handleBlur('amount', e.target.value)}
+                           className={`w-full px-5 py-4 bg-slate-50 border rounded-2xl text-sm font-black text-slate-800 focus:bg-white outline-none focus:border-indigo-400 transition-all ${errors.amount ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {errors.amount && <p className="text-red-500 text-[9px] font-bold px-1">{errors.amount}</p>}
                      </div>
 
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التصنيف</label>
-                        <ModernSelect
-                           value={newTransaction.category}
-                           onChange={(val) => setNewTransaction({ ...newTransaction, category: val })}
-                           options={newTransaction.type === 'income' ? [
-                              { value: "مبيعات", label: "مبيعات" },
-                              { value: "استرداد", label: "استرداد" },
-                              { value: "أخرى", label: "أخرى" }
-                           ] : [
-                              { value: "رواتب", label: "رواتب" },
-                              { value: "شحن", label: "شحن" },
-                              { value: "تسويق", label: "تسويق" },
-                              { value: "أخرى", label: "أخرى" }
-                           ]}
-                        />
+                        <div className={errors.category ? "rounded-xl border border-red-500" : ""}>
+                           <ModernSelect
+                              value={newTransaction.category}
+                              onChange={(val) => {
+                                 setNewTransaction({ ...newTransaction, category: val });
+                                 if (errors.category) setErrors({ ...errors, category: '' });
+                              }}
+                              options={newTransaction.type === 'income' ? [
+                                 { value: "مبيعات", label: "مبيعات" },
+                                 { value: "استرداد", label: "استرداد" },
+                                 { value: "أخرى", label: "أخرى" }
+                              ] : [
+                                 { value: "رواتب", label: "رواتب" },
+                                 { value: "شحن", label: "شحن" },
+                                 { value: "تسويق", label: "تسويق" },
+                                 { value: "أخرى", label: "أخرى" }
+                              ]}
+                           />
+                        </div>
+                        {errors.category && <p className="text-red-500 text-[9px] font-bold px-1">{errors.category}</p>}
                      </div>
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة</label>
-                        <textarea value={newTransaction.note} onChange={e => setNewTransaction({ ...newTransaction, note: e.target.value })} className="w-full h-24 px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all resize-none" />
+                        <textarea
+                           value={newTransaction.note}
+                           onChange={e => {
+                              setNewTransaction({ ...newTransaction, note: e.target.value });
+                              if (errors.note) setErrors({ ...errors, note: '' });
+                           }}
+                           onBlur={(e) => handleBlur('note', e.target.value)}
+                           className={`w-full h-24 px-5 py-4 bg-slate-50 border rounded-2xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all resize-none ${errors.note ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {errors.note && <p className="text-red-500 text-[9px] font-bold px-1">{errors.note}</p>}
                      </div>
                   </div>
                   <div className="p-8 border-t border-slate-100 bg-white">

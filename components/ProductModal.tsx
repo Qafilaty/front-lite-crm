@@ -44,6 +44,7 @@ const INITIAL_STATE: ProductFormState = {
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess, product }) => {
     const isEditMode = !!product; // Derive isEditMode
     const [formData, setFormData] = useState<ProductFormState>(INITIAL_STATE);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [activeTab, setActiveTab] = useState<'general' | 'variants'>('general');
 
     // Variant Input State
@@ -60,6 +61,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
     // Reset or Populate on open
     useEffect(() => {
         if (isOpen) {
+            setErrors({});
             if (product) {
                 // Populate form for Edit Mode
                 setFormData({
@@ -205,11 +207,50 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
         setFormData(prev => ({ ...prev, variantsProbability: updated }));
     };
 
+    const handleBlur = (field: string, value: any) => {
+        const newErrors = { ...errors };
+        delete newErrors[field];
+
+        if (field === 'name') {
+            if (!value) newErrors.name = 'يرجى إدخال اسم المنتج';
+        }
+        else if (field === 'sku') {
+            if (!value) newErrors.sku = 'يرجى إدخال رمز التخزين (SKU)';
+        }
+        else if (field === 'price') {
+            if (Number(value) < 0) newErrors.price = 'لا يمكن أن يكون السعر أقل من 0';
+        }
+        else if (field === 'cost') {
+            if (Number(value) < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
+        }
+
+        setErrors(newErrors);
+    };
+
     const handleSubmit = async () => {
-        if (!formData.name) {
-            toast.error('يرجى إدخال اسم المنتج');
+        const newErrors: Record<string, string> = {};
+
+        if (!formData.name) newErrors.name = 'يرجى إدخال اسم المنتج';
+        if (!formData.sku) newErrors.sku = 'يرجى إدخال رمز التخزين (SKU)';
+        if (formData.price < 0) newErrors.price = 'لا يمكن أن يكون السعر أقل من 0';
+        if (formData.cost < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
+
+        // Validate variants if present
+        if (formData.variants.length > 0) {
+            const invalidVariant = formData.variants.find(v => !v.name || v.value.length === 0);
+            if (invalidVariant) {
+                toast.error('يرجى التأكد من إدخال اسماء وقيم جميع المتغيرات');
+                // Could also set a general error or specific variant error if complex
+            }
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            toast.error('يرجى التحقق من الحقول');
             return;
         }
+
+        setErrors({});
 
         const toastId = toast.loading(isEditMode ? 'جاري تحديث المنتج...' : 'جاري إضافة المنتج...');
         const isLoading = isEditMode ? isUpdating : isCreating;
@@ -370,41 +411,69 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                 placeholder="مثال: قميص قطني صيفي"
                                                 name="name"
                                                 value={formData.name}
-                                                onChange={handleInputChange}
+                                                onChange={(e) => {
+                                                    handleInputChange(e);
+                                                    if (errors.name) setErrors({ ...errors, name: '' });
+                                                }}
+                                                onBlur={(e) => handleBlur('name', e.target.value)}
                                                 autoFocus
+                                                className={errors.name ? "border-red-500 focus:border-red-500 bg-red-50" : ""}
                                             />
+                                            {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.name}</p>}
                                         </div>
-                                        <Input
-                                            label="رمز التخزين (SKU)"
-                                            placeholder="PRD-001"
-                                            name="sku"
-                                            value={formData.sku}
-                                            onChange={handleInputChange}
-                                            icon={<span className="text-xs font-bold text-gray-500">#</span>}
-                                        />
+                                        <div>
+                                            <Input
+                                                label="رمز التخزين (SKU)"
+                                                placeholder="PRD-001"
+                                                name="sku"
+                                                value={formData.sku}
+                                                onChange={(e) => {
+                                                    handleInputChange(e);
+                                                    if (errors.sku) setErrors({ ...errors, sku: '' });
+                                                }}
+                                                onBlur={(e) => handleBlur('sku', e.target.value)}
+                                                icon={<span className="text-xs font-bold text-gray-500">#</span>}
+                                                className={errors.sku ? "border-red-500 focus:border-red-500 bg-red-50" : ""}
+                                            />
+                                            {errors.sku && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.sku}</p>}
+                                        </div>
 
                                         <div className="hidden md:block"></div>
 
-                                        <Input
-                                            label="سعر البيع"
-                                            type="number"
-                                            name="price"
-                                            value={formData.price}
-                                            onChange={handleInputChange}
-                                            icon={<DollarSign size={14} className="text-gray-500" />}
-                                            disabled={hasVariants}
-                                            className={hasVariants ? "bg-gray-50 text-gray-400" : ""}
-                                        />
-                                        <Input
-                                            label="سعر التكلفة"
-                                            type="number"
-                                            name="cost"
-                                            value={formData.cost}
-                                            onChange={handleInputChange}
-                                            icon={<Archive size={14} className="text-gray-500" />}
-                                            disabled={hasVariants}
-                                            className={hasVariants ? "bg-gray-50 text-gray-400" : ""}
-                                        />
+                                        <div>
+                                            <Input
+                                                label="سعر البيع"
+                                                type="number"
+                                                name="price"
+                                                value={formData.price}
+                                                onChange={(e) => {
+                                                    handleInputChange(e);
+                                                    if (errors.price) setErrors({ ...errors, price: '' });
+                                                }}
+                                                onBlur={(e) => handleBlur('price', e.target.value)}
+                                                icon={<DollarSign size={14} className="text-gray-500" />}
+                                                disabled={hasVariants}
+                                                className={hasVariants ? "bg-gray-50 text-gray-400" : (errors.price ? "border-red-500 focus:border-red-500 bg-red-50" : "")}
+                                            />
+                                            {errors.price && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.price}</p>}
+                                        </div>
+                                        <div>
+                                            <Input
+                                                label="سعر التكلفة"
+                                                type="number"
+                                                name="cost"
+                                                value={formData.cost}
+                                                onChange={(e) => {
+                                                    handleInputChange(e);
+                                                    if (errors.cost) setErrors({ ...errors, cost: '' });
+                                                }}
+                                                onBlur={(e) => handleBlur('cost', e.target.value)}
+                                                icon={<Archive size={14} className="text-gray-500" />}
+                                                disabled={hasVariants}
+                                                className={hasVariants ? "bg-gray-50 text-gray-400" : (errors.cost ? "border-red-500 focus:border-red-500 bg-red-50" : "")}
+                                            />
+                                            {errors.cost && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.cost}</p>}
+                                        </div>
 
                                         {hasVariants && (
                                             <div className="md:col-span-2 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl text-sm flex items-center gap-3 border border-blue-100">
