@@ -13,24 +13,25 @@ export const useInventory = (companyId: string | undefined) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const result = await productService.getAllProducts(companyId, {
+
+      const result = await productService.getAllProducts({
         pagination: { limit: 100, page: 1 }
       });
-      
+
       if (result.success && result.products) {
         const transformedProducts = result.products.map((p: any) => ({
           id: p.id,
           name: p.name || '',
           sku: p.sku || '',
-          stock: p.quantityInStock || 0,
+          stock: p.quantity || 0,
+          quantity: p.quantity || 0,
           price: p.variantsProbability?.[0]?.price || 0,
           category: 'عام',
           variants: p.variantsProbability?.map((v: any) => ({
             id: v.id,
             name: v.name,
             sku: v.sku,
-            stock: v.quantityInStock || 0,
+            stock: v.quantity || 0,
             price: v.price,
           })) || [],
         }));

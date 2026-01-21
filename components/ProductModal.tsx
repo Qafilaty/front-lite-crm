@@ -22,6 +22,7 @@ interface ProductFormState {
     cost: number;
     status: boolean;
     note: string;
+    quantity: number; // For simple products (no variants)
     variants: ProductVariantDefinition[];
     variantsProbability: ProductVariantProbability[];
 
@@ -37,6 +38,7 @@ const INITIAL_STATE: ProductFormState = {
     cost: 0,
     status: true,
     note: '',
+    quantity: 0,
     variants: [],
     variantsProbability: [],
 };
@@ -72,6 +74,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                     cost: product.cost || 0, // Ensure Product type has cost or cast it
                     status: product.status !== false, // Default to true if undefined
                     note: product.note || '',
+                    quantity: product.quantity || 0,
                     variants: product.variants || [], // Assuming structure matches or needs mapping
                     variantsProbability: product.variantsProbability || [],
                 });
@@ -223,6 +226,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
         else if (field === 'cost') {
             if (Number(value) < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
         }
+        else if (field === 'quantity') {
+            if (Number(value) < 0) newErrors.quantity = 'لا يمكن أن تكون الكمية أقل من 0';
+        }
 
         setErrors(newErrors);
     };
@@ -234,12 +240,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
         if (!formData.sku) newErrors.sku = 'يرجى إدخال رمز التخزين (SKU)';
         if (formData.price < 0) newErrors.price = 'لا يمكن أن يكون السعر أقل من 0';
         if (formData.cost < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
+        if (!hasVariants && formData.quantity < 0) newErrors.quantity = 'لا يمكن أن تكون الكمية أقل من 0';
 
         // Validate variants if present
         if (formData.variants.length > 0) {
-            const invalidVariant = formData.variants.find(v => !v.name || v.value.length === 0);
+            const invalidVariant = formData.variants.find(v => !v.name || !v.value || v.value.length === 0);
+            console.log({ invalidVariant });
+
             if (invalidVariant) {
                 toast.error('يرجى التأكد من إدخال اسماء وقيم جميع المتغيرات');
+                return;
                 // Could also set a general error or specific variant error if complex
             }
         }
@@ -265,6 +275,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                 // cost: formData.cost, // Ensure checking if backend accepts this
                 status: formData.status,
                 note: formData.note,
+                quantity: formData.quantity,
 
                 variants: formData.variants.map(v => ({
                     name: v.name,
@@ -272,7 +283,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                     value: v.value.map(val => ({ name: val.name, value: val.value }))
                 })),
 
-                variantsProbability: formData.variantsProbability.map(vp => ({
+                variantsProbability: hasVariants ? formData.variantsProbability.map(vp => ({
                     // For update, we might need _id if it's an existing variant to update it, 
                     // but often full replacement or simplified structure works depending on resolvers.
                     ...(vp._id || vp.id ? { _id: vp._id || vp.id } : {}),
@@ -281,7 +292,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                     price: vp.price,
                     cost: vp.cost,
                     quantity: vp.quantity,
-                })),
+                })) : [],
             };
 
             let result;
@@ -470,10 +481,28 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                 onBlur={(e) => handleBlur('cost', e.target.value)}
                                                 icon={<Archive size={14} className="text-gray-500" />}
                                                 disabled={hasVariants}
-                                                className={hasVariants ? "bg-gray-50 text-gray-400" : (errors.cost ? "border-red-500 focus:border-red-500 bg-red-50" : "")}
                                             />
                                             {errors.cost && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.cost}</p>}
                                         </div>
+
+                                        {!hasVariants && (
+                                            <div className="md:col-span-2">
+                                                <Input
+                                                    label="الكمية المتوفرة"
+                                                    type="number"
+                                                    name="quantity"
+                                                    value={formData.quantity}
+                                                    onChange={(e) => {
+                                                        handleInputChange(e);
+                                                        if (errors.quantity) setErrors({ ...errors, quantity: '' });
+                                                    }}
+                                                    onBlur={(e) => handleBlur('quantity', e.target.value)}
+                                                    icon={<Package size={14} className="text-gray-500" />}
+                                                    className={errors.quantity ? "border-red-500 focus:border-red-500 bg-red-50" : ""}
+                                                />
+                                                {errors.quantity && <p className="text-red-500 text-[10px] font-bold mt-1 px-1">{errors.quantity}</p>}
+                                            </div>
+                                        )}
 
                                         {hasVariants && (
                                             <div className="md:col-span-2 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl text-sm flex items-center gap-3 border border-blue-100">
@@ -609,13 +638,148 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                             <div className="overflow-x-auto max-h-[400px] no-scrollbar">
                                                 <table className="min-w-full divide-y divide-gray-100">
                                                     <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                                                        {/* Bulk Edit Row */}
+                                                        <tr className="bg-indigo-50/30 border-b border-indigo-100">
+                                                            <td className="px-4 py-2 text-right text-xs font-bold text-indigo-600">
+                                                                تطبيق على الكل:
+                                                            </td>
+                                                            <td className="px-4 py-2"></td>
+                                                            <td className="px-4 py-2">
+                                                                <div className="flex items-center gap-1 group/input">
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="السعر"
+                                                                        id="bulk-price"
+                                                                        className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                const input = e.currentTarget;
+                                                                                const val = parseFloat(input.value);
+                                                                                if (!isNaN(val)) {
+                                                                                    setFormData(prev => ({
+                                                                                        ...prev,
+                                                                                        variantsProbability: prev.variantsProbability.map(p => ({ ...p, price: val }))
+                                                                                    }));
+                                                                                    toast.success('تم تطبيق السعر على الكل');
+                                                                                    input.value = ''; // Clear after apply
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const input = document.getElementById('bulk-price') as HTMLInputElement;
+                                                                            const val = parseFloat(input?.value);
+                                                                            if (!isNaN(val)) {
+                                                                                setFormData(prev => ({
+                                                                                    ...prev,
+                                                                                    variantsProbability: prev.variantsProbability.map(p => ({ ...p, price: val }))
+                                                                                }));
+                                                                                toast.success('تم تطبيق السعر على الكل');
+                                                                                input.value = '';
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
+                                                                        title="تطبيق السعر"
+                                                                    >
+                                                                        <CheckCircle2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2">
+                                                                <div className="flex items-center gap-1 group/input">
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="التكلفة"
+                                                                        id="bulk-cost"
+                                                                        className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                const input = e.currentTarget;
+                                                                                const val = parseFloat(input.value);
+                                                                                if (!isNaN(val)) {
+                                                                                    setFormData(prev => ({
+                                                                                        ...prev,
+                                                                                        variantsProbability: prev.variantsProbability.map(p => ({ ...p, cost: val }))
+                                                                                    }));
+                                                                                    toast.success('تم تطبيق التكلفة على الكل');
+                                                                                    input.value = '';
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const input = document.getElementById('bulk-cost') as HTMLInputElement;
+                                                                            const val = parseFloat(input?.value);
+                                                                            if (!isNaN(val)) {
+                                                                                setFormData(prev => ({
+                                                                                    ...prev,
+                                                                                    variantsProbability: prev.variantsProbability.map(p => ({ ...p, cost: val }))
+                                                                                }));
+                                                                                toast.success('تم تطبيق التكلفة على الكل');
+                                                                                input.value = '';
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
+                                                                        title="تطبيق التكلفة"
+                                                                    >
+                                                                        <CheckCircle2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2">
+                                                                <div className="flex items-center gap-1 group/input">
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="الكمية"
+                                                                        id="bulk-quantity"
+                                                                        className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                const input = e.currentTarget;
+                                                                                const val = parseFloat(input.value);
+                                                                                if (!isNaN(val)) {
+                                                                                    setFormData(prev => ({
+                                                                                        ...prev,
+                                                                                        variantsProbability: prev.variantsProbability.map(p => ({ ...p, quantity: val }))
+                                                                                    }));
+                                                                                    toast.success('تم تطبيق الكمية على الكل');
+                                                                                    input.value = '';
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const input = document.getElementById('bulk-quantity') as HTMLInputElement;
+                                                                            const val = parseFloat(input?.value);
+                                                                            if (!isNaN(val)) {
+                                                                                setFormData(prev => ({
+                                                                                    ...prev,
+                                                                                    variantsProbability: prev.variantsProbability.map(p => ({ ...p, quantity: val }))
+                                                                                }));
+                                                                                toast.success('تم تطبيق الكمية على الكل');
+                                                                                input.value = '';
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
+                                                                        title="تطبيق الكمية"
+                                                                    >
+                                                                        <CheckCircle2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2 text-center text-[10px] text-indigo-400 font-medium">
+                                                            </td>
+                                                        </tr>
                                                         <tr>
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">المتغير</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">SKU</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">السعر</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">التكلفة</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">الكمية</th>
-                                                            <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-16">افتراضي</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-48">SKU</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">السعر</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">التكلفة</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-32">الكمية</th>
+                                                            <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-20">افتراضي</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-50">

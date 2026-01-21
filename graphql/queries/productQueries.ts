@@ -11,8 +11,7 @@ export const GET_PRODUCT = gql`
       thumbnail
       name
       sku
-      allQuantity
-      quantityInStock
+      quantity
       status
       note
       variants {
@@ -31,8 +30,7 @@ export const GET_PRODUCT = gql`
         sku
         price
         cost
-        allQuantity
-        quantity: quantityInStock
+        quantity
       }
       company {
         id
@@ -55,14 +53,17 @@ export const GET_ALL_PRODUCTS = gql`
         thumbnail
         name
         sku
-        allQuantity
-        quantityInStock
+        quantity
         status
         note
         variants {
           id
           name
           type
+          value {
+            name
+            value
+          }
         }
         variantsProbability {
           id
@@ -70,8 +71,7 @@ export const GET_ALL_PRODUCTS = gql`
           sku
           price
           cost
-          allQuantity
-          quantity: quantityInStock
+          quantity
         }
         createdAt
         updatedAt

@@ -5,6 +5,7 @@ import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, U
 import toast from 'react-hot-toast';
 import TableSkeleton from './common/TableSkeleton';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
+import { PaginationControl } from './common';
 
 interface UsersViewProps {
   users: User[];
@@ -29,7 +30,7 @@ const UsersView: React.FC<UsersViewProps> = ({
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [editingUser, setEditingUser] = useState<any>(null);
 
   // Delete Modal States
@@ -351,17 +352,14 @@ const UsersView: React.FC<UsersViewProps> = ({
             </table>
           </div>
         )}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
-          <div className="flex items-center gap-2">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-            <div className="flex items-center gap-1 mx-3">
-              {[...Array(totalPages)].map((_, i) => (
-                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-              ))}
-            </div>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
-          </div>
-        </div>
+        <PaginationControl
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          totalItems={filteredUsers.length}
+        />
       </div>
 
       {showModal && (

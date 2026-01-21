@@ -12,6 +12,7 @@ import { ModernSelect } from './common';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import TableSkeleton from './common/TableSkeleton';
+import { PaginationControl } from './common';
 
 const FinancesView: React.FC = () => {
    const { user } = useAuth();
@@ -21,7 +22,7 @@ const FinancesView: React.FC = () => {
    const [searchTerm, setSearchTerm] = useState('');
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [currentPage, setCurrentPage] = useState(1);
-   const itemsPerPage = 12;
+   const [itemsPerPage, setItemsPerPage] = useState(12);
 
    const [pagination, setPagination] = useState({
       limit: 50,
@@ -320,127 +321,139 @@ const FinancesView: React.FC = () => {
                   </div>
                </>
             )}
+            <PaginationControl
+               currentPage={currentPage}
+               totalPages={totalPages}
+               onPageChange={setCurrentPage}
+               limit={itemsPerPage}
+               onLimitChange={setItemsPerPage}
+               totalItems={filteredTransactions.length}
+            />
          </div>
 
-         {isModalOpen && createPortal(
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-               <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh]">
-                  <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><Plus className="w-6 h-6" /></div>
-                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">إضافة حركة مالية</h3>
-                     </div>
-                     <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-xl transition-all"><X className="w-6 h-6" /></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
-                     <div className="flex p-1.5 bg-slate-100 rounded-2xl">
-                        <button onClick={() => setNewTransaction({ ...newTransaction, type: 'income' })} className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>
-                           <PlusCircle className="w-4 h-4" /> مداخيل
-                        </button>
-                        <button onClick={() => setNewTransaction({ ...newTransaction, type: 'expense' })} className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>
-                           <X className="w-4 h-4" /> مصروفات
-                        </button>
-                     </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القيمة (دج)</label>
-                        <input
-                           type="number"
-                           value={newTransaction.amount}
-                           onChange={e => {
-                              setNewTransaction({ ...newTransaction, amount: Number(e.target.value) });
-                              if (errors.amount) setErrors({ ...errors, amount: '' });
-                           }}
-                           onBlur={(e) => handleBlur('amount', e.target.value)}
-                           className={`w-full px-5 py-4 bg-slate-50 border rounded-2xl text-sm font-black text-slate-800 focus:bg-white outline-none focus:border-indigo-400 transition-all ${errors.amount ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
-                        />
-                        {errors.amount && <p className="text-red-500 text-[9px] font-bold px-1">{errors.amount}</p>}
-                     </div>
-
-                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التصنيف</label>
-                        <div className={errors.category ? "rounded-xl border border-red-500" : ""}>
-                           <ModernSelect
-                              value={newTransaction.category}
-                              onChange={(val) => {
-                                 setNewTransaction({ ...newTransaction, category: val });
-                                 if (errors.category) setErrors({ ...errors, category: '' });
-                              }}
-                              options={newTransaction.type === 'income' ? [
-                                 { value: "مبيعات", label: "مبيعات" },
-                                 { value: "استرداد", label: "استرداد" },
-                                 { value: "أخرى", label: "أخرى" }
-                              ] : [
-                                 { value: "رواتب", label: "رواتب" },
-                                 { value: "شحن", label: "شحن" },
-                                 { value: "تسويق", label: "تسويق" },
-                                 { value: "أخرى", label: "أخرى" }
-                              ]}
-                           />
+         {
+            isModalOpen && createPortal(
+               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+                  <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh]">
+                     <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><Plus className="w-6 h-6" /></div>
+                           <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">إضافة حركة مالية</h3>
                         </div>
-                        {errors.category && <p className="text-red-500 text-[9px] font-bold px-1">{errors.category}</p>}
+                        <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-xl transition-all"><X className="w-6 h-6" /></button>
                      </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة</label>
-                        <textarea
-                           value={newTransaction.note}
-                           onChange={e => {
-                              setNewTransaction({ ...newTransaction, note: e.target.value });
-                              if (errors.note) setErrors({ ...errors, note: '' });
-                           }}
-                           onBlur={(e) => handleBlur('note', e.target.value)}
-                           className={`w-full h-24 px-5 py-4 bg-slate-50 border rounded-2xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all resize-none ${errors.note ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
-                        />
-                        {errors.note && <p className="text-red-500 text-[9px] font-bold px-1">{errors.note}</p>}
-                     </div>
-                  </div>
-                  <div className="p-8 border-t border-slate-100 bg-white">
-                     <button
-                        onClick={handleAddTransaction}
-                        disabled={isSubmitting}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
-                     >
-                        {isSubmitting ? (
-                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                           <>حفظ الحركة <Save className="w-4 h-4" /></>
-                        )}
-                     </button>
-                  </div>
-               </div>
-            </div>, document.body
-         )}
+                     <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
+                        <div className="flex p-1.5 bg-slate-100 rounded-2xl">
+                           <button onClick={() => setNewTransaction({ ...newTransaction, type: 'income' })} className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>
+                              <PlusCircle className="w-4 h-4" /> مداخيل
+                           </button>
+                           <button onClick={() => setNewTransaction({ ...newTransaction, type: 'expense' })} className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>
+                              <X className="w-4 h-4" /> مصروفات
+                           </button>
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القيمة (دج)</label>
+                           <input
+                              type="number"
+                              value={newTransaction.amount}
+                              onChange={e => {
+                                 setNewTransaction({ ...newTransaction, amount: Number(e.target.value) });
+                                 if (errors.amount) setErrors({ ...errors, amount: '' });
+                              }}
+                              onBlur={(e) => handleBlur('amount', e.target.value)}
+                              className={`w-full px-5 py-4 bg-slate-50 border rounded-2xl text-sm font-black text-slate-800 focus:bg-white outline-none focus:border-indigo-400 transition-all ${errors.amount ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
+                           />
+                           {errors.amount && <p className="text-red-500 text-[9px] font-bold px-1">{errors.amount}</p>}
+                        </div>
 
-         {/* Delete Confirmation Modal */}
-         {deleteId && createPortal(
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-               <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
-                  <div className="p-8 text-center">
-                     <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm">
-                        <Trash2 className="w-10 h-10" />
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التصنيف</label>
+                           <div className={errors.category ? "rounded-xl border border-red-500" : ""}>
+                              <ModernSelect
+                                 value={newTransaction.category}
+                                 onChange={(val) => {
+                                    setNewTransaction({ ...newTransaction, category: val });
+                                    if (errors.category) setErrors({ ...errors, category: '' });
+                                 }}
+                                 options={newTransaction.type === 'income' ? [
+                                    { value: "مبيعات", label: "مبيعات" },
+                                    { value: "استرداد", label: "استرداد" },
+                                    { value: "أخرى", label: "أخرى" }
+                                 ] : [
+                                    { value: "رواتب", label: "رواتب" },
+                                    { value: "شحن", label: "شحن" },
+                                    { value: "تسويق", label: "تسويق" },
+                                    { value: "أخرى", label: "أخرى" }
+                                 ]}
+                              />
+                           </div>
+                           {errors.category && <p className="text-red-500 text-[9px] font-bold px-1">{errors.category}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة</label>
+                           <textarea
+                              value={newTransaction.note}
+                              onChange={e => {
+                                 setNewTransaction({ ...newTransaction, note: e.target.value });
+                                 if (errors.note) setErrors({ ...errors, note: '' });
+                              }}
+                              onBlur={(e) => handleBlur('note', e.target.value)}
+                              className={`w-full h-24 px-5 py-4 bg-slate-50 border rounded-2xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all resize-none ${errors.note ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200'}`}
+                           />
+                           {errors.note && <p className="text-red-500 text-[9px] font-bold px-1">{errors.note}</p>}
+                        </div>
                      </div>
-                     <h3 className="text-xl font-black text-slate-800 mb-2">حذف المعاملة؟</h3>
-                     <p className="text-xs font-bold text-slate-500 leading-relaxed mb-8">
-                        هل أنت متأكد من حذف هذه المعاملة المالية؟<br />
-                        لا يمكن التراجع عن هذا الإجراء
-                     </p>
-
-                     <div className="flex gap-3">
-                        <button disabled={isDeleting} onClick={() => setDeleteId(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase hover:bg-slate-50 transition-all disabled:opacity-50">
-                           إلغاء
-                        </button>
-                        <button disabled={isDeleting} onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                           {isDeleting ? (
+                     <div className="p-8 border-t border-slate-100 bg-white">
+                        <button
+                           onClick={handleAddTransaction}
+                           disabled={isSubmitting}
+                           className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                           {isSubmitting ? (
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                            ) : (
-                              'نعم، حذف'
+                              <>حفظ الحركة <Save className="w-4 h-4" /></>
                            )}
                         </button>
                      </div>
                   </div>
-               </div>
-            </div>, document.body
-         )}
-      </div>
+               </div>, document.body
+            )
+         }
+
+         {/* Delete Confirmation Modal */}
+         {
+            deleteId && createPortal(
+               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+                  <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+                     <div className="p-8 text-center">
+                        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm">
+                           <Trash2 className="w-10 h-10" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">حذف المعاملة؟</h3>
+                        <p className="text-xs font-bold text-slate-500 leading-relaxed mb-8">
+                           هل أنت متأكد من حذف هذه المعاملة المالية؟<br />
+                           لا يمكن التراجع عن هذا الإجراء
+                        </p>
+
+                        <div className="flex gap-3">
+                           <button disabled={isDeleting} onClick={() => setDeleteId(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase hover:bg-slate-50 transition-all disabled:opacity-50">
+                              إلغاء
+                           </button>
+                           <button disabled={isDeleting} onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                              {isDeleting ? (
+                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                 'نعم، حذف'
+                              )}
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div>, document.body
+            )
+         }
+      </div >
    );
 };
 

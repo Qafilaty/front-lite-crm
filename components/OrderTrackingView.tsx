@@ -1,11 +1,11 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Order, OrderStatus } from '../types';
 import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
-  PlusCircle, Check, RefreshCcw, Info
+  PlusCircle, Check, RefreshCcw, Info, UserCheck, User
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
@@ -16,8 +16,9 @@ import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
+import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
-import { ModernSelect } from './common';
+import { ModernSelect, PaginationControl } from './common';
 
 interface OrderTrackingViewProps {
   orders?: Order[];
@@ -34,9 +35,49 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [storeFilter, setStoreFilter] = useState('all');
+  const [productFilter, setProductFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // New state for collapsible filters
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setStartX(e.pageX - (scrollContainerRef.current?.offsetLeft || 0));
+    setScrollLeft(scrollContainerRef.current?.scrollLeft || 0);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
+    const walk = (x - startX) * 2; // scroll-fast
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+    }
+  };
+
+  const scrollCheck = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // 1. Fetch Company Statuses (Filtered by Group: 'tracking')
   const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY, {
@@ -57,6 +98,9 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   // 2. Fetch Stores & Wilayas (Lazy)
   const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
   const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
+  const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
+    variables: { pagination: { limit: 100, page: 1 } }
+  });
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -79,6 +123,11 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
       filter["store.idStore"] = storeFilter;
     }
 
+    // Product Filter
+    if (productFilter !== 'all') {
+      filter["products.idProduct"] = productFilter;
+    }
+
     // State Filter
     if (stateFilter !== 'all') {
       filter["state.code"] = stateFilter;
@@ -96,7 +145,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     }
 
     return filter;
-  }, [statusFilter, storeFilter, stateFilter, searchTerm, trackingStatuses]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, trackingStatuses]);
 
   // 4. Fetch Orders
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
@@ -137,81 +186,144 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 animate-in slide-in-from-top-4 duration-500">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="w-4 h-4 text-indigo-500" />
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">تصفية الشحنات</h3>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">المتجر</label>
-            <ModernSelect
-              value={storeFilter}
-              onChange={setStoreFilter}
-              options={[
-                { value: 'all', label: 'جميع المتاجر' },
-                ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
-              ]}
-              className="w-full"
-              onOpen={() => getStores()}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
-            <ModernSelect
-              value={stateFilter}
-              onChange={setStateFilter}
-              options={[
-                { value: 'all', label: 'جميع الولايات' },
-                ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
-              ]}
-              className="w-full"
-              onOpen={() => getWilayas()}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">بحث سريع (الكل)</label>
-            <div className="relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+      <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Search + Filter Toggle */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
               <input
                 type="text"
-                placeholder="الاسم، الهاتف، الكود، التتبع..."
+                placeholder="بحث سريع... (الكود، الاسم، الهاتف)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 transition-all"
+                className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
               />
             </div>
-          </div>
-        </div>
 
-        <div className="pt-2 border-t border-slate-50 flex flex-wrap gap-2 overflow-x-auto no-scrollbar pb-2">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border uppercase tracking-widest 
-              ${statusFilter === 'all' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 text-slate-400 border-slate-200'}`}
-          >
-            الكل
-          </button>
-          {trackingStatuses.map((s: any) => {
-            const isActive = statusFilter === s.id;
-            const style = getStatusStyle(s);
-            return (
-              <button
-                key={s.id}
-                onClick={() => setStatusFilter(s.id)}
-                className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border uppercase tracking-widest whitespace-nowrap
-                  ${isActive ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'hover:scale-105 shadow-sm'}`}
-                style={!isActive && style ? {
-                  backgroundColor: style.backgroundColor,
-                  color: style.color,
-                  borderColor: style.borderColor
-                } : {}}
-              >
-                {s.nameAR || s.nameEN}
-              </button>
-            );
-          })}
+            <button
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+            >
+              <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
+              {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all') && (
+                <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
+                  {[storeFilter, stateFilter, productFilter].filter(f => f !== 'all').length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Collapsible Filters Area */}
+          {isFiltersOpen && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
+                <ModernSelect
+                  value={storeFilter}
+                  onChange={setStoreFilter}
+                  options={[
+                    { value: 'all', label: 'جميع المتاجر' },
+                    ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
+                  ]}
+                  className="w-full"
+                  onOpen={() => getStores()}
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-slate-400 px-2">المنتج</span>
+                <ModernSelect
+                  value={productFilter}
+                  onChange={setProductFilter}
+                  options={[
+                    { value: 'all', label: 'جميع المنتجات' },
+                    ...(productsData?.allProduct?.data?.map((p: any) => ({ value: p.id, label: p.name })) || [])
+                  ]}
+                  className="w-full"
+                  onOpen={() => getProducts()}
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-slate-400 px-2">الولاية</span>
+                <ModernSelect
+                  value={stateFilter}
+                  onChange={setStateFilter}
+                  options={[
+                    { value: 'all', label: 'جميع الولايات' },
+                    ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
+                  ]}
+                  className="w-full"
+                  onOpen={() => getWilayas()}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Status Tabs - Scrollable Area */}
+          <div className="pt-2 border-t border-slate-50 relative group/scroll">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full bg-gradient-to-r from-white to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none" />
+
+            <button
+              onClick={() => scrollCheck('right')}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => scrollCheck('left')}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div
+              ref={scrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              className="overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing select-none"
+            >
+              <div className="flex gap-2 min-w-max px-1">
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border uppercase tracking-widest flex items-center gap-2 flex-shrink-0
+                   ${statusFilter === 'all'
+                      ? `bg-indigo-600 text-white border-transparent shadow-lg scale-105`
+                      : `bg-white text-slate-500 border-transparent hover:bg-slate-50 shadow-sm`}`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'all' ? 'bg-white' : 'bg-slate-300'}`} />
+                  الكل
+                </button>
+                {trackingStatuses.map((s: any) => {
+                  const isActive = statusFilter === s.id;
+                  const style = getStatusStyle(s);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setStatusFilter(s.id)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border uppercase tracking-widest flex items-center gap-2 flex-shrink-0
+                      ${isActive ? 'brightness-110 shadow-md scale-105 ring-2 ring-offset-2 ring-indigo-50/50' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50'}`}
+                      style={!isActive && style ? {
+                        backgroundColor: style.backgroundColor, // keep soft bg for tracking
+                        color: style.color,
+                        borderColor: style.borderColor
+                      } : (isActive && style ? {
+                        backgroundColor: style.color, // Solid for active in tracking
+                        color: '#fff',
+                        borderColor: style.color
+                      } : {})}
+                    >
+                      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />}
+                      {s.nameAR || s.nameEN}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -225,9 +337,10 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
             <table className="w-full text-right border-collapse min-w-[1100px]">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
@@ -241,15 +354,39 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
                   return (
                     <tr key={order.id} onClick={() => navigate(`/tracking/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
-                      <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{trackingCode}</td>
                       <td className="px-6 py-5">
                         <div className="space-y-0.5">
                           <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer}</p>
                           <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-[11px] font-bold text-slate-600">
-                        {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">
+                            {/* State Display */}
+                            {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                          </span>
+                          {order.city && (
+                            <span className="text-[10px] font-bold text-slate-400 px-1">
+                              {order.city}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{trackingCode}</td>
+                      <td className="px-6 py-5">
+                        {order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                              <UserCheck className="w-3 h-3" />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-600">
+                              {order.confirmationTimeLine[0].user?.name || 'غير معروف'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-300 font-bold">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-5 font-black text-slate-800 text-[11px]">{order.totalPrice || order.amount} دج</td>
                       <td className="px-6 py-5">
@@ -276,17 +413,15 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
             </table>
           </div>
         )}
-        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-center items-center">
-          <div className="flex items-center gap-2">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronRight className="w-5 h-5" /></button>
-            <div className="flex items-center gap-1.5 mx-3">
-              {[...Array(totalPages)].map((_, i) => (
-                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-              ))}
-            </div>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all"><ChevronLeft className="w-5 h-5" /></button>
-          </div>
-        </div>
+        <PaginationControl
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          totalItems={ordersData?.allOrder?.total || 0}
+          isLoading={ordersLoading}
+        />
       </div>
     </div>
   );

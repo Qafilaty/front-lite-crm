@@ -10,6 +10,7 @@ import {
   Loader2
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
+import { PaginationControl } from './common';
 import { salaryService, userService, orderService } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,10 +34,10 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersTotal, setOrdersTotal] = useState(0);
-  const ordersPerPage = 10;
+  const [ordersPerPage, setOrdersPerPage] = useState(10);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const fetchData = async () => {
     try {
@@ -209,6 +210,30 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     setOrdersPage(newPage);
     fetchEmployeeOrders(selectedUserForOrders.id, newPage);
   };
+
+  // Re-fetch when orders limit changes
+  const handleOrderLimitChange = (newLimit: number) => {
+    setOrdersPerPage(newLimit);
+    setOrdersPage(1);
+    if (selectedUserForOrders) {
+      // We need to fetch immediately with new limit
+      // fetchEmployeeOrders uses state ordersPerPage which might not be updated yet?
+      // Actually useState update is async.
+      // Better to just update state and let useEffect handle it if we had one, or call fetch with new limit.
+      // Since fetch uses the state variable, we should ideally pass the limit to fetch function.
+      // Let's modify fetchEmployeeOrders signature or just call it after timeout?
+      // Cleaner: modify fetchEmployeeOrders to accept limit override
+    }
+    // Actually, standard pattern: useEffect on ordersPerPage?
+    // But fetchEmployeeOrders is called manually.
+    // Let's just use effect for selectedUserForOrders + page + limit?
+  };
+
+  useEffect(() => {
+    if (selectedUserForOrders) {
+      fetchEmployeeOrders(selectedUserForOrders.id, ordersPage);
+    }
+  }, [ordersPerPage]);
 
   // @ts-ignore
   const paginatedData = activeTab === 'due'
@@ -494,27 +519,17 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                   </table>
 
                   {/* Pagination Stats inside Modal */}
-                  {Math.ceil(ordersTotal / ordersPerPage) > 1 && (
-                    <div className="p-4 bg-white border-t border-slate-200 flex justify-center items-center gap-4 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                      <button
-                        disabled={ordersPage === 1}
-                        onClick={() => handlePageChangeOrders(ordersPage - 1)}
-                        className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <span className="text-[10px] font-black text-slate-400">
-                        صفحة {ordersPage} من {Math.ceil(ordersTotal / ordersPerPage)}
-                      </span>
-                      <button
-                        disabled={ordersPage === Math.ceil(ordersTotal / ordersPerPage)}
-                        onClick={() => handlePageChangeOrders(ordersPage + 1)}
-                        className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <PaginationControl
+                      currentPage={ordersPage}
+                      totalPages={Math.ceil(ordersTotal / ordersPerPage)}
+                      onPageChange={handlePageChangeOrders}
+                      limit={ordersPerPage}
+                      onLimitChange={setOrdersPerPage}
+                      totalItems={ordersTotal}
+                      isLoading={loadingOrders}
+                    />
+                  </div>
 
                 </div>
               ) : (

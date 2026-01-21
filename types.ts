@@ -167,7 +167,8 @@ export interface Product {
   id: string;
   name: string;
   sku: string;
-  stock: number;
+  quantity?: number;
+  stock?: number; // Legacy, use quantity
   price: number;
   category: string;
   thumbnail?: string; // Added

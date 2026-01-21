@@ -8,6 +8,7 @@ import {
 import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_WILAYAS } from '../graphql/queries';
 import { CREATE_ORDER } from '../graphql/mutations/orderMutations';
+import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
 import { ModernSelect } from './common';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,7 +57,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
     const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
     const wilayas: Wilaya[] = wilayasData?.allWilayas || [];
 
-    // 2. Products (Lazy)
+    // 2. Pricing (Lazy)
+    const [getDeliveryPricing, { data: pricingData }] = useLazyQuery(GET_ALL_DELIVERY_PRICE_COMPANY);
+
+    // 3. Products (Lazy)
     // Only fetch when picker opens
     const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
         variables: { pagination: { limit: 100, page: 1 } },
@@ -65,7 +69,43 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
     const products: Product[] = productsData?.allProduct?.data || [];
 
-    // 3. Create Mutation
+    // Helper: Find pricing for current state
+    const currentPricing = useMemo(() => {
+        if (!newOrder.state || !pricingData?.allDeliveryPriceCompany?.data?.[0]?.prices) return null;
+
+        // Try to match by Exact Name, Code, or approximate match
+        const prices = pricingData.allDeliveryPriceCompany.data[0].prices;
+        const selectedState = wilayas.find(w => w.name === newOrder.state);
+
+        // 1. Try match by Code (Most reliable)
+        if (selectedState?.code) {
+            const matchByCode = prices.find((p: any) => parseInt(p.code) === parseInt(selectedState.code));
+            if (matchByCode) return matchByCode;
+        }
+
+        // 2. Try match by Name (Exact)
+        const matchByName = prices.find((p: any) => p.name === newOrder.state);
+        if (matchByName) return matchByName;
+
+        return null;
+    }, [newOrder.state, pricingData, wilayas]);
+
+    // Fetch pricing when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            getDeliveryPricing();
+        }
+    }, [isOpen]);
+
+    // Auto-update shipping cost when state/type changes
+    useEffect(() => {
+        if (currentPricing) {
+            const price = newOrder.deliveryType === 'home' ? (currentPricing.home || 0) : (currentPricing.desk || 0);
+            setNewOrder(prev => ({ ...prev, shippingCost: price }));
+        }
+    }, [currentPricing, newOrder.deliveryType]);
+
+    // 4. Create Mutation
     const [createOrder, { loading: isSubmitting }] = useMutation(CREATE_ORDER);
 
     // --- Effects & Logic ---
@@ -344,11 +384,27 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setNewOrder({ ...newOrder, deliveryType: 'home' })} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600 font-black' : 'border-slate-100 bg-slate-50 text-slate-400 font-bold hover:border-slate-200'}`}>
-                                <Home className="w-4 h-4" /> <span className="text-[10px] uppercase">للمنزل</span>
+                            <button
+                                onClick={() => setNewOrder({ ...newOrder, deliveryType: 'home' })}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Home className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمنزل</span>
+                                </div>
+                                {currentPricing && (
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing.home || 0} دج</span>
+                                )}
                             </button>
-                            <button onClick={() => setNewOrder({ ...newOrder, deliveryType: 'office' })} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600 font-black' : 'border-slate-100 bg-slate-50 text-slate-400 font-bold hover:border-slate-200'}`}>
-                                <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase">للمكتب</span>
+                            <button
+                                onClick={() => setNewOrder({ ...newOrder, deliveryType: 'office' })}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمكتب</span>
+                                </div>
+                                {currentPricing && (
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing.desk || 0} دج</span>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -491,7 +547,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     </div>
                 </div>
             </div>
-        </div>,
+        </div >,
         document.body
     );
 };

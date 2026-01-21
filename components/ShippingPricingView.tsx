@@ -6,7 +6,6 @@ import LoadingSpinner from './common/LoadingSpinner';
 import { StatePricing, Wilaya } from '../types';
 import {
   Home, Building2, Save, Search, Zap, CheckCircle2, DollarSign, MapPin,
-  ArrowLeft, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
 
@@ -323,19 +322,6 @@ const ShippingPricingView: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            {/* Simple Pagination Simulation */}
-            <div className="p-4 bg-slate-50/30 border-t border-slate-100 flex justify-center items-center">
-              <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-                <div className="flex items-center gap-1 mx-2">
-                  <button className="w-7 h-7 rounded text-[10px] font-black bg-indigo-600 text-white shadow-sm">1</button>
-                  <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">2</button>
-                  <button className="w-7 h-7 rounded text-[10px] font-black bg-white text-slate-400 border border-slate-200">3</button>
-                </div>
-                <button className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600"><ChevronLeft className="w-4 h-4" /></button>
-              </div>
             </div>
           </div>
         </>

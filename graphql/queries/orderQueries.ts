@@ -238,6 +238,14 @@ export const GET_ALL_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        confirmationTimeLine {
+          id
+          user {
+            id
+            name
+          }
+          createdAt
+        }
       }
       total
       numberDeferredOrder

@@ -31,7 +31,8 @@ const InventoryPage: React.FC = () => {
           note: p.note || '',
           price: p.variantsProbability?.[0]?.price || p.price || 0,
           cost: p.variantsProbability?.[0]?.cost || p.cost || 0,
-          stock: p.quantityInStock || 0,
+          stock: p.quantity || 0,
+          quantity: p.quantity || 0,
 
           // Map definitions if available
           variants: p.variants?.map((v: any) => ({
@@ -45,7 +46,7 @@ const InventoryPage: React.FC = () => {
             id: v.id || v._id,
             name: v.name,
             sku: v.sku,
-            quantity: v.quantityInStock || v.quantity || 0,
+            quantity: v.quantity || 0,
             price: v.price,
             cost: v.cost,
             isDefault: v.isDefault

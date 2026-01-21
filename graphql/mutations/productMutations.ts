@@ -15,8 +15,7 @@ export const CREATE_PRODUCT = gql`
       cost
       status
       note
-      allQuantity
-      quantityInStock
+      quantity
       createdAt
       variantsProbability {
         id
@@ -24,7 +23,7 @@ export const CREATE_PRODUCT = gql`
         sku
         price
         cost
-        quantity: quantityInStock
+        quantity
         isDefault
       }
     }
@@ -44,15 +43,14 @@ export const UPDATE_PRODUCT = gql`
         cost
         status
         note
-        allQuantity
-        quantityInStock
+        quantity
         variantsProbability {
           id
           name
           sku
           price
           cost
-          quantity: quantityInStock
+          quantity
           isDefault
         }
       }

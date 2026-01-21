@@ -58,11 +58,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   // Helpers for display
   const getStockInfo = (p: Product) => {
-    if (p.variantsProbability && p.variantsProbability.length > 0) {
-      const total = p.variantsProbability.reduce((acc, v) => acc + (v.quantity || 0), 0);
-      return total;
-    }
-    return p.stock || 0;
+    return p.quantity || 0;
   };
 
   const getPriceDisplay = (p: Product) => {
@@ -219,7 +215,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                   const isLowStock = stock > 0 && stock < 10;
                   const isOutOfStock = stock === 0;
                   const isExpanded = expandedProductId === product.id;
-                  const hasVariants = product.variantsProbability && product.variantsProbability.length > 0;
+                  const hasVariants = product.variants && product.variants.length > 0;
 
                   return (
                     <React.Fragment key={product.id}>
