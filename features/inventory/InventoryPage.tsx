@@ -8,13 +8,29 @@ import type { Product } from '../../types';
 
 const InventoryPage: React.FC = () => {
   const { user } = useAuth();
-  const { inventory, loading, error, loadInventory, deleteProduct } = useInventory(user?.company?.id);
-  
+  const { inventory, loading, error, loadInventory, deleteProduct, total } = useInventory(user?.company?.id);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft'>('all');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  // Debounce search
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleAddClick = () => {
     setIsAddModalOpen(true);
@@ -32,7 +48,7 @@ const InventoryPage: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     if (!selectedProduct) return;
-    
+
     setDeleteLoading(true);
     try {
       await deleteProduct(selectedProduct.id);
@@ -66,7 +82,7 @@ const InventoryPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
         <div className="text-center">
           <p className="text-rose-600 font-bold">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
@@ -77,14 +93,37 @@ const InventoryPage: React.FC = () => {
     );
   }
 
+
+  React.useEffect(() => {
+    loadInventory(page, limit, {
+      search: debouncedSearch,
+      status: filterStatus === 'all' ? null : filterStatus === 'active'
+    });
+  }, [loadInventory, page, limit, debouncedSearch, filterStatus]);
+
   return (
     <>
-      <InventoryView 
-        inventory={inventory} 
-        setInventory={() => {}} 
+      <InventoryView
+        inventory={inventory}
+        setInventory={() => { }}
         onAddClick={handleAddClick}
         onEditClick={handleEditClick}
         onDeleteClick={handleDeleteClick}
+        // Pagination Props
+        currentPage={page}
+        totalCount={total}
+        itemsPerPage={limit}
+        onPageChange={setPage}
+        onItemsPerPageChange={(newLimit) => {
+          setLimit(newLimit);
+          setPage(1); // Reset to first page when limit changes
+        }}
+        isLoading={loading}
+        // Filter Props
+        searchQuery={searchQuery}
+        onSearchChange={(val) => { setSearchQuery(val); setPage(1); }} // Reset to page 1 on search
+        filterStatus={filterStatus}
+        onFilterStatusChange={(status) => { setFilterStatus(status); setPage(1); }} // Reset to page 1 on filter
       />
 
       {/* Add Product Modal */}

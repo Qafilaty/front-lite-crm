@@ -9,6 +9,7 @@ import ProductModal from './ProductModal';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import EmptyState from './common/EmptyState';
 import TableSkeleton from './common/TableSkeleton';
+import PaginationControl from './common/PaginationControl';
 import toast from 'react-hot-toast';
 
 interface InventoryViewProps {
@@ -18,7 +19,18 @@ interface InventoryViewProps {
   onUpdate: (id: string, productData: any) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   isLoading?: boolean;
-  onRefresh: () => Promise<void>;
+  onRefresh?: () => Promise<void>;
+  // Callbacks for actions usually coming from parent
+  onAddClick?: () => void;
+  onEditClick?: (product: Product) => void;
+  onDeleteClick?: (product: Product) => void;
+
+  // Pagination Props
+  // Filter Props
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  filterStatus?: 'all' | 'active' | 'draft';
+  onFilterStatusChange?: (status: 'all' | 'active' | 'draft') => void;
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -28,10 +40,17 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onUpdate,
   onDelete,
   isLoading = false,
-  onRefresh
+  onRefresh,
+  currentPage,
+  totalCount,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
+  searchQuery = '',
+  onSearchChange,
+  filterStatus = 'all',
+  onFilterStatusChange
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft'>('all');
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   // Modal States
@@ -43,18 +62,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // --- Computed ---
-
-  const filteredProducts = useMemo(() => {
-    return inventory.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = filterStatus === 'all'
-        ? true
-        : filterStatus === 'active' ? p.status !== false
-          : p.status === false;
-      return matchesSearch && matchesStatus;
-    });
-  }, [inventory, searchQuery, filterStatus]);
+  // Use inventory directly as it is now filtered on the server
+  const filteredProducts = inventory;
 
   // Helpers for display
   const getStockInfo = (p: Product) => {
@@ -75,6 +84,21 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       );
     }
     return <span className="font-bold text-slate-900">{p.price} ر.س</span>;
+  };
+
+  const getCostDisplay = (p: Product) => {
+    if (p.variantsProbability && p.variantsProbability.length > 0) {
+      const costs = p.variantsProbability.map(v => v.cost || 0);
+      const min = Math.min(...costs);
+      const max = Math.max(...costs);
+      if (min === max) return <span className="font-medium text-gray-500">{min} ر.س</span>;
+      return (
+        <div className="flex flex-col text-xs">
+          <span className="font-medium text-gray-600">{min} - {max} ر.س</span>
+        </div>
+      );
+    }
+    return <span className="font-medium text-gray-500">{p.cost || 0} ر.س</span>;
   };
 
   // --- Actions ---
@@ -128,10 +152,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
 
   return (
-    <div className="flex flex-col h-full" dir="rtl">
+    <div className="space-y-6" dir="rtl">
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 mb-1">إدارة المخزون</h2>
           <p className="text-slate-500 text-sm">إدارة وإضافة وتعديل المنتجات والمتغيرات الخاصة بها</p>
@@ -146,7 +170,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm mb-6 flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -154,32 +178,29 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             placeholder="بحث بالاسم أو SKU..."
             className="w-full pl-4 pr-10 py-2.5 rounded-lg border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 text-sm text-gray-600 placeholder-gray-400"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange?.(e.target.value)}
           />
         </div>
         <div className="flex items-center bg-gray-50 p-1 rounded-lg">
           <button
-            onClick={() => setFilterStatus('all')}
+            onClick={() => onFilterStatusChange?.('all')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             الكل
           </button>
           <button
-            onClick={() => setFilterStatus('active')}
+            onClick={() => onFilterStatusChange?.('active')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'active' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             نشط
           </button>
           <button
-            onClick={() => setFilterStatus('draft')}
+            onClick={() => onFilterStatusChange?.('draft')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'draft' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             مسودة
           </button>
         </div>
-        <button className="p-2.5 text-gray-500 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
-          <Filter size={20} />
-        </button>
       </div>
 
       {/* Products Table */}
@@ -204,6 +225,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المنتج والقسم</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">SKU</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المخزون</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التكلفة</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">السعر</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">الحالة</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">الإجراءات</th>
@@ -285,6 +307,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {getCostDisplay(product)}
                         </td>
                         <td className="px-6 py-4">
                           {getPriceDisplay(product)}
@@ -379,23 +404,17 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             </table>
           </div>
 
-          {/* Pagination - Placeholder for now or implement if data allows */}
-          {inventory.length > 20 && (
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
-              <span className="text-xs text-gray-500">
-                عرض <span className="font-bold text-slate-800">{filteredProducts.length}</span> من أصل <span className="font-bold text-slate-800">{inventory.length}</span> منتج
-              </span>
-              <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-400 disabled:opacity-50" disabled>
-                  <ChevronRight size={16} />
-                </button>
-                <button className="w-8 h-8 rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/30">1</button>
-                <button className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-slate-800 hover:bg-gray-50">
-                  <ChevronLeft size={16} />
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Pagination */}
+          <div className="border-t border-gray-100 bg-gray-50/30">
+            <PaginationControl
+              currentPage={currentPage || 1}
+              totalPages={Math.ceil((totalCount || inventory.length || 0) / (itemsPerPage || 10))}
+              totalItems={totalCount || inventory.length || 0}
+              limit={itemsPerPage || 10}
+              onPageChange={onPageChange || (() => { })}
+              onLimitChange={onItemsPerPageChange || (() => { })}
+            />
+          </div>
         </div>
       )}
 

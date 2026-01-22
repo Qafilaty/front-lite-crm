@@ -271,11 +271,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                 thumbnail: formData.thumbnail,
                 name: formData.name,
                 sku: formData.sku,
-                price: formData.price,
-                // cost: formData.cost, // Ensure checking if backend accepts this
+                price: Number(formData.price),
+                cost: Number(formData.cost),
                 status: formData.status,
                 note: formData.note,
-                quantity: formData.quantity,
+                quantity: Number(formData.quantity),
 
                 variants: formData.variants.map(v => ({
                     name: v.name,

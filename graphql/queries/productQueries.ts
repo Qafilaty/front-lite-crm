@@ -12,6 +12,8 @@ export const GET_PRODUCT = gql`
       name
       sku
       quantity
+      price
+      cost
       status
       note
       variants {
@@ -44,16 +46,18 @@ export const GET_PRODUCT = gql`
 
 export const GET_ALL_PRODUCTS = gql`
   query GetAllProducts(
-    $filter: [Filter]
+    $advancedFilter: JSON
     $pagination: Pagination
   ) {
-    allProduct(filter: $filter, pagination: $pagination) {
+    allProduct(advancedFilter: $advancedFilter, pagination: $pagination) {
       data {
         id
         thumbnail
         name
         sku
         quantity
+        price
+        cost
         status
         note
         variants {

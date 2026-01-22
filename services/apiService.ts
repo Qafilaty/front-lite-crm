@@ -431,7 +431,7 @@ export const orderService = {
 export const productService = {
   async getAllProducts(
     options?: {
-      filter?: any[];
+      advancedFilter?: any;
       pagination?: { limit: number; page: number };
     }
   ) {
