@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Store as StoreIcon, Settings, X, Link2, Copy, CheckCircle2, ShieldCheck, ExternalLink, Globe } from 'lucide-react';
+import { Store as StoreIcon, Settings, X, Link2, Copy, CheckCircle2, ShieldCheck, ExternalLink, Globe, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storeService } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { Store } from '../types';
 import LoadingSpinner from './common/LoadingSpinner';
 import { CardGridSkeleton } from './common';
+import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 
 // Fixed list of supported stores
 const SUPPORTED_STORES = [
@@ -52,6 +53,11 @@ const StoreLinkingView: React.FC = () => {
   const [generatedWebhook, setGeneratedWebhook] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  // Delete Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch stores
   const fetchStores = async () => {
@@ -100,6 +106,35 @@ const StoreLinkingView: React.FC = () => {
     // Reset other states
     setGeneratedWebhook(existingStore?.url || null);
     setIsModalOpen(true);
+  };
+
+  const handleOpenDeleteModal = (storeId: string) => {
+    setStoreToDelete(storeId);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!storeToDelete) return;
+
+    setIsDeleting(true);
+    const toastId = toast.loading('جاري حذف المتجر...');
+
+    try {
+      const result = await storeService.deleteStore(storeToDelete);
+      if (result.success) {
+        toast.success('تم حذف المتجر وإيقاف المزامنة بنجاح', { id: toastId });
+        setStores(prev => prev.filter(s => s.id !== storeToDelete));
+        setShowDeleteModal(false);
+        setStoreToDelete(null);
+      } else {
+        toast.error('فشل حذف المتجر', { id: toastId });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء العملية', { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const cleanUrl = (url: string) => {
@@ -258,29 +293,45 @@ const StoreLinkingView: React.FC = () => {
                 </p>
 
                 <div className="mt-auto w-full">
-                  <button
-                    onClick={() => handleOpenSettings(platform)}
-                    className={`w-full py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all ${isConnected
-                      ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
-                      }`}
-                  >
-                    {isConnected ? (
-                      <>
+                  {isConnected ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenSettings(platform)}
+                        className="flex-1 py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      >
                         <Settings className="w-3.5 h-3.5" /> معلومات الربط
-                      </>
-                    ) : (
-                      <>
-                        <Link2 className="w-3.5 h-3.5" /> إعداد الربط
-                      </>
-                    )}
-                  </button>
+                      </button>
+                      <button
+                        onClick={() => connectedStore?.id && handleOpenDeleteModal(connectedStore.id)}
+                        className="px-3 py-2.5 rounded-lg text-xs font-black flex items-center justify-center transition-all bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100"
+                        title="حذف المتجر"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenSettings(platform)}
+                      className="w-full py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
+                    >
+                      <Link2 className="w-3.5 h-3.5" /> إعداد الربط
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        title="حذف ربط المتجر"
+        description="هل أنت متأكد أنك تريد حذف ربط هذا المتجر؟ سيتم إيقاف المزامنة فوراً ولن تستقبل أي طلبات جديدة من هذا المتجر بعد الآن."
+        isDeleting={isDeleting}
+      />
 
       {/* Settings/Connect Modal */}
       {isModalOpen && selectedPlatform && (
