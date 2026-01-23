@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
@@ -26,6 +26,154 @@ interface SheetValidation {
     sheets: { id: string, name: string }[];
     message?: string;
 }
+
+
+interface ColumnOption {
+    value: string;
+    label: string;
+}
+
+interface ColumnSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: ColumnOption[];
+    color: 'indigo' | 'amber';
+    placeholder?: string;
+}
+
+const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, color, placeholder = "اختر العمود..." }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+    const [placement, setPlacement] = useState<'top' | 'bottom'>('bottom');
+
+    const updatePosition = useCallback(() => {
+        if (!isOpen || !containerRef.current) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 250; // Max height approximation
+
+        let newPlacement: 'top' | 'bottom' = 'bottom';
+        let style: React.CSSProperties = {
+            left: rect.left + window.scrollX,
+            width: rect.width,
+            position: 'absolute',
+            zIndex: 9999
+        };
+
+        // Decide placement
+        if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+            newPlacement = 'top';
+            style.top = rect.top + window.scrollY - 4; // Anchor to top of trigger
+            style.transform = 'translateY(-100%)'; // Move up by its own height
+        } else {
+            newPlacement = 'bottom';
+            style.top = rect.bottom + window.scrollY + 4;
+        }
+
+        setPlacement(newPlacement);
+        setDropdownStyle(style);
+    }, [isOpen]);
+
+    // Handle scroll and resize to keep position sync
+    useEffect(() => {
+        if (isOpen) {
+            updatePosition();
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+        }
+
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [isOpen, updatePosition]);
+
+    // Click outside
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            const portalEl = document.getElementById(`dropdown-portal-${containerRef.current?.id}`);
+            if (containerRef.current?.contains(target)) return;
+            // Check if click is inside portal logic (handled by portal ID check if simple, but refs are better)
+            // simplified check for now: relies on stopPropagation in portal or content check
+            // But since portal is in body, ref check on portal is hard without a ref to the portal content.
+            // We can use the ID trick again.
+            const portalNode = document.getElementById(`dropdown-portal-${portalId}`);
+            if (portalNode && portalNode.contains(target)) return;
+
+            setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]); // portalId is stable
+
+    const activeRingClass = color === 'indigo' ? 'ring-indigo-100' : 'ring-amber-100';
+    const activeTextClass = color === 'indigo' ? 'text-indigo-700' : 'text-amber-700';
+    const activeBgClass = color === 'indigo' ? 'bg-indigo-50' : 'bg-amber-50';
+    const hoverBgClass = color === 'indigo' ? 'hover:bg-indigo-50' : 'hover:bg-amber-50';
+
+    // Unique ID for portal targeting logic (simple internal id ref)
+    const portalId = useRef(`portal-${Math.random().toString(36).substr(2, 9)}`).current;
+
+    const selectedOption = options.find(o => o.value === value);
+
+    return (
+        <div className="relative w-48" ref={containerRef}>
+            <div
+                onClick={() => { setIsOpen(!isOpen); }}
+                className={`w-full rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between py-2.5 pl-3 pr-3 ${value
+                    ? `bg-white shadow-sm ring-1 ring-inset ${activeRingClass}`
+                    : 'bg-slate-50 hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-inset hover:ring-slate-200'
+                    }`}
+            >
+                <span className={`text-[11px] font-black truncate block flex-1 text-right ${value ? activeTextClass : 'text-slate-500'}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <div className="flex items-center justify-center w-4 h-4 shrink-0">
+                    {value ? (
+                        <div className={`w-1.5 h-1.5 rounded-full ${color === 'indigo' ? 'bg-indigo-500' : 'bg-amber-500'}`}></div>
+                    ) : (
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-slate-600' : 'text-slate-400'}`} />
+                    )}
+                </div>
+            </div>
+
+            {isOpen && createPortal(
+                <div
+                    id={`dropdown-portal-${portalId}`}
+                    style={dropdownStyle}
+                    className={`bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 overflow-y-auto custom-scrollbar flex flex-col max-h-[250px] ${placement === 'top' ? 'origin-bottom' : 'origin-top'}`}
+                >
+                    <div className="p-1 space-y-0.5" onMouseDown={(e) => e.stopPropagation()}>
+                        <div
+                            onClick={() => { onChange(''); setIsOpen(false); }}
+                            className="px-3 py-2 rounded-lg text-[10px] font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 cursor-pointer transition-colors flex items-center justify-between"
+                        >
+                            <span>(إلغاء التحديد)</span>
+                        </div>
+                        {options.map((option) => (
+                            <div
+                                key={option.value}
+                                onClick={() => { onChange(option.value); setIsOpen(false); }}
+                                className={`px-3 py-2 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center justify-between ${option.value === value ? `${activeBgClass} ${activeTextClass}` : `text-slate-600 ${hoverBgClass}`}`}
+                            >
+                                <span className="font-bold">{option.label}</span>
+                                {option.value === value && <Check className="w-3 h-3" />}
+                            </div>
+                        ))}
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
 
 export const IntegrationSettings: React.FC = () => {
     const { user } = useAuth();
@@ -396,102 +544,80 @@ export const IntegrationSettings: React.FC = () => {
 
 
     const handleSaveConfigs = async () => {
-        // Check validation for populated configs
-        const newSheetId = configs.new.id.trim();
-        const abandonedSheetId = configs.abandoned.id.trim();
+        const type = activeMappingTab;
+        const config = configs[type];
+        const sheetId = config.id.trim();
+        const sheetName = config.name.trim();
 
-        if (!newSheetId && !abandonedSheetId) {
-            setLastActionMessage({ type: 'warning', text: 'يرجى إدخال معرف ورقة العمل (Spreadsheet ID) لملف واحد على الأقل.' });
+        // 1. Basic Validation
+        if (!sheetId) {
+            setLastActionMessage({ type: 'warning', text: 'يرجى إدخال معرف ورقة العمل (Spreadsheet ID).' });
             return;
         }
 
-        // Check validation status
-        if (newSheetId && sheetValidation.new.status === 'error') {
-            setLastActionMessage({ type: 'warning', text: 'يرجى تصحيح معرف ملف الطلبات الجديدة قبل الحفظ.' });
-            setActiveMappingTab('new');
-            return;
-        }
-        if (abandonedSheetId && sheetValidation.abandoned.status === 'error') {
-            setLastActionMessage({ type: 'warning', text: 'يرجى تصحيح معرف ملف الطلبات المتروكة قبل الحفظ.' });
-            setActiveMappingTab('abandoned');
+        if (sheetValidation[type].status === 'error') {
+            setLastActionMessage({ type: 'warning', text: 'يرجى تصحيح معرف الملف قبل الحفظ.' });
             return;
         }
 
-        const validateMappings = (type: SheetType) => {
-            const missing = fields.filter(f => f.required && !mappings[type][f.id]);
-            return missing;
-        };
-
-        if (newSheetId) {
-            const missingNew = validateMappings('new');
-            if (missingNew.length > 0) {
-                setActiveMappingTab('new');
-                setLastActionMessage({
-                    type: 'warning',
-                    text: `[الطلبات الجديدة] يرجى مطابقة: ${missingNew.map(f => f.label).join('، ')}`
-                });
-                return;
-            }
+        if (!sheetName) {
+            setLastActionMessage({ type: 'warning', text: 'يرجى اختيار ورقة العمل.' });
+            return;
         }
 
-        if (abandonedSheetId) {
-            const missingAbandoned = validateMappings('abandoned');
-            if (missingAbandoned.length > 0) {
-                setActiveMappingTab('abandoned');
-                setLastActionMessage({
-                    type: 'warning',
-                    text: `[الطلبات المتروكة] يرجى مطابقة: ${missingAbandoned.map(f => f.label).join('، ')}`
-                });
-                return;
-            }
+        // 2. Mapping Validation
+        const missing = fields.filter(f => f.required && !mappings[type][f.id]);
+        if (missing.length > 0) {
+            setLastActionMessage({
+                type: 'warning',
+                text: `يرجى مطابقة: ${missing.map(f => f.label).join('، ')}`
+            });
+            return;
         }
 
         setIsConnecting(true);
 
         try {
-            const processSave = async (type: SheetType) => {
-                const config = configs[type];
-                if (!config.id) return; // Skip if no ID
-
-                const content = {
-                    idFile: config.id,
-                    nameSheet: config.name,
-                    typeOrder: type,
-                    lastRowSynced: config.startRow - 1,
-                    configWithOrderCollection: Object.entries(mappings[type]).map(([field, column]) => ({
-                        field,
-                        column
-                    }))
-                };
-
-                if (config.dbId) {
-                    // Update existing
-                    await updateSheets({
-                        variables: {
-                            idGoogleSheets: googleAccount.id,
-                            id: config.dbId,
-                            content
-                        }
-                    });
-                } else {
-                    // Create new
-                    await createSheets({
-                        variables: {
-                            idGoogleSheets: googleAccount.id,
-                            content
-                        }
-                    });
-                }
+            const content = {
+                idFile: sheetId,
+                nameSheet: sheetName,
+                typeOrder: type,
+                lastRowSynced: config.startRow - 1,
+                configWithOrderCollection: Object.entries(mappings[type]).map(([field, column]) => ({
+                    field,
+                    column
+                }))
             };
 
-            if (newSheetId) await processSave('new');
-            if (abandonedSheetId) await processSave('abandoned');
+            if (config.dbId) {
+                // Update existing
+                await updateSheets({
+                    variables: {
+                        idGoogleSheets: googleAccount.id,
+                        id: config.dbId,
+                        content
+                    }
+                });
+            } else {
+                // Create new
+                await createSheets({
+                    variables: {
+                        idGoogleSheets: googleAccount.id,
+                        content
+                    }
+                });
+            }
 
             await refetchSheets();
 
             setIsConnecting(false);
-            setCurrentStep(3);
-            setLastActionMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح. يمكنك الآن بدء المزامنة.' });
+            setLastActionMessage({ type: 'success', text: `تم حفظ إعدادات ${type === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'} بنجاح.` });
+
+            // Allow moving to next step only if at least one config is valid (which just happened)
+            // But we don't force it, user might want to save the other one too.
+            // We can prompt or just stay let them decide. User said "deal with each sheet individually".
+            // So we stay on this step.
+
         } catch (error: any) {
             console.error("Save error:", error);
             setIsConnecting(false);
@@ -841,161 +967,134 @@ export const IntegrationSettings: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between gap-4">
-                                <div>
-                                    <h3 className="text-xs font-black text-indigo-900">ليس لديك ملف جاهز؟</h3>
-                                    <p className="text-[10px] text-indigo-400 font-bold mt-0.5">يمكنك إنشاء ملف جديد يحتوي على ورقتي "الطلبات الجديدة" و "الطلبات المتروكة" بضغطة واحدة.</p>
-                                </div>
+
+
+                            {/* Tab Navigation */}
+                            <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
                                 <button
-                                    onClick={handleCreateNewFile}
-                                    disabled={isCreatingFile}
-                                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all shadow-md hover:shadow-indigo-200 flex items-center gap-2 shrink-0"
+                                    onClick={() => setActiveMappingTab('new')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${activeMappingTab === 'new'
+                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100'
+                                        : 'text-slate-400 hover:text-slate-600'
+                                        }`}
                                 >
-                                    {isCreatingFile ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                                    إنشاء ملف جديد
+                                    <ShoppingCart className="w-4 h-4" />
+                                    الطلبات الجديدة
+                                    {activeMappingTab === 'new' && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>}
+                                </button>
+                                <button
+                                    onClick={() => setActiveMappingTab('abandoned')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${activeMappingTab === 'abandoned'
+                                        ? 'bg-white text-amber-600 shadow-sm ring-1 ring-slate-100'
+                                        : 'text-slate-400 hover:text-slate-600'
+                                        }`}
+                                >
+                                    <Hourglass className="w-4 h-4" />
+                                    الطلبات المتروكة
+                                    {activeMappingTab === 'abandoned' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                <div
-                                    onClick={() => setActiveMappingTab('new')}
-                                    className={`bg-white rounded-2xl p-5 border cursor-pointer transition-all duration-300 space-y-4 group ${activeMappingTab === 'new' ? 'border-indigo-500 shadow-md ring-4 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activeMappingTab === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400'}`}>
-                                            <ShoppingCart className="w-4 h-4" />
+                            {/* Active Tab Content */}
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                {/* Sheet Configuration */}
+                                <div className={`bg-white rounded-2xl p-6 border transition-all ${activeMappingTab === 'new' ? 'border-indigo-100' : 'border-amber-100'}`}>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeMappingTab === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                {activeMappingTab === 'new' ? <ShoppingCart className="w-5 h-5" /> : <Hourglass className="w-5 h-5" />}
+                                            </div>
+                                            <div>
+                                                <h3 className={`text-sm font-black ${activeMappingTab === 'new' ? 'text-indigo-900' : 'text-amber-900'}`}>
+                                                    إعدادات {activeMappingTab === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'}
+                                                </h3>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-1">قم بتحديد الملف والورقة لجلب البيانات منها</p>
+                                            </div>
                                         </div>
-                                        <h3 className={`text-sm font-black transition-colors ${activeMappingTab === 'new' ? 'text-indigo-900' : 'text-slate-900'}`}>الطلبات الجديدة</h3>
-                                        <div className="mr-auto flex items-center gap-2">
-                                            {activeMappingTab === 'new' && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>}
-                                            {configs['new'].dbId && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSheet('new'); }}
-                                                    className="w-6 h-6 flex items-center justify-center rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors"
-                                                    title="حذف الإعدادات"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {renderSheetInput('new')}
-                                </div>
-
-                                <div
-                                    onClick={() => setActiveMappingTab('abandoned')}
-                                    className={`bg-white rounded-2xl p-5 border cursor-pointer transition-all duration-300 space-y-4 group ${activeMappingTab === 'abandoned' ? 'border-amber-500 shadow-md ring-4 ring-amber-50' : 'border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activeMappingTab === 'abandoned' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'}`}>
-                                            <Hourglass className="w-4 h-4" />
-                                        </div>
-                                        <h3 className={`text-sm font-black transition-colors ${activeMappingTab === 'abandoned' ? 'text-amber-900' : 'text-slate-900'}`}>الطلبات المتروكة</h3>
-                                        <div className="mr-auto flex items-center gap-2">
-                                            {activeMappingTab === 'abandoned' && <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>}
-                                            {configs['abandoned'].dbId && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSheet('abandoned'); }}
-                                                    className="w-6 h-6 flex items-center justify-center rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors"
-                                                    title="حذف الإعدادات"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {renderSheetInput('abandoned')}
-                                </div>
-                            </div>
-
-                            {/* Column Mapping Section */}
-                            <div className="bg-white rounded-3xl p-6 border border-slate-100 relative overflow-hidden">
-                                {/* Visual Indicator Background */}
-                                <div className={`absolute top-0 right-0 w-full h-1 bg-gradient-to-l transition-colors duration-500 ${activeMappingTab === 'new' ? 'from-indigo-500 to-transparent' : 'from-amber-500 to-transparent'}`}></div>
-
-                                <div className="flex items-center justify-between mb-5 border-b border-slate-50 pb-3">
-                                    <div>
-                                        <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                                            {activeMappingTab === 'new' ? <ShoppingCart className="w-5 h-5 text-indigo-500" /> : <Hourglass className="w-5 h-5 text-amber-500" />}
-                                            مطابقة أعمدة {activeMappingTab === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'}
-                                        </h3>
-                                        <p className="text-[10px] text-slate-400 font-bold">تأكد من مطابقة الأعمدة للملف المحدد أعلاه</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    {fields.map((field) => {
-                                        const isMapped = !!mappings[activeMappingTab][field.id];
-                                        return (
-                                            <div
-                                                key={field.id}
-                                                className={`group flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-300 ${isMapped
-                                                    ? (activeMappingTab === 'new' ? 'bg-indigo-50/40 border-indigo-100' : 'bg-amber-50/40 border-amber-100')
-                                                    : 'border-transparent hover:bg-slate-50'
-                                                    }`}
+                                        {configs[activeMappingTab].dbId && (
+                                            <button
+                                                onClick={() => handleDeleteSheet(activeMappingTab)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors border border-rose-100"
+                                                title="حذف الإعدادات"
                                             >
-                                                <div className="flex items-center gap-3 w-48 shrink-0">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {renderSheetInput(activeMappingTab)}
+                                </div>
+
+                                {/* Column Mapping */}
+                                <div className="bg-white rounded-3xl p-6 border border-slate-100 relative overflow-hidden">
+                                    <div className={`absolute top-0 right-0 w-full h-1 bg-gradient-to-l transition-colors duration-500 ${activeMappingTab === 'new' ? 'from-indigo-500 to-transparent' : 'from-amber-500 to-transparent'}`}></div>
+
+                                    <div className="flex items-center justify-between mb-5 border-b border-slate-50 pb-3">
+                                        <div>
+                                            <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                                <Columns className="w-4 h-4 text-slate-400" />
+                                                مطابقة الأعمدة
+                                            </h3>
+                                            <p className="text-[10px] text-slate-400 font-bold mt-1">اختر العمود المناسب لكل حقل من حقول النظام</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {fields.map((field) => {
+                                            const isMapped = !!mappings[activeMappingTab][field.id];
+                                            return (
+                                                <div
+                                                    key={field.id}
+                                                    className={`group flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${isMapped
+                                                        ? (activeMappingTab === 'new' ? 'bg-indigo-50/30 border-indigo-100' : 'bg-amber-50/30 border-amber-100')
+                                                        : 'border-slate-100 hover:border-slate-200 bg-white'
+                                                        }`}
+                                                >
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${isMapped
                                                         ? (activeMappingTab === 'new' ? 'bg-indigo-600 text-white' : 'bg-amber-600 text-white')
-                                                        : 'bg-white border border-slate-200 text-slate-400'
+                                                        : 'bg-slate-50 text-slate-400'
                                                         }`}>
-                                                        <field.Icon className="w-3 h-3" />
+                                                        <field.Icon className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <p className={`text-[11px] font-black leading-none ${isMapped ? (activeMappingTab === 'new' ? 'text-indigo-900' : 'text-amber-900') : 'text-slate-700'}`}>{field.label}</p>
-                                                            {field.required && <span className="text-rose-500 text-[10px] font-bold">*</span>}
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1.5 mb-1">
+                                                            <p className={`text-[11px] font-black truncate ${isMapped ? (activeMappingTab === 'new' ? 'text-indigo-900' : 'text-amber-900') : 'text-slate-700'}`}>{field.label}</p>
+                                                            {field.required && <span className="text-rose-500 text-[12px] leading-none">*</span>}
                                                         </div>
-                                                        <p className="text-[8px] text-slate-400 font-bold mt-1 uppercase">حقل النظام</p>
+
+                                                        <ColumnSelect
+                                                            value={mappings[activeMappingTab][field.id] || ''}
+                                                            onChange={(val) => handleMappingChange(field.id, val)}
+                                                            color={activeMappingTab === 'new' ? 'indigo' : 'amber'}
+                                                            options={sheetHeaders[activeMappingTab]?.length > 0 ? (
+                                                                sheetHeaders[activeMappingTab].map((header, idx) => ({
+                                                                    value: String.fromCharCode(65 + idx),
+                                                                    label: `${String.fromCharCode(65 + idx)} - ${header}`
+                                                                }))
+                                                            ) : (
+                                                                ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'].map(col => ({
+                                                                    value: col,
+                                                                    label: `العمود ${col}`
+                                                                }))
+                                                            )}
+                                                        />
                                                     </div>
                                                 </div>
-
-                                                <div className="flex-1 px-4 opacity-10">
-                                                    <div className="w-full h-px border-t border-dashed border-slate-900"></div>
-                                                </div>
-
-                                                <div className="w-48 relative">
-                                                    <select
-                                                        value={mappings[activeMappingTab][field.id] || ''}
-                                                        onChange={(e) => handleMappingChange(field.id, e.target.value)}
-                                                        className={`w-full bg-white border rounded-lg py-2 pr-8 pl-3 text-[10px] font-black appearance-none outline-none cursor-pointer transition-all ${isMapped
-                                                            ? (activeMappingTab === 'new' ? 'border-indigo-400 text-indigo-700' : 'border-amber-400 text-amber-700')
-                                                            : 'border-slate-200 text-slate-500'
-                                                            }`}
-                                                    >
-                                                        <option value="">اختر العمود...</option>
-
-                                                        {sheetHeaders[activeMappingTab]?.length > 0 ? (
-                                                            sheetHeaders[activeMappingTab].map((header, idx) => {
-                                                                // Simple index to letter conversion (0->A, 1->B ... 25->Z)
-                                                                const letter = String.fromCharCode(65 + idx);
-                                                                return (
-                                                                    <option key={letter} value={letter}>{letter} - {header}</option>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'].map(col => (
-                                                                <option key={col} value={col}>العمود {col}</option>
-                                                            ))
-                                                        )}
-                                                    </select>
-                                                    <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 w-3 h-3 pointer-events-none" />
-                                                    <Columns className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none transition-colors ${isMapped ? (activeMappingTab === 'new' ? 'text-indigo-400' : 'text-amber-400') : 'text-slate-300'}`} />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-center gap-4 py-2">
+                            <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
                                 <button onClick={() => setCurrentStep(1)} className="px-6 py-2.5 rounded-xl text-slate-400 font-black hover:text-slate-600 text-xs transition-all flex items-center gap-2">
-                                    <ArrowRight className="w-3 h-3" />
-                                    السابق
+                                    <ArrowRight className="w-4 h-4" />
+                                    رجوع
                                 </button>
-                                <button onClick={handleSaveConfigs} disabled={isConnecting} className="bg-slate-900 text-white px-10 py-3 rounded-xl font-black hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-sm">
+                                <button onClick={handleSaveConfigs} disabled={isConnecting} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100">
                                     {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    <span className="text-sm">حفظ ومتابعة</span>
+                                    <span className="text-sm">حفظ الإعدادات</span>
                                 </button>
                             </div>
                         </div>
