@@ -223,16 +223,16 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                     <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
                                                     <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
                                                         {order.phone}
-                                                        {order.phoneCount && order.phoneCount > 1 && (
+                                                        {order.duplicatePhone && order.duplicatePhone > 1 && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setSearchTerm(order.phone);
                                                                 }}
                                                                 className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
-                                                                title={`${order.phoneCount} طلبات لهذا الرقم`}
+                                                                title={`${order.duplicatePhone} طلبات لهذا الرقم`}
                                                             >
-                                                                {order.phoneCount}
+                                                                {order.duplicatePhone}
                                                             </button>
                                                         )}
                                                     </p>

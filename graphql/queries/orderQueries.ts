@@ -12,7 +12,7 @@ export const GET_ORDER = gql`
       fullName
       phone
       phone2
-      phoneCount
+
       state {
         idState
         name
@@ -159,7 +159,7 @@ export const GET_ALL_ORDERS = gql`
         fullName
         phone
         phone2
-        phoneCount
+
         state {
           idState
           name
@@ -326,7 +326,7 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
         fullName
         phone
         phone2
-        phoneCount
+
         state {
           idState
           name

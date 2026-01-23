@@ -88,7 +88,7 @@ export interface Order {
   fullName?: string; // backend field
   phone: string;
   phone2?: string;
-  phoneCount?: number;
+  duplicatePhone?: number;
   state: string | { name: string; code?: string; idState?: string };
   city: string;
   address: string;

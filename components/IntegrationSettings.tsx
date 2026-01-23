@@ -1239,7 +1239,7 @@ export const IntegrationSettings: React.FC = () => {
 
                                                 {!isAutoSyncActive[activeView] && stagedData[activeView].length === 0 && (
                                                     <button
-                                                        onClick={() => setIsAutoSyncActive(prev => ({ ...prev, [activeView]: true }))}
+                                                        onClick={() => handleToggleAutoSync(activeView)}
                                                         className="w-full py-3.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-black hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-200 transition-all flex items-center justify-center gap-2 text-xs"
                                                     >
                                                         <Bot className="w-4 h-4" />
