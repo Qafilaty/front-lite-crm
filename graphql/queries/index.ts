@@ -64,3 +64,6 @@ export {
 export {
   GET_BASIC_STATISTICS,
 } from './generalQueries';
+
+// Google Sheets Queries
+export * from './googleSheetsQueries';

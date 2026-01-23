@@ -43,6 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.SHIPPING_CARRIERS, label: 'شركات التوصيل', icon: Share2 },
         { id: View.SHIPPING_PRICING, label: 'تسعير التوصيل', icon: Map },
         { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
+        { id: View.INTEGRATION_SETTINGS, label: 'الربط التقني', icon: BookOpen },
         { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
       ]
     }

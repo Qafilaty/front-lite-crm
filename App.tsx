@@ -24,6 +24,9 @@ import WooCommerceSuccess from './pages/WooCommerceSuccess';
 import FinancesPage from './pages/FinancesPage';
 import FinancialStatsPage from './pages/FinancialStatsPage';
 import SalariesPage from './pages/SalariesPage';
+import IntegrationSettingsPage from './pages/IntegrationSettingsPage';
+import GoogleSheetsSuccessPage from './pages/GoogleSheetsSuccessPage';
+import GoogleSheetsFailedPage from './pages/GoogleSheetsFailedPage';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -34,6 +37,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/woocommerce/success" element={<WooCommerceSuccess />} />
+      <Route path="/google-sheets/success" element={<GoogleSheetsSuccessPage />} />
+      <Route path="/google-sheets/failed" element={<GoogleSheetsFailedPage />} />
 
       {/* Protected Routes */}
       <Route
@@ -60,6 +65,7 @@ const AppRoutes: React.FC = () => {
         <Route path="finances" element={<FinancesPage />} />
         <Route path="financial-stats" element={<FinancialStatsPage />} />
         <Route path="salaries" element={<SalariesPage />} />
+        <Route path="integration-settings" element={<IntegrationSettingsPage />} />
       </Route>
 
       {/* Catch all - redirect to dashboard */}

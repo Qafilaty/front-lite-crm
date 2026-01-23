@@ -29,6 +29,7 @@ const Layout: React.FC = () => {
     if (path.includes('/finances')) return View.FINANCES;
     if (path.includes('/financial-stats')) return View.FINANCIAL_STATS;
     if (path.includes('/salaries')) return View.SALARIES;
+    if (path.includes('/integration-settings')) return View.INTEGRATION_SETTINGS;
     return View.DASHBOARD;
   };
 
@@ -44,6 +45,7 @@ const Layout: React.FC = () => {
       [View.SHIPPING_CARRIERS]: '/carriers',
       [View.SHIPPING_PRICING]: '/pricing',
       [View.STORE_LINKING]: '/stores',
+      [View.INTEGRATION_SETTINGS]: '/integration-settings',
       [View.API_DOCS]: '/api-docs',
       [View.SUBSCRIPTIONS]: '/subscriptions',
       [View.FINANCES]: '/finances',

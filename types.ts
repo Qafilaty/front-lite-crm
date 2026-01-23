@@ -21,7 +21,8 @@ export enum View {
   REGISTER = 'register',
   FINANCES = 'finances',
   FINANCIAL_STATS = 'financial_stats',
-  SALARIES = 'salaries'
+  SALARIES = 'salaries',
+  INTEGRATION_SETTINGS = 'integration_settings'
 }
 
 export interface OrderItem {
@@ -126,6 +127,10 @@ export interface User {
   activation?: boolean;
   numberDeliveredOrder?: number;
   orderPrice?: number;
+  company?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface VariantValue {
