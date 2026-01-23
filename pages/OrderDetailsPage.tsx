@@ -31,7 +31,14 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
             const mappedOrder: Order = {
                 ...data.order,
                 // Map timeLine to history if available
-                history: [],
+                items: data.order.products?.map((p: any) => ({
+                    name: p.name || p.product?.name || 'Unknown Product',
+                    variant: p.variantsProduct?.name || '',
+                    quantity: p.quantity,
+                    price: p.price
+                })) || [],
+                notes: data.order.note,
+                history: [], // History is replaced by specific timelines below
                 confirmationTimeLine: data.order.confirmationTimeLine?.map((t: any) => ({
                     status: t.oreginalStatus || t.status,
                     date: new Date(t.createdAt).toLocaleString('en-GB'),

@@ -29,7 +29,12 @@ interface OrderDetailsViewProps {
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   order, onBack, onUpdate, onDelete, readOnly = false, trackingMode = false
 }) => {
-  const [editedOrder, setEditedOrder] = useState<Order>({ ...order });
+  const [editedOrder, setEditedOrder] = useState<Order>(() => ({
+    ...order,
+    customer: order.customer || order.fullName || '',
+    state: typeof order.state === 'object' && order.state !== null ? (order.state as any).name : order.state,
+    city: typeof order.city === 'object' && order.city !== null ? (order.city as any).name : order.city,
+  }));
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
 
   // Use status object or ID directly
@@ -118,7 +123,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         address: editedOrder.address,
         deliveryType: editedOrder.deliveryType,
         deliveryPrice: editedOrder.shippingCost,
-        totalPrice: editedOrder.amount,
+        totalPrice: editedOrder.amount - (editedOrder.discount || 0),
+        note: editedOrder.notes,
+        discount: editedOrder.discount,
         // Map items
         products: editedOrder.items.map(item => ({
           name: item.name,
@@ -612,9 +619,21 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-indigo-600"
                 />
               </div>
-              <div className="md:col-span-2 flex flex-col justify-center items-end">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الخصم (Discount)</label>
+                <input
+                  disabled={readOnly}
+                  type="number"
+                  value={editedOrder.discount || 0}
+                  onChange={e => setEditedOrder({ ...editedOrder, discount: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-rose-500"
+                />
+              </div>
+              <div className="md:col-span-1 flex flex-col justify-center items-end">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع النهائي (DZD)</p>
-                <p className="text-3xl font-black text-slate-800 font-mono tracking-tighter">{editedOrder.amount} <span className="text-[10px]">دج</span></p>
+                <p className="text-3xl font-black text-slate-800 font-mono tracking-tighter">
+                  {(editedOrder.amount - (editedOrder.discount || 0)).toLocaleString()} <span className="text-[10px]">دج</span>
+                </p>
               </div>
             </div>
           </div>
@@ -622,6 +641,38 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
         {/* Timeline Sidebar */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Order Meta Card */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+              <Clock className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">معلومات الطلب</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الإنشاء</p>
+                <p className="text-xs font-bold text-slate-700 dir-ltr">{new Date(editedOrder.createdAt).toLocaleString('ar-DZ')}</p>
+              </div>
+
+              {editedOrder.duplicatePhone && (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-[10px] font-black">رقم هاتف مكرر</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة داخلية</label>
+                <textarea
+                  disabled={readOnly}
+                  value={editedOrder.notes || ''}
+                  onChange={e => setEditedOrder({ ...editedOrder, notes: e.target.value })}
+                  className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none"
+                  placeholder="ملاحظات حول الطلب..."
+                />
+              </div>
+            </div>
+          </div>
           {/* Confirmation Timeline */}
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col max-h-[400px]">
             <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">

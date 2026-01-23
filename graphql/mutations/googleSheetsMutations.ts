@@ -22,6 +22,7 @@ export const CREATE_SHEETS_TO_GOOGLE_SHEETS = gql`
           idFile
           nameSheet
           typeOrder
+          autoSync
           lastRowSynced
           configWithOrderCollection {
             column
@@ -44,6 +45,7 @@ export const UPDATE_SHEETS_TO_GOOGLE_SHEETS = gql`
           idFile
           nameSheet
           typeOrder
+          autoSync
           lastRowSynced
           configWithOrderCollection {
             column
@@ -77,6 +79,14 @@ export const DELETE_SHEETS_FROM_GOOGLE_SHEETS = gql`
             typeOrder
          }
        }
+    }
+  }
+`;
+
+export const CREATE_MULTI_ORDER_FROM_SHEETS = gql`
+  mutation CreateMultiOrderFromSheets($idGoogleSheets: ID!, $idSheets: ID!, $startRow: Int!) {
+    createMultiOrderFromSheets(idGoogleSheets: $idGoogleSheets, idSheets: $idSheets, startRow: $startRow) {
+      status
     }
   }
 `;

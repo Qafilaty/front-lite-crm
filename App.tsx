@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
+import AbandonedOrdersPage from './pages/AbandonedOrdersPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import InventoryPage from './pages/InventoryPage';
 import ShippingCarriersPage from './pages/ShippingCarriersPage';
@@ -53,6 +54,7 @@ const AppRoutes: React.FC = () => {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="orders" element={<OrdersPage />} />
+        <Route path="abandoned" element={<AbandonedOrdersPage />} />
         <Route path="orders/:id" element={<OrderDetailsPage />} />
         <Route path="tracking" element={<OrderTrackingPage />} />
         <Route path="tracking/:id" element={<OrderDetailsPage trackingMode={true} />} />

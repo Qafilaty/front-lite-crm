@@ -12,6 +12,7 @@ export const GET_ORDER = gql`
       fullName
       phone
       phone2
+      phoneCount
       state {
         idState
         name
@@ -158,6 +159,7 @@ export const GET_ALL_ORDERS = gql`
         fullName
         phone
         phone2
+        phoneCount
         state {
           idState
           name
@@ -303,6 +305,82 @@ export const SPOTLIGHT_SEARCH = gql`
         }
         createdAt
       }
+    }
+  }
+`;
+
+export const GET_ALL_ABANDONED_ORDERS = gql`
+  query GetAllAbandonedOrders(
+    $pagination: Pagination
+    $advancedFilter: JSON
+    $advancedSort: JSON
+  ) {
+    allAbandonedOrder(
+      pagination: $pagination
+      advancedFilter: $advancedFilter
+      advancedSort: $advancedSort
+    ) {
+      data {
+        id
+        numberOrder
+        fullName
+        phone
+        phone2
+        phoneCount
+        state {
+          idState
+          name
+          code
+        }
+        city
+        address
+        note
+        totalPrice
+        subTotalPrice
+        totalQuantity
+        status {
+          id
+          nameAR
+          nameFR
+          nameEN
+          color
+          group
+          style
+          order
+        }
+        deliveryType
+        deliveryPrice
+        discount
+        weight
+        trackingReplaced
+        duplicatePhone
+        store {
+          store {
+            id
+            name
+            logo
+          }
+        }
+        products {
+          product {
+            id
+            name
+            sku
+          }
+           variantsProduct {
+            id
+            name
+          }
+          name
+          sku
+          price
+          quantity
+        }
+        createdAt
+        updatedAt
+        updatedAtStatus
+      }
+      total
     }
   }
 `;

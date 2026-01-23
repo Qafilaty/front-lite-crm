@@ -11,6 +11,7 @@ export enum View {
   USERS = 'users',
   ORDER_CONFIRMATION = 'order_confirmation',
   ORDER_TRACKING = 'order_tracking',
+  ORDER_ABANDONED = 'order_abandoned',
   INVENTORY = 'inventory',
   SHIPPING_CARRIERS = 'shipping_carriers',
   SHIPPING_PRICING = 'shipping_pricing',
@@ -87,6 +88,7 @@ export interface Order {
   fullName?: string; // backend field
   phone: string;
   phone2?: string;
+  phoneCount?: number;
   state: string | { name: string; code?: string; idState?: string };
   city: string;
   address: string;
@@ -98,6 +100,7 @@ export interface Order {
   totalPrice?: number; // backend field
   subTotalPrice?: number;
   totalQuantity?: number;
+  discount?: number;
   status: OrderStatus | StatusOrderObject;
   storeName: string;
   notes?: string;

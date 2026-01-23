@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { LayoutDashboard, Users, CheckCircle2, Truck, Box, LogOut, Zap, ChevronLeft, ChevronRight, Share2, Store, Map, BookOpen, Wallet, Banknote } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Zap, ChevronLeft, ChevronRight, Share2, Store, Map, BookOpen, Wallet, Banknote, FileSpreadsheet } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 interface SidebarProps {
@@ -25,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       title: 'العمليات',
       items: [
         { id: View.ORDER_CONFIRMATION, label: 'تأكيد الطلبيات', icon: CheckCircle2 },
+        { id: View.ORDER_ABANDONED, label: 'الطلبات المتروكة', icon: FileWarning },
         { id: View.ORDER_TRACKING, label: 'تتبع الطلبيات', icon: Truck },
         { id: View.INVENTORY, label: 'المخزون', icon: Box },
       ]
@@ -43,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.SHIPPING_CARRIERS, label: 'شركات التوصيل', icon: Share2 },
         { id: View.SHIPPING_PRICING, label: 'تسعير التوصيل', icon: Map },
         { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
-        { id: View.INTEGRATION_SETTINGS, label: 'الربط التقني', icon: BookOpen },
+        { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
       ]
     }

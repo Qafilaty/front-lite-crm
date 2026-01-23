@@ -3,26 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import { Order, OrderStatus, OrderItem, StatusOrderObject } from '../types';
 import {
   Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft,
-  Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User
+  Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User, CheckSquare, Square
 } from 'lucide-react';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
 import CreateOrderModal from './CreateOrderModal';
-import { useQuery, useLazyQuery } from '@apollo/client';
+import { useQuery, useLazyQuery, useSubscription, gql } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER } from '../graphql/queries';
+import toast from 'react-hot-toast';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { ModernSelect, PaginationControl } from './common';
 import { useAuth } from '../contexts/AuthContext';
 import { statusLabels, statusColors } from '../constants/statusConstants';
+import { BulkDeliveryModal } from './BulkDeliveryModal';
 
 interface OrderConfirmationViewProps {
   orders?: Order[];
   setOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
 }
+
+const SYNC_ORDERS_SUBSCRIPTION = gql`
+  subscription SyncOrders($idCompany: ID!) {
+     syncOrdersWithExternalStores(idCompany: $idCompany) {
+        id
+        numberOrder
+        fullName
+        totalPrice
+        status { id nameAR nameEN color }
+     }
+  }
+`;
 
 const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: initialOrders = [], setOrders: setParentOrders }) => {
   // Use GET_CURRENT_USER for reliable company ID
@@ -45,6 +59,10 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  // Bulk Selection State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isBulkDeliveryModalOpen, setIsBulkDeliveryModalOpen] = useState(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -172,6 +190,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   useEffect(() => {
     if (ordersData?.allOrder?.data) {
       setOrders(ordersData.allOrder.data);
+      setSelectedOrderIds([]); // Clear selection on data change
     }
   }, [ordersData]);
 
@@ -196,8 +215,51 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     return null;
   };
 
-  // Handlers
-  // handleUpdateOrder removed as OrderDetailsView is no longer rendered here
+  // Selection Logic
+  const toggleSelection = (id: string) => {
+    setSelectedOrderIds(prev =>
+      prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedOrderIds.length === orders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(orders.map(o => o.id));
+    }
+  };
+
+  const getSelectedOrders = () => {
+    return orders.filter(o => selectedOrderIds.includes(o.id));
+  };
+
+
+  // Check if the current filter is "Confirmed"
+  const isConfirmedStatus = useMemo(() => {
+    if (statusFilter === 'all') return false;
+    const selectedStatus = confirmationStatuses.find(s => s.id === statusFilter);
+    return selectedStatus?.nameEN?.toLowerCase() === 'confirmed' || selectedStatus?.nameAR === 'مؤكدة';
+  }, [statusFilter, confirmationStatuses]);
+
+  // Real-time updates
+  useSubscription(SYNC_ORDERS_SUBSCRIPTION, {
+    variables: { idCompany: user?.company?.id || '' },
+    skip: !user?.company?.id,
+    onData: ({ data: { data } }) => {
+      if (data?.syncOrdersWithExternalStores) {
+        toast.success(`تم استلام ${data.syncOrdersWithExternalStores.length} طلبات جديدة!`, {
+          icon: '🚀',
+          duration: 5000
+        });
+        refetch(); // Refresh the list
+      }
+    }
+  });
+
+  useEffect(() => {
+    setSelectedOrderIds([]); // Clear selection when filter changes
+  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm]);
 
   return (
     <>
@@ -207,9 +269,19 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
             <h2 className="text-xl font-black text-slate-800 tracking-tight">تأكيد الطلبيات</h2>
             <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة وتحرير الطلبات</p>
           </div>
-          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all w-full lg:w-auto">
-            <Plus className="w-4 h-4" /> إضافة طلب يدوي
-          </button>
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+            {selectedOrderIds.length > 0 && (
+              <button
+                onClick={() => setIsBulkDeliveryModalOpen(true)}
+                className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
+              >
+                <Truck className="w-4 h-4" /> إرسال ({selectedOrderIds.length})
+              </button>
+            )}
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none">
+              <Plus className="w-4 h-4" /> إضافة طلب يدوي
+            </button>
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
@@ -356,13 +428,23 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
           {ordersLoading ? (
             <div className="p-6">
-              <TableSkeleton columns={6} rows={8} />
+              <TableSkeleton columns={isConfirmedStatus ? 7 : 6} rows={8} />
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-right border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
+                    {isConfirmedStatus && (
+                      <th className="px-6 py-4 w-12 text-center animate-in slide-in-from-right-4 fade-in">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500  cursor-pointer"
+                          checked={selectedOrderIds.length > 0 && selectedOrderIds.length === orders.length}
+                          onChange={toggleAll}
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>
@@ -375,6 +457,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   {orders.map((order) => {
                     const statusStyle = getStatusStyle(order.status);
                     const statusLabel = getStatusLabel(order.status);
+                    const isSelected = selectedOrderIds.includes(order.id);
 
                     // Fallback colors if status is object but no color, OR if status is string
                     let fallbackColors = statusColors.default;
@@ -383,11 +466,39 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     }
 
                     return (
-                      <tr key={order.id} onClick={() => navigate(`/orders/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
+                      <tr
+                        key={order.id}
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        className={`group transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}
+                      >
+                        {isConfirmedStatus && (
+                          <td className="px-6 py-5 text-center animate-in slide-in-from-right-4 fade-in" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              checked={isSelected}
+                              onChange={() => toggleSelection(order.id)}
+                            />
+                          </td>
+                        )}
                         <td className="px-6 py-5">
                           <div className="space-y-0.5">
                             <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
-                            <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
+                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
+                              {order.phone}
+                              {order.phoneCount && order.phoneCount > 1 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSearchTerm(order.phone);
+                                  }}
+                                  className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
+                                  title={`${order.phoneCount} طلبات لهذا الرقم`}
+                                >
+                                  {order.phoneCount}
+                                </button>
+                              )}
+                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-5">
@@ -417,7 +528,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                             <span className="text-[10px] text-slate-300 font-bold">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-5 font-black text-indigo-600 text-[11px]">{order.totalPrice || order.amount} دج</td>
+                        <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono">{order.totalPrice || order.amount} دج</td>
                         <td className="px-6 py-5">
                           <span
                             className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
@@ -436,7 +547,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   })}
                   {orders.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات تطابق معايير البحث</td>
+                      <td colSpan={isConfirmedStatus ? 7 : 6} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات تطابق معايير البحث</td>
                     </tr>
                   )}
                 </tbody>
@@ -459,6 +570,18 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
+          refetch();
+        }}
+      />
+
+      <BulkDeliveryModal
+        isOpen={isBulkDeliveryModalOpen}
+        onClose={() => setIsBulkDeliveryModalOpen(false)}
+        selectedOrders={getSelectedOrders()}
+        onRemoveOrder={(id) => toggleSelection(id)}
+        onSuccess={() => {
+          // refetch orders to update status ideally (though status might not change immediately unless backend does it)
+          // But user might want to clear selection
           refetch();
         }}
       />

@@ -7,6 +7,7 @@ import { useLazyQuery } from '@apollo/client';
 import { SPOTLIGHT_SEARCH } from '../graphql/queries/orderQueries';
 import { useDebounce } from '../hooks/useDebounce';
 import { Loader2 } from 'lucide-react';
+import NotificationsMenu from './NotificationsMenu';
 
 interface HeaderProps {
   currentUser: UserType;
@@ -165,10 +166,10 @@ const Header: React.FC<HeaderProps> = ({
                       </p>
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-1">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${!order.status.color ? 'bg-slate-100 text-slate-500' : ''}`}
-                        style={order.status.color ? { backgroundColor: `${order.status.color}15`, color: order.status.color } : {}}
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${!order.status?.color ? 'bg-slate-100 text-slate-500' : ''}`}
+                        style={order.status?.color ? { backgroundColor: `${order.status.color}15`, color: order.status.color } : {}}
                       >
-                        {order.status.nameAR || 'غير محدد'}
+                        {order.status?.nameAR || 'غير محدد'}
                       </span>
                       <span className="text-[10px] font-black text-slate-800">{order.totalPrice?.toLocaleString()} د.ج</span>
                     </div>
@@ -186,6 +187,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
+        <NotificationsMenu />
         <button
           onClick={() => onViewChange(View.SUBSCRIPTIONS)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currentView === View.SUBSCRIPTIONS ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}

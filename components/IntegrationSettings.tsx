@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import { GET_ALL_GOOGLE_SHEETS, GET_ALL_SHEETS_SPREADSHEET, GET_FIRST_ROW_SHEETS, GET_ALL_ROWS_SHEETS_WITH_FIRST_ROW } from '../graphql/queries';
-import { DELETE_GOOGLE_SHEETS, CREATE_SHEETS_TO_GOOGLE_SHEETS, UPDATE_SHEETS_TO_GOOGLE_SHEETS, CREATE_SPREADSHEET_FILE, DELETE_SHEETS_FROM_GOOGLE_SHEETS } from '../graphql/mutations';
+import { DELETE_GOOGLE_SHEETS, CREATE_SHEETS_TO_GOOGLE_SHEETS, UPDATE_SHEETS_TO_GOOGLE_SHEETS, CREATE_SPREADSHEET_FILE, DELETE_SHEETS_FROM_GOOGLE_SHEETS, CREATE_MULTI_ORDER_FROM_SHEETS } from '../graphql/mutations';
 import {
     RefreshCw, ExternalLink, FileSpreadsheet, Trash2, AlertTriangle, X,
     UserCog, Sliders, Play, Check, Plug, Loader2, Unlink, ShoppingCart,
@@ -256,6 +256,7 @@ export const IntegrationSettings: React.FC = () => {
         nameSheet: string;
         typeOrder: string;
         lastRowSynced: number;
+        autoSync: boolean;
         configWithOrderCollection: {
             field: string;
             column: string;
@@ -270,6 +271,7 @@ export const IntegrationSettings: React.FC = () => {
                 abandoned: { id: '', name: 'Abandoned', startRow: 2 }
             };
             const newMappings: Record<SheetType, Record<string, string>> = { new: {}, abandoned: {} };
+            const newAutoSync: Record<SheetType, boolean> = { new: false, abandoned: false };
 
             googleAccount.sheets.forEach((sheet: SheetFromQuery) => {
                 const type = sheet.typeOrder as SheetType;
@@ -280,6 +282,7 @@ export const IntegrationSettings: React.FC = () => {
                         startRow: sheet.lastRowSynced ? sheet.lastRowSynced + 1 : 2,
                         dbId: sheet.id
                     };
+                    newAutoSync[type] = sheet.autoSync || false;
 
                     if (sheet.configWithOrderCollection) {
                         const mapping: Record<string, string> = {};
@@ -293,6 +296,7 @@ export const IntegrationSettings: React.FC = () => {
 
             setConfigs(newConfigs);
             setMappings(newMappings);
+            setIsAutoSyncActive(newAutoSync);
             // We set validation to idle so we don't automatically trigger fetch on load, preserving current name
         }
     }, [googleAccount]);
@@ -382,6 +386,8 @@ export const IntegrationSettings: React.FC = () => {
             setLastActionMessage({ type: 'warning', text: 'فشل حذف الورقة.' });
         }
     });
+
+    const [createMultiOrderFromSheets] = useMutation(CREATE_MULTI_ORDER_FROM_SHEETS);
 
     const handleDeleteSheet = async (type: SheetType) => {
         const config = configs[type];
@@ -543,6 +549,57 @@ export const IntegrationSettings: React.FC = () => {
 
 
 
+    // Auto-transition to Step 3 if configs are ready
+    useEffect(() => {
+        if (isConnected && googleAccount?.sheets?.length > 0) {
+            // Check if at least one config is saved (has dbId)
+            const isReady = (configs.new.dbId || configs.abandoned.dbId);
+            if (isReady && currentStep < 3 && !isLinking) {
+                setCurrentStep(3);
+            }
+        }
+    }, [isConnected, configs.new.dbId, configs.abandoned.dbId, isLinking]);
+
+    const handleToggleAutoSync = async (type: SheetType) => {
+        const newState = !isAutoSyncActive[type];
+
+        try {
+            // Optimistic update
+            setIsAutoSyncActive(prev => ({ ...prev, [type]: newState }));
+
+            const config = configs[type];
+            if (!config.dbId || !googleAccount?.id) return;
+
+            const content = {
+                idFile: config.id,
+                nameSheet: config.name,
+                typeOrder: type,
+                lastRowSynced: config.startRow - 1,
+                autoSync: newState,
+                configWithOrderCollection: Object.entries(mappings[type]).map(([field, column]) => ({
+                    field,
+                    column
+                }))
+            };
+
+            await updateSheets({
+                variables: {
+                    idGoogleSheets: googleAccount.id,
+                    id: config.dbId,
+                    content
+                }
+            });
+
+            setLastActionMessage({ type: 'success', text: newState ? 'تم تفعيل المزامنة التلقائية.' : 'تم إيقاف المزامنة التلقائية.' });
+
+        } catch (error: any) {
+            console.error("Auto Sync Toggle Error", error);
+            // Revert
+            setIsAutoSyncActive(prev => ({ ...prev, [type]: !newState }));
+            setLastActionMessage({ type: 'warning', text: 'فشل تغيير حالة المزامنة.' });
+        }
+    };
+
     const handleSaveConfigs = async () => {
         const type = activeMappingTab;
         const config = configs[type];
@@ -612,11 +669,7 @@ export const IntegrationSettings: React.FC = () => {
 
             setIsConnecting(false);
             setLastActionMessage({ type: 'success', text: `تم حفظ إعدادات ${type === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'} بنجاح.` });
-
-            // Allow moving to next step only if at least one config is valid (which just happened)
-            // But we don't force it, user might want to save the other one too.
-            // We can prompt or just stay let them decide. User said "deal with each sheet individually".
-            // So we stay on this step.
+            setCurrentStep(3);
 
         } catch (error: any) {
             console.error("Save error:", error);
@@ -657,30 +710,43 @@ export const IntegrationSettings: React.FC = () => {
         }
     };
 
-    const handleAddToDatabase = () => {
+    const handleAddToDatabase = async () => {
         setIsAddingToDb(true);
-        const count = stagedData[activeView].length;
 
-        setTimeout(() => {
-            setIsAddingToDb(false);
-            const nextRow = configs[activeView].startRow + count;
+        try {
+            const config = configs[activeView];
+            if (!config.dbId || !googleAccount?.id) {
+                setLastActionMessage({ type: 'warning', text: 'الإعدادات غير محفوظة أو حساب Google غير متصل.' });
+                setIsAddingToDb(false);
+                return;
+            }
 
-            setConfigs(prev => ({
-                ...prev,
-                [activeView]: { ...prev[activeView], startRow: nextRow }
-            }));
-
-            setStagedData(prev => ({ ...prev, [activeView]: [] }));
-
-            setLastActionMessage({
-                type: 'success',
-                text: `تمت إضافة ${count} طلبية بنجاح. المؤشر الآن عند السطر ${nextRow}.`
+            const { data } = await createMultiOrderFromSheets({
+                variables: {
+                    idGoogleSheets: googleAccount.id,
+                    idSheets: config.dbId,
+                    startRow: config.startRow
+                }
             });
 
-            if (count < 50) {
-                setIsAutoSyncActive(prev => ({ ...prev, [activeView]: true }));
+            if (data?.createMultiOrderFromSheets?.status) {
+                setLastActionMessage({ type: 'success', text: `تم حفظ ${stagedData[activeView].length} طلب بنجاح.` });
+
+                // Clear staged data as it is now processed
+                setStagedData(prev => ({ ...prev, [activeView]: [] }));
+
+                // Refetch to get updated startRow/lastSyncedRow
+                await refetchSheets();
+            } else {
+                setLastActionMessage({ type: 'warning', text: 'فشلت عملية الحفظ. يرجى المحاولة مرة أخرى.' });
             }
-        }, 1800);
+
+        } catch (error: any) {
+            console.error("Batch save error:", error);
+            setLastActionMessage({ type: 'warning', text: `حدث خطأ أثناء الحفظ: ${error.message}` });
+        } finally {
+            setIsAddingToDb(false);
+        }
     };
 
     const updateConfig = (type: SheetType, key: keyof SheetConfig, value: string | number) => {
@@ -776,8 +842,8 @@ export const IntegrationSettings: React.FC = () => {
             {/* Header & Progress Steps */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                 <div className="text-right">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">الربط التقني</h2>
-                    <p className="text-[10px] text-slate-400 font-bold">إدارة الطلبات عبر Google Sheets</p>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">إعدادات الربط</h2>
+                    <p className="text-[10px] text-slate-400 font-bold">إدارة ربط Google Sheets</p>
                 </div>
 
                 <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">
@@ -785,19 +851,25 @@ export const IntegrationSettings: React.FC = () => {
                         { n: 1, l: 'الحساب', Icon: UserCog },
                         { n: 2, l: 'الإعدادات', Icon: Sliders },
                         { n: 3, l: 'التشغيل', Icon: Play }
-                    ].map((s) => (
-                        <div key={s.n} className="flex items-center gap-1">
-                            <button
-                                disabled={currentStep < s.n || (!isConnected && s.n > 1)}
-                                onClick={() => setCurrentStep(s.n)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black transition-all ${currentStep === s.n ? 'bg-indigo-600 text-white shadow-sm' : (isConnected && currentStep > s.n) ? 'bg-emerald-100 text-emerald-600' : 'text-slate-400 cursor-not-allowed'}`}
-                            >
-                                {currentStep > s.n ? <Check className="w-3 h-3" /> : <s.Icon className="w-3 h-3" />}
-                                <span className="hidden sm:inline">{s.l}</span>
-                            </button>
-                            {s.n < 3 && <div className="w-3 h-0.5 bg-slate-200/60 rounded-full"></div>}
-                        </div>
-                    ))}
+                    ].map((s) => {
+                        const isStep2Enabled = isConnected;
+                        const isStep3Enabled = isConnected && (configs.new.dbId || configs.abandoned.dbId);
+                        const isDisabled = (s.n === 2 && !isStep2Enabled) || (s.n === 3 && !isStep3Enabled);
+
+                        return (
+                            <div key={s.n} className="flex items-center gap-1">
+                                <button
+                                    disabled={isDisabled}
+                                    onClick={() => setCurrentStep(s.n)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black transition-all ${currentStep === s.n ? 'bg-indigo-600 text-white shadow-sm' : (!isDisabled) ? 'hover:bg-indigo-50 text-slate-500 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`}
+                                >
+                                    {currentStep > s.n ? <Check className="w-3 h-3" /> : <s.Icon className="w-3 h-3" />}
+                                    <span className="hidden sm:inline">{s.l}</span>
+                                </button>
+                                {s.n < 3 && <div className="w-3 h-0.5 bg-slate-200/60 rounded-full"></div>}
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
 
@@ -1069,8 +1141,8 @@ export const IntegrationSettings: React.FC = () => {
                                                             color={activeMappingTab === 'new' ? 'indigo' : 'amber'}
                                                             options={sheetHeaders[activeMappingTab]?.length > 0 ? (
                                                                 sheetHeaders[activeMappingTab].map((header, idx) => ({
-                                                                    value: String.fromCharCode(65 + idx),
-                                                                    label: `${String.fromCharCode(65 + idx)} - ${header}`
+                                                                    value: header,
+                                                                    label: header
                                                                 }))
                                                             ) : (
                                                                 ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'].map(col => ({
@@ -1189,19 +1261,49 @@ export const IntegrationSettings: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {isAutoSyncActive[activeView] && (
-                                        <div className="bg-slate-900 rounded-2xl p-5 text-white text-center relative overflow-hidden group shadow-lg">
-                                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-indigo-500"></div>
-                                            <div className="space-y-2 relative z-10">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300">أتمتة WILO نشطة</p>
-                                                </div>
-                                                <p className="text-sm font-black tracking-tight">مراقبة من السطر {configs[activeView].startRow}</p>
-                                                <button onClick={() => setIsAutoSyncActive(prev => ({ ...prev, [activeView]: false }))} className="bg-white/10 px-3 py-1.5 rounded-lg text-[8px] font-black text-white hover:bg-white/20 transition-all">إيقاف</button>
+                                    <div className={`rounded-2xl p-5 text-center relative overflow-hidden group shadow-lg transition-all duration-300 ${isAutoSyncActive[activeView] ? 'bg-slate-900 text-white' : 'bg-white border border-slate-100'}`}>
+                                        {isAutoSyncActive[activeView] && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-indigo-500"></div>}
+                                        <div className="space-y-3 relative z-10 flex flex-col items-center justify-center h-full">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {isAutoSyncActive[activeView] ? (
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+                                                ) : (
+                                                    <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                                )}
+                                                <p className={`text-[10px] font-black uppercase tracking-widest ${isAutoSyncActive[activeView] ? 'text-indigo-300' : 'text-slate-400'}`}>
+                                                    {isAutoSyncActive[activeView] ? 'أتمتة WILO نشطة' : 'أتمتة WILO متوقفة'}
+                                                </p>
                                             </div>
+
+                                            <div className="space-y-0.5">
+                                                <p className={`text-base font-black tracking-tight ${isAutoSyncActive[activeView] ? 'text-white' : 'text-slate-900'}`}>
+                                                    المزامنة التلقائية
+                                                </p>
+                                                <p className={`text-[10px] font-bold ${isAutoSyncActive[activeView] ? 'text-slate-400' : 'text-slate-400'}`}>
+                                                    فحص دوري كل 5 دقائق
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleToggleAutoSync(activeView)}
+                                                className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${isAutoSyncActive[activeView]
+                                                    ? 'bg-white/10 text-white hover:bg-white/20'
+                                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5'}`}
+                                            >
+                                                {isAutoSyncActive[activeView] ? (
+                                                    <>
+                                                        <Minus className="w-3 h-3" />
+                                                        إيقاف المزامنة
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Bot className="w-3 h-3" />
+                                                        تفعيل المزامنة
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
 
                                 <div className="lg:col-span-2 space-y-5">

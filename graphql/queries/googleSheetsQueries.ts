@@ -14,6 +14,7 @@ export const GET_ALL_GOOGLE_SHEETS = gql`
         idFile
         nameSheet
         typeOrder
+        autoSync
         lastRowSynced
         configWithOrderCollection {
           id

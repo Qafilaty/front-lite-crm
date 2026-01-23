@@ -19,6 +19,7 @@ const Layout: React.FC = () => {
     if (path.includes('/dashboard')) return View.DASHBOARD;
     if (path.includes('/users')) return View.USERS;
     if (path.includes('/orders')) return View.ORDER_CONFIRMATION;
+    if (path.includes('/abandoned')) return View.ORDER_ABANDONED;
     if (path.includes('/tracking')) return View.ORDER_TRACKING;
     if (path.includes('/inventory')) return View.INVENTORY;
     if (path.includes('/carriers')) return View.SHIPPING_CARRIERS;
@@ -40,6 +41,7 @@ const Layout: React.FC = () => {
       [View.DASHBOARD]: '/dashboard',
       [View.USERS]: '/users',
       [View.ORDER_CONFIRMATION]: '/orders',
+      [View.ORDER_ABANDONED]: '/abandoned',
       [View.ORDER_TRACKING]: '/tracking',
       [View.INVENTORY]: '/inventory',
       [View.SHIPPING_CARRIERS]: '/carriers',
