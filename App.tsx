@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apolloClient';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { OrderNotificationProvider } from './contexts/OrderNotificationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -80,9 +81,11 @@ const App: React.FC = () => {
   return (
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <OrderNotificationProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </OrderNotificationProvider>
       </AuthProvider>
     </ApolloProvider>
   );

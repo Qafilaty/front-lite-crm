@@ -1,7 +1,8 @@
 import React from 'react';
 import { View } from '../types';
-import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Zap, ChevronLeft, ChevronRight, Share2, Store, Map, BookOpen, Wallet, Banknote, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen } from 'lucide-react';
 import logo from '../assets/logo.png';
+import { useOrderNotification } from '../contexts/OrderNotificationContext';
 
 interface SidebarProps {
   currentView: View;
@@ -13,6 +14,15 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, isCollapsed, onToggleCollapse, onLogout }) => {
+  const { hasNewOrders, markAsRead } = useOrderNotification();
+
+  const handleViewChange = (view: View) => {
+    if (view === View.ORDER_CONFIRMATION) {
+      markAsRead();
+    }
+    onViewChange(view);
+  };
+
   const sections = [
     {
       title: 'الأساسية',
@@ -24,7 +34,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
     {
       title: 'العمليات',
       items: [
-        { id: View.ORDER_CONFIRMATION, label: 'تأكيد الطلبيات', icon: CheckCircle2 },
+        {
+          id: View.ORDER_CONFIRMATION,
+          label: 'تأكيد الطلبيات',
+          icon: CheckCircle2,
+          hasNotification: hasNewOrders
+        },
         { id: View.ORDER_ABANDONED, label: 'الطلبات المتروكة', icon: FileWarning },
         { id: View.ORDER_TRACKING, label: 'تتبع الطلبيات', icon: Truck },
         { id: View.INVENTORY, label: 'المخزون', icon: Box },
@@ -47,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
       ]
-    }
+    },
   ];
 
   return (
@@ -80,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
             {section.items.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onViewChange(item.id)}
+                onClick={() => handleViewChange(item.id)}
                 className={`
                   w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative
                   ${currentView === item.id
@@ -90,7 +105,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
               >
-                <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${currentView === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
+                <div className="relative">
+                  <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${currentView === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
+                  {/* Red Dot Notification */}
+                  {/* @ts-ignore */}
+                  {item.hasNotification && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0F172A] animate-pulse" />
+                  )}
+                </div>
                 {!isCollapsed && (
                   <div className="flex-1 flex justify-between items-center">
                     <span className="text-[12px] font-bold">{item.label}</span>
