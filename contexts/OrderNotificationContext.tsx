@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 const SYNC_ORDERS_SUBSCRIPTION = gql`
   subscription OnSyncOrders($idCompany: ID!) {
     syncOrdersWithExternalStores(idCompany: $idCompany) {
-      _id
+      id
       fullName
     }
   }
@@ -48,7 +48,7 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     };
 
     useSubscription(SYNC_ORDERS_SUBSCRIPTION, {
-        skip: !user || !user.company?.id,
+        // skip: !user || !user.company?.id,
         variables: { idCompany: user?.company?.id },
         onData: ({ data }) => {
             console.log("Sync Orders Data:", data);
