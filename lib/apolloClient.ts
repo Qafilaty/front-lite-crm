@@ -1,10 +1,14 @@
-import { ApolloClient, InMemoryCache, from } from '@apollo/client';
+import { ApolloClient, InMemoryCache, from, split } from '@apollo/client';
 import { createUploadLink } from 'apollo-upload-client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import { createClient } from 'graphql-ws';
+import { getMainDefinition } from '@apollo/client/utilities';
 
 // Get API URL from environment variable or use default
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/graphql';
+const WS_URL = API_URL.replace(/^http/, 'ws');
 
 // HTTP Link (Upload Link)
 const uploadLink = createUploadLink({
@@ -56,9 +60,33 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
   }
 });
 
+// WebSocket Link
+const wsLink = new GraphQLWsLink(createClient({
+  url: WS_URL,
+  connectionParams: () => {
+    const token = localStorage.getItem('authToken');
+    return {
+      authorization: token ? token : '',
+    };
+  }
+}));
+
+// Split Link
+const splitLink = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query);
+    return (
+      definition.kind === 'OperationDefinition' &&
+      definition.operation === 'subscription'
+    );
+  },
+  wsLink,
+  from([errorLink, authLink, uploadLink])
+);
+
 // Create Apollo Client
 export const apolloClient = new ApolloClient({
-  link: from([errorLink, authLink, uploadLink]),
+  link: splitLink,
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

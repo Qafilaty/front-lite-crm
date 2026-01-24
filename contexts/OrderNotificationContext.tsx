@@ -2,21 +2,9 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { useSubscription, gql } from '@apollo/client';
 import { useAuth } from './AuthContext';
 
-// Defining the subscription query
-const ORDER_CREATED_SUBSCRIPTION = gql`
-  subscription OnOrderCreated {
-    createdOrder {
-      _id
-      fullName
-      totalPrice
-      idCompany
-    }
-  }
-`;
-
 const SYNC_ORDERS_SUBSCRIPTION = gql`
-  subscription OnSyncOrders {
-    syncOrdersWithExternalStores {
+  subscription OnSyncOrders($idCompany: ID!) {
+    syncOrdersWithExternalStores(idCompany: $idCompany) {
       _id
       fullName
     }
@@ -59,21 +47,12 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
         playNotificationSound();
     };
 
-    useSubscription(ORDER_CREATED_SUBSCRIPTION, {
-        skip: !user,
-        onData: ({ data }) => {
-            if (data.data?.createdOrder) {
-                handleNewOrder();
-            }
-        },
-        onError: (err) => {
-            console.error("Subscription Error (createdOrder):", err);
-        }
-    });
-
     useSubscription(SYNC_ORDERS_SUBSCRIPTION, {
-        skip: !user,
+        skip: !user || !user.company?.id,
+        variables: { idCompany: user?.company?.id },
         onData: ({ data }) => {
+            console.log("Sync Orders Data:", data);
+
             if (data.data?.syncOrdersWithExternalStores) {
                 handleNewOrder();
             }
