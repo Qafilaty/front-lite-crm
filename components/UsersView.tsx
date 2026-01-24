@@ -161,12 +161,20 @@ const UsersView: React.FC<UsersViewProps> = ({
     setErrors({});
     setIsSubmitting(true);
     try {
-      const success = await onUpdate(editingUser.id, {
+      const payload: any = {
         name: editingUser.name,
         email: editingUser.email,
         phone: editingUser.phone,
+        role: editingUser.role, // Added role
         orderPrice: editingUser.role === 'confirmed' ? Number(editingUser.orderPrice) : 0
-      });
+      };
+
+      // Only include password if it's not empty (meaning user wants to change it)
+      if (editingUser.password && editingUser.password.trim() !== '') {
+        payload.password = editingUser.password;
+      }
+
+      const success = await onUpdate(editingUser.id, payload);
 
       if (success) {
         setShowModal(false);
@@ -367,14 +375,16 @@ const UsersView: React.FC<UsersViewProps> = ({
           {typeof document !== 'undefined' && ReactDOM.createPortal(
             <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto py-10 px-4">
               <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setShowModal(false)}></div>
-              <div className="relative z-10 bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto">
+              <div className="relative z-10 bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
                     {modalMode === 'add' ? 'إضافة مستخدم' : 'تعديل مستخدم'}
                   </h3>
                   <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
                 </div>
-                <form onSubmit={modalMode === 'add' ? handleAddUser : handleEditUser} className="p-6 space-y-4">
+                <form onSubmit={modalMode === 'add' ? handleAddUser : handleEditUser} className="p-6 grid grid-cols-2 gap-4">
+
+                  {/* Row 1: Name and Phone */}
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم</label>
                     <input
@@ -390,22 +400,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                     />
                     {errors.name && <p className="text-red-500 text-[9px] font-bold px-1">{errors.name}</p>}
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">البريد</label>
-                    <input
-                      type="email"
-                      value={modalMode === 'add' ? newUser.email : editingUser?.email || ''}
-                      onChange={(e) => {
-                        if (modalMode === 'add') setNewUser({ ...newUser, email: e.target.value });
-                        else setEditingUser({ ...editingUser, email: e.target.value });
-                        if (errors.email) setErrors({ ...errors, email: '' });
-                      }}
-                      onBlur={(e) => handleBlur('email', e.target.value)}
-                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.email ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
-                      placeholder="email@example.com"
-                    />
-                    {errors.email && <p className="text-red-500 text-[9px] font-bold px-1">{errors.email}</p>}
-                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الهاتف</label>
                     <input
@@ -423,9 +418,65 @@ const UsersView: React.FC<UsersViewProps> = ({
                     {errors.phone && <p className="text-red-500 text-[9px] font-bold px-1">{errors.phone}</p>}
                   </div>
 
-                  {/* Conditional Commission Field */}
+                  {/* Row 2: Email and Password */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">البريد</label>
+                    <input
+                      type="email"
+                      value={modalMode === 'add' ? newUser.email : editingUser?.email || ''}
+                      onChange={(e) => {
+                        if (modalMode === 'add') setNewUser({ ...newUser, email: e.target.value });
+                        else setEditingUser({ ...editingUser, email: e.target.value });
+                        if (errors.email) setErrors({ ...errors, email: '' });
+                      }}
+                      onBlur={(e) => handleBlur('email', e.target.value)}
+                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.email ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                      placeholder="email@example.com"
+                    />
+                    {errors.email && <p className="text-red-500 text-[9px] font-bold px-1">{errors.email}</p>}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{modalMode === 'add' ? 'كلمة المرور' : 'تغيير كلمة المرور'}</label>
+                    <input
+                      type="password"
+                      value={modalMode === 'add' ? newUser.password : editingUser?.password || ''}
+                      onChange={(e) => {
+                        if (modalMode === 'add') setNewUser({ ...newUser, password: e.target.value });
+                        else setEditingUser({ ...editingUser, password: e.target.value });
+                        if (errors.password) setErrors({ ...errors, password: '' });
+                      }}
+                      onBlur={(e) => handleBlur('password', e.target.value)}
+                      className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.password ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                      placeholder={modalMode === 'add' ? "كلمة المرور..." : "اتركها فارغة للإبقاء على الحالية"}
+                    />
+                    {errors.password && <p className="text-red-500 text-[9px] font-bold px-1">{errors.password}</p>}
+                  </div>
+
+                  {/* Row 3: Role (Enabled for both Add and Edit) */}
+                  <div className="space-y-1.5 col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'confirmed' }) : setEditingUser({ ...editingUser, role: 'confirmed' })}
+                        className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'confirmed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
+                      >
+                        مؤكد
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'admin' }) : setEditingUser({ ...editingUser, role: 'admin' })}
+                        className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
+                      >
+                        أدمن
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Conditional Commission Field - Row 4 */}
                   {((modalMode === 'add' && newUser.role === 'confirmed') || (modalMode === 'edit' && editingUser?.role === 'confirmed')) && (
-                    <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                    <div className="space-y-1.5 animate-in slide-in-from-top-2 col-span-2">
                       <label className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-1 flex items-center gap-1">
                         <Coins className="w-3 h-3" /> عمولة التأكيد (د.ج)
                       </label>
@@ -442,36 +493,10 @@ const UsersView: React.FC<UsersViewProps> = ({
                     </div>
                   )}
 
-                  {modalMode === 'add' && (
-                    <>
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">كلمة المرور</label>
-                        <input
-                          type="password"
-                          value={newUser.password}
-                          onChange={(e) => {
-                            setNewUser({ ...newUser, password: e.target.value });
-                            if (errors.password) setErrors({ ...errors, password: '' });
-                          }}
-                          onBlur={(e) => handleBlur('password', e.target.value)}
-                          className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.password ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
-                          placeholder="كلمة المرور..."
-                        />
-                        {errors.password && <p className="text-red-500 text-[9px] font-bold px-1">{errors.password}</p>}
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => setNewUser({ ...newUser, role: 'confirmed' })} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'confirmed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>مؤكد</button>
-                          <button type="button" onClick={() => setNewUser({ ...newUser, role: 'admin' })} className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${newUser.role === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>أدمن</button>
-                        </div>
-                      </div>
-                    </>
-                  )}
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase shadow-md hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 col-span-2"
                   >
                     {isSubmitting && (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

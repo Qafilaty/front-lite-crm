@@ -64,6 +64,9 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkDeliveryModalOpen, setIsBulkDeliveryModalOpen] = useState(false);
 
+  // Highlighting State
+  const [highlightedOrderIds, setHighlightedOrderIds] = useState<Set<string>>(new Set());
+
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setStartX(e.pageX - (scrollContainerRef.current?.offsetLeft || 0));
@@ -248,11 +251,21 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     skip: !user?.company?.id,
     onData: ({ data: { data } }) => {
       if (data?.syncOrdersWithExternalStores) {
-        toast.success(`تم استلام ${data.syncOrdersWithExternalStores.length} طلبات جديدة!`, {
-          icon: '🚀',
-          duration: 5000
-        });
-        refetch(); // Refresh the list
+        const newOrders = data.syncOrdersWithExternalStores;
+        if (newOrders.length > 0) {
+          const newIds = newOrders.map((o: any) => o.id);
+          setHighlightedOrderIds(prev => {
+            const next = new Set(prev);
+            newIds.forEach((id: string) => next.add(id));
+            return next;
+          });
+
+          toast.success(`تم استلام ${newOrders.length} طلبات جديدة!`, {
+            icon: '🚀',
+            duration: 5000
+          });
+          refetch(); // Refresh the list
+        }
       }
     }
   });
@@ -465,11 +478,14 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       fallbackColors = statusColors[order.status] || statusColors.default;
                     }
 
+                    // Check highlight
+                    const isNew = highlightedOrderIds.has(order.id);
+
                     return (
                       <tr
                         key={order.id}
                         onClick={() => navigate(`/orders/${order.id}`)}
-                        className={`group transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}
+                        className={`group transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/30' : (isNew ? 'bg-emerald-50/80 hover:bg-emerald-100' : 'hover:bg-slate-50')}`}
                       >
                         {isConfirmedStatus && (
                           <td className="px-6 py-5 text-center animate-in slide-in-from-right-4 fade-in" onClick={(e) => e.stopPropagation()}>
@@ -515,7 +531,16 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          {order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
+                          {order.confirmed ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                <UserCheck className="w-3 h-3" />
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-600">
+                                {order.confirmed.name}
+                              </span>
+                            </div>
+                          ) : (order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                                 <UserCheck className="w-3 h-3" />
@@ -526,7 +551,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                             </div>
                           ) : (
                             <span className="text-[10px] text-slate-300 font-bold">-</span>
-                          )}
+                          ))}
                         </td>
                         <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono">{order.totalPrice || order.amount} دج</td>
                         <td className="px-6 py-5">

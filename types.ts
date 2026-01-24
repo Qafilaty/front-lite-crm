@@ -117,6 +117,7 @@ export interface Order {
     status?: string;
     trackingCode?: string;
   };
+  confirmed?: User;
 }
 
 export interface User {

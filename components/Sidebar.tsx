@@ -107,17 +107,20 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
               >
                 <div className="relative">
                   <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${currentView === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
-                  {/* Red Dot Notification */}
-                  {/* @ts-ignore */}
-                  {item.hasNotification && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0F172A] animate-pulse" />
-                  )}
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 flex justify-between items-center">
                     <span className="text-[12px] font-bold">{item.label}</span>
                     {item.badge && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
                   </div>
+                )}
+
+                {/* Red Dot Notification */}
+                {/* @ts-ignore */}
+                {item.hasNotification && (
+                  <span className={`absolute w-2.5 h-2.5 bg-[#f5b701] rounded-full animate-pulse shadow-sm
+                    ${isCollapsed ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2 left-3'}
+                  `} />
                 )}
               </button>
             ))}

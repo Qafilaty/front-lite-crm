@@ -98,6 +98,10 @@ export const GET_ORDER = gql`
         deleted
         createdAt
       }
+      confirmed {
+        id
+        name
+      }
       deliveryTimeLine {
         id
         status
@@ -240,6 +244,10 @@ export const GET_ALL_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        confirmed {
+          id
+          name
+        }
         confirmationTimeLine {
           id
           user {
@@ -379,6 +387,10 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        confirmed {
+          id
+          name
+        }
       }
       total
     }

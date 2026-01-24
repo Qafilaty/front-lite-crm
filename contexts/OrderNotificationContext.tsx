@@ -27,18 +27,50 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
 
     useEffect(() => {
         // Initialize audio
-        audioRef.current = new Audio('/assets/notification.mp3');
-        // Fallback if local asset is missing, or use a base64 string or CDN
-        // Using a simple beep sound or ensuring the file exists is key.
-        // For now, assuming /assets/notification.mp3 or similar exists. 
-        // If not, we can use a standard notification sound URL.
-        audioRef.current.src = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'; // Example valid URL for testing
-        // Or prompt user to add file? I'll use a reliable CDN link for "bell" sound to ensure it works.
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+        // Browser Autoplay Policy: AudioContext must be resumed (or audio played) after user interaction
+        const unlockAudio = () => {
+            if (audioRef.current) {
+                // Try to play and immediately pause to "unlock" the capability
+                audioRef.current.play().then(() => {
+                    audioRef.current?.pause();
+                    audioRef.current!.currentTime = 0;
+                }).catch(e => {
+                    // Ignore error if it fails (e.g. if already playing or distinct policy)
+                    console.log("Audio unlock attempt:", e);
+                });
+            }
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('keydown', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('keydown', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('keydown', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
     }, []);
 
     const playNotificationSound = () => {
         if (audioRef.current) {
-            audioRef.current.play().catch(e => console.log("Audio play failed (interaction needed):", e));
+            audioRef.current.currentTime = 0; // Reset to start
+            const playPromise = audioRef.current.play();
+
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        // Automatic playback started!
+                    })
+                    .catch((error) => {
+                        console.error("Notification sound failed to play:", error);
+                    });
+            }
         }
     };
 
