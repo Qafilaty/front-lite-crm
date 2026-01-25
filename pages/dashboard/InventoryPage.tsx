@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import InventoryView from '../components/InventoryView';
-import { productService } from '../services/apiService';
-import type { Product } from '../types';
+import { useAuth } from '../../contexts/AuthContext';
+import InventoryView from '../../components/InventoryView';
+import { productService } from '../../services/apiService';
+import type { Product } from '../../types';
 
 const InventoryPage: React.FC = () => {
   const { user } = useAuth();

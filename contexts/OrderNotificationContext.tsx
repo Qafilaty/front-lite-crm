@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { useSubscription, gql } from '@apollo/client';
+import { useSubscription, useQuery, gql } from '@apollo/client';
 import { useAuth } from './AuthContext';
+import { GET_POSTPONED_COUNT } from '../graphql/queries/orderQueries';
 
 const SYNC_ORDERS_SUBSCRIPTION = gql`
   subscription OnSyncOrders($idCompany: ID!) {
@@ -14,6 +15,7 @@ const SYNC_ORDERS_SUBSCRIPTION = gql`
 interface OrderNotificationContextType {
     hasNewOrders: boolean;
     markAsRead: () => void;
+    duePostponedCount: number;
 }
 
 const OrderNotificationContext = createContext<OrderNotificationContextType | undefined>(undefined);
@@ -21,9 +23,23 @@ const OrderNotificationContext = createContext<OrderNotificationContextType | un
 export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
     const [hasNewOrders, setHasNewOrders] = useState(false);
+    const [duePostponedCount, setDuePostponedCount] = useState(0);
 
     // Use a ref for the audio to avoid recreating it
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Postponed Orders Query
+    useQuery(GET_POSTPONED_COUNT, {
+        skip: !user,
+        pollInterval: 300000, // 5 minutes
+        fetchPolicy: 'network-only',
+        onCompleted: (data) => {
+            setDuePostponedCount(data?.allOrder?.numberDeferredOrder || 0);
+        },
+        onError: (err) => {
+            console.error("Postponed Count Error:", err);
+        }
+    });
 
     useEffect(() => {
         // Initialize audio
@@ -83,7 +99,7 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
         // skip: !user || !user.company?.id,
         variables: { idCompany: user?.company?.id },
         onData: ({ data }) => {
-            console.log("Sync Orders Data:", data);
+            // console.log("Sync Orders Data:", data);
 
             if (data.data?.syncOrdersWithExternalStores) {
                 handleNewOrder();
@@ -99,7 +115,7 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     };
 
     return (
-        <OrderNotificationContext.Provider value={{ hasNewOrders, markAsRead }}>
+        <OrderNotificationContext.Provider value={{ hasNewOrders, markAsRead, duePostponedCount }}>
             {children}
         </OrderNotificationContext.Provider>
     );

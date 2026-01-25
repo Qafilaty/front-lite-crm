@@ -20,6 +20,7 @@ import { ModernSelect, PaginationControl } from './common';
 import { useAuth } from '../contexts/AuthContext';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import { BulkDeliveryModal } from './BulkDeliveryModal';
+import { AssignConfirmerModal } from './AssignConfirmerModal';
 
 interface OrderConfirmationViewProps {
   orders?: Order[];
@@ -63,6 +64,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   // Bulk Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkDeliveryModalOpen, setIsBulkDeliveryModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   // Highlighting State
   const [highlightedOrderIds, setHighlightedOrderIds] = useState<Set<string>>(new Set());
@@ -284,12 +286,23 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
           </div>
           <div className="flex items-center gap-3 w-full lg:w-auto">
             {selectedOrderIds.length > 0 && (
-              <button
-                onClick={() => setIsBulkDeliveryModalOpen(true)}
-                className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
-              >
-                <Truck className="w-4 h-4" /> إرسال ({selectedOrderIds.length})
-              </button>
+              isConfirmedStatus ? (
+                <button
+                  onClick={() => setIsBulkDeliveryModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
+                >
+                  <Truck className="w-4 h-4" /> إرسال ({selectedOrderIds.length})
+                </button>
+              ) : (
+                (user?.role === 'admin' || user?.role === 'owner') && (
+                  <button
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
+                  >
+                    <UserCheck className="w-4 h-4" /> إسناد ({selectedOrderIds.length})
+                  </button>
+                )
+              )
             )}
             <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none">
               <Plus className="w-4 h-4" /> إضافة طلب يدوي
@@ -448,16 +461,14 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
               <table className="w-full text-right border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                    {isConfirmedStatus && (
-                      <th className="px-6 py-4 w-12 text-center animate-in slide-in-from-right-4 fade-in">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500  cursor-pointer"
-                          checked={selectedOrderIds.length > 0 && selectedOrderIds.length === orders.length}
-                          onChange={toggleAll}
-                        />
-                      </th>
-                    )}
+                    <th className="px-6 py-4 w-12 text-center animate-in slide-in-from-right-4 fade-in">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500  cursor-pointer"
+                        checked={selectedOrderIds.length > 0 && selectedOrderIds.length === orders.length}
+                        onChange={toggleAll}
+                      />
+                    </th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>
@@ -484,19 +495,17 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     return (
                       <tr
                         key={order.id}
-                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onClick={() => navigate(`/dashboard/orders/${order.id}`)}
                         className={`group transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/30' : (isNew ? 'bg-emerald-50/80 hover:bg-emerald-100' : 'hover:bg-slate-50')}`}
                       >
-                        {isConfirmedStatus && (
-                          <td className="px-6 py-5 text-center animate-in slide-in-from-right-4 fade-in" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                              checked={isSelected}
-                              onChange={() => toggleSelection(order.id)}
-                            />
-                          </td>
-                        )}
+                        <td className="px-6 py-5 text-center animate-in slide-in-from-right-4 fade-in" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            checked={isSelected}
+                            onChange={() => toggleSelection(order.id)}
+                          />
+                        </td>
                         <td className="px-6 py-5">
                           <div className="space-y-0.5">
                             <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
@@ -563,7 +572,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           </span>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
                             مراجعة <Eye className="w-3.5 h-3.5" />
                           </button>
                         </td>
@@ -572,7 +581,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   })}
                   {orders.length === 0 && (
                     <tr>
-                      <td colSpan={isConfirmedStatus ? 7 : 6} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات تطابق معايير البحث</td>
+                      <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات تطابق معايير البحث</td>
                     </tr>
                   )}
                 </tbody>
@@ -608,6 +617,17 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
           // refetch orders to update status ideally (though status might not change immediately unless backend does it)
           // But user might want to clear selection
           refetch();
+          setSelectedOrderIds([]); // Clear selection after success
+        }}
+      />
+
+      <AssignConfirmerModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        selectedIds={selectedOrderIds}
+        onSuccess={() => {
+          refetch();
+          setSelectedOrderIds([]);
         }}
       />
     </>

@@ -217,7 +217,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                         : statusColors.default;
 
                                     return (
-                                        <tr key={order.id} onClick={() => navigate(`/orders/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
+                                        <tr key={order.id} onClick={() => navigate(`/dashboard/orders/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
                                             <td className="px-6 py-5">
                                                 <div className="space-y-0.5">
                                                     <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
@@ -266,7 +266,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5 text-center">
-                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
+                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
                                                     مراجعة <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                             </td>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import FinancesView from '../components/FinancesView';
-import FinancialStatsView from '../components/FinancialStatsView';
-import { Transaction } from '../types';
+import FinancesView from '../../components/FinancesView';
+import FinancialStatsView from '../../components/FinancialStatsView';
+import { Transaction } from '../../types';
 
 const FinancesPage: React.FC = () => {
     // Dummy data state until API integration

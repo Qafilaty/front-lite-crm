@@ -1,5 +1,5 @@
 import React from 'react';
-import StoreLinkingView from '../components/StoreLinkingView';
+import StoreLinkingView from '../../components/StoreLinkingView';
 
 const StoreLinkingPage: React.FC = () => {
   return <StoreLinkingView />;

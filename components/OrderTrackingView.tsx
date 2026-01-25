@@ -353,7 +353,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   const trackingCode = order.deliveryCompany?.trackingCode || '-';
 
                   return (
-                    <tr key={order.id} onClick={() => navigate(`/tracking/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
+                    <tr key={order.id} onClick={() => navigate(`/dashboard/tracking/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
                       <td className="px-6 py-5">
                         <div className="space-y-0.5">
                           <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer}</p>
@@ -411,7 +411,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         </span>
                       </td>
                       <td className="px-6 py-5 text-center">
-                        <button onClick={(e) => { e.stopPropagation(); navigate(`/tracking/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/tracking/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">
                           تتبع <Eye className="w-3.5 h-3.5" />
                         </button>
                       </td>

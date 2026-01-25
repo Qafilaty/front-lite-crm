@@ -3,18 +3,23 @@ import ReactDOM from 'react-dom';
 import { useQuery, useMutation } from '@apollo/client';
 import { Order, OrderLog, OrderItem, OrderStatus, StatusOrderObject } from '../types';
 import {
-  ArrowRight, Save, X, History,
   User, Phone, MapPin, ShoppingBag, PlusCircle, Trash2, Plus, Clock, Truck, Home, Building2, Store, Check,
-  CheckCircle2, RefreshCcw, Map, Loader2, Copy, AlertCircle
+  CheckCircle2, RefreshCcw, Map, Loader2, Copy, AlertCircle, Search,
+  ArrowRight,
+  Save,
+  X,
+  SlidersHorizontal
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
 import { DeliveryCompany } from '../types';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
+import { PostponedModal } from './PostponedModal';
 import toast from 'react-hot-toast';
 import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
+import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { ModernSelect } from './common';
 
 interface OrderDetailsViewProps {
@@ -66,6 +71,21 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   });
 
   const { data: wilayasData } = useQuery(GET_ALL_WILAYAS);
+
+  const { data: productsData } = useQuery(GET_ALL_PRODUCTS, {
+    variables: { pagination: { limit: 100, page: 1 } }
+  });
+
+  const [focusedProductIndex, setFocusedProductIndex] = useState<number | null>(null);
+  const [itemModes, setItemModes] = useState<Record<number, 'select' | 'manual'>>({});
+  const [openModeMenuIndex, setOpenModeMenuIndex] = useState<number | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number, left: number, width: number } | null>(null);
+
+  const [deliveryErrors, setDeliveryErrors] = useState<any[]>([]);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+
+  const [isPostponeModalOpen, setIsPostponeModalOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<any>(null);
 
   const [updateOrder, { loading: isUpdating }] = useMutation(UPDATE_ORDER);
   const [changeStatusOrder, { loading: isStatusUpdating }] = useMutation(CHANGE_STATUS_ORDER);
@@ -157,6 +177,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       ? newLog.status.id
       : newLog.status;
 
+    // Intercept Postponed Status
+    // Check both object property (nameEN) and resolved value
+    const isPostponed =
+      (typeof newLog.status === 'object' && newLog.status?.nameEN === 'postponed') ||
+      statusValue === 'postponed' ||
+      getStatusKey(statusValue) === 'postponed';
+
+    if (isPostponed) {
+      setPendingStatusChange({ ...newLog, status: statusValue });
+      setIsAddLogOpen(false);
+      setIsPostponeModalOpen(true);
+      return;
+    }
+
     try {
       await changeStatusOrder({
         variables: {
@@ -205,6 +239,58 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     } catch (error: any) {
       console.error(error);
       toast.error('حدث خطأ أثناء تحديث الحالة');
+    }
+  };
+
+  const handlePostponeConfirm = async (date: string) => {
+    if (!pendingStatusChange) return;
+
+    setIsPostponeModalOpen(false);
+
+    try {
+      await changeStatusOrder({
+        variables: {
+          id: order.id,
+          content: {
+            status: pendingStatusChange.status,
+            note: pendingStatusChange.note,
+            idUser: idUser,
+            requiredFields: [
+              { key: 'postponementDate', value: date, type: 'date' }
+            ]
+          }
+        }
+      });
+
+      toast.success(`تم تأجيل الطلب إلى ${new Date(date).toLocaleDateString('ar-DZ')}`);
+
+      // Optimistic update
+      const now = new Date().toLocaleString('en-GB');
+      const log: OrderLog = {
+        status: pendingStatusChange.status, // Should be 'postponed'
+        date: now,
+        note: pendingStatusChange.note || `تم التأجيل إلى ${date}`,
+        user: userData?.currentUser?.name || 'مستخدم'
+      };
+
+      const updated = {
+        ...editedOrder,
+        status: pendingStatusChange.status,
+        postponementDate: date,
+        lastStatusDate: now,
+        history: [...(editedOrder.history || []), log],
+        confirmationTimeLine: [...(editedOrder.confirmationTimeLine || []), log],
+        updatedAt: now
+      };
+
+      setEditedOrder(updated);
+      onUpdate(updated);
+      setPendingStatusChange(null);
+      setNewLog({ status: updated.status, note: '' });
+
+    } catch (error) {
+      console.error("Postpone Error", error);
+      toast.error('حدث خطأ أثناء تأجيل الطلب');
     }
   };
 
@@ -316,9 +402,22 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       setIsSuccessModalOpen(true);
 
       toast.success('تم إرسال الطلب بنجاح');
+    } else if (result.data?.failedOrder?.length > 0) {
+      // Handle Failure
+      const failures = result.data.failedOrder.map((fail: any) => {
+        let parsedErrors = [];
+        try {
+          parsedErrors = JSON.parse(fail.errors);
+        } catch (e) {
+          parsedErrors = [{ message: fail.errors || 'Unknown Error', field: 'general' }];
+        }
+        return { ...fail, parsedErrors };
+      });
 
-      // Update local order tracking if needed, 
-      // but ideally we should trigger a refresh or update local state
+      setDeliveryErrors(failures);
+      setIsDeliveryModalOpen(false); // Close selection modal
+      setIsErrorModalOpen(true);     // Open error display modal
+      toast.error('فشل إرسال الطلب، يرجى مراجعة الأخطاء');
     } else {
       toast.error('فشل إرسال الطلب');
     }
@@ -369,7 +468,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <button onClick={() => { setIsAddLogOpen(true); }} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center justify-center gap-2">
             <RefreshCcw className="w-4 h-4" /> تحديث الحالة
           </button>
-          {!readOnly && !order.deliveryCompany?.trackingCode && (
+          {!readOnly && !order.deliveryCompany?.trackingCode && getStatusKey(editedOrder.status) === 'confirmed' && (
             <button
               onClick={openDeliveryModal}
               className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center justify-center gap-2"
@@ -540,100 +639,306 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </div>
           </div>
 
-          {/* Items / Cart Management Card */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-50 pb-5">
+          {/* Items / Cart Management Card - Redesigned */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
+            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
               <div className="flex items-center gap-3">
-                <ShoppingBag className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">سلة المشتريات</h3>
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">سلة المشتريات</h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1">
+                    {editedOrder.items?.length || 0} منتجات في الطلب
+                  </p>
+                </div>
               </div>
               {!readOnly && (
-                <button onClick={addItem} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-100 transition-all">
-                  <PlusCircle className="w-4 h-4" /> إضافة منتج
+                <button
+                  onClick={addItem}
+                  className="group flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>إضافة منتج</span>
                 </button>
               )}
             </div>
 
-            <div className="space-y-4">
-              {editedOrder.items?.map((item, idx) => (
-                <div key={idx} className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-in slide-in-from-right-4">
-                  <div className="md:col-span-5">
-                    <input
-                      disabled={readOnly}
-                      value={item.name}
-                      onChange={e => updateItem(idx, 'name', e.target.value)}
-                      placeholder="اسم المنتج..."
-                      className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-xs font-bold"
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <input
-                      disabled={readOnly}
-                      value={item.variant}
-                      onChange={e => updateItem(idx, 'variant', e.target.value)}
-                      placeholder="اللون/المقاس..."
-                      className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-[10px] font-bold"
-                    />
-                  </div>
-                  <div className="md:col-span-2 flex items-center gap-2">
-                    <span className="text-[9px] font-black text-slate-400">الكمية:</span>
-                    <input
-                      disabled={readOnly}
-                      type="number"
-                      value={item.quantity}
-                      onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
-                      className="w-16 bg-white border border-slate-200 px-2 py-3 rounded-xl text-xs font-bold text-center"
-                    />
-                  </div>
-                  <div className="md:col-span-1">
-                    <input
-                      disabled={readOnly}
-                      type="number"
-                      value={item.price}
-                      onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 px-2 py-3 rounded-xl text-xs font-bold text-indigo-600 text-center"
-                    />
-                  </div>
-                  {!readOnly && (
-                    <div className="md:col-span-1 flex justify-center">
-                      <button onClick={() => removeItem(idx)} className="p-2 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                    <th className="py-4 px-6 w-[35%]">المنتج</th>
+                    <th className="py-4 px-4 w-[20%]">النوع / الخصائص</th>
+                    <th className="py-4 px-4 w-[12%] text-center">الكمية</th>
+                    <th className="py-4 px-4 w-[15%] text-left">السعر</th>
+                    <th className="py-4 px-4 w-[15%] text-left">الإجمالي</th>
+                    {!readOnly && <th className="py-4 px-4 w-[8%] text-center"></th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {editedOrder.items?.map((item, idx) => (
+                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 px-6 relative">
+                        <div className="relative group/mode">
+                          {/* Input Area */}
+                          {(!itemModes[idx] || itemModes[idx] === 'select') ? (
+                            <div
+                              className={`flex items-center gap-2 border rounded-xl pl-3 pr-10 py-2 bg-white transition-all ${(focusedProductIndex === idx) ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200'}`}
+                              // Update position when this container is interactable or focused
+                              onFocus={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                                setFocusedProductIndex(idx);
+                              }}
+                              // Also capture click to ensure position is correct even if already focused
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                              }}
+                            >
+                              <Search className={`w-3.5 h-3.5 ${focusedProductIndex === idx ? 'text-indigo-500' : 'text-slate-400'}`} />
+                              <input
+                                disabled={readOnly}
+                                value={item.name}
+                                onChange={e => updateItem(idx, 'name', e.target.value)}
+                                // Handled by parent div onFocus
+                                placeholder="بحث عن منتج..."
+                                className="w-full bg-transparent border-none p-0 text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                                autoComplete="off"
+                              />
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                disabled={readOnly}
+                                value={item.name}
+                                onChange={e => updateItem(idx, 'name', e.target.value)}
+                                placeholder="اسم المنتج (يدوي)..."
+                                className="w-full bg-slate-50 border border-slate-200 px-3 pr-10 py-2.5 rounded-xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                              />
+                            </div>
+                          )}
+
+                          {/* Floating Mode Toggle Trigger */}
+                          {!readOnly && (
+                            <button
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: 140 });
+                                setOpenModeMenuIndex(openModeMenuIndex === idx ? null : idx);
+                              }}
+                              className={`absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all opacity-0 group-hover/mode:opacity-100 ${openModeMenuIndex === idx ? 'opacity-100 bg-indigo-50 text-indigo-600' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Portal: Floating Mode Menu */}
+                          {openModeMenuIndex === idx && dropdownPosition && typeof document !== 'undefined' && ReactDOM.createPortal(
+                            <>
+                              <div className="fixed inset-0 z-[9998]" onClick={() => setOpenModeMenuIndex(null)} />
+                              <div
+                                className="fixed bg-white rounded-xl shadow-2xl border border-slate-100 z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                                style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
+                              >
+                                <div className="p-1">
+                                  <button
+                                    onClick={() => {
+                                      setItemModes(prev => ({ ...prev, [idx]: 'select' }));
+                                      setOpenModeMenuIndex(null);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${(!itemModes[idx] || itemModes[idx] === 'select') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                                  >
+                                    <span>قائمة</span>
+                                    {(!itemModes[idx] || itemModes[idx] === 'select') && <Check className="w-3 h-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setItemModes(prev => ({ ...prev, [idx]: 'manual' }));
+                                      setOpenModeMenuIndex(null);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${(itemModes[idx] === 'manual') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                                  >
+                                    <span>يدوي</span>
+                                    {(itemModes[idx] === 'manual') && <Check className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                            </>,
+                            document.body
+                          )}
+                        </div>
+
+                        {/* Portal: Suggestions Dropdown */}
+                        {(!itemModes[idx] || itemModes[idx] === 'select') && focusedProductIndex === idx && dropdownPosition && !readOnly && typeof document !== 'undefined' && ReactDOM.createPortal(
+                          <div
+                            className="fixed bg-white border border-slate-100 rounded-xl shadow-2xl z-[9999] max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
+                            style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur on scroll interaction
+                          >
+                            {(() => {
+                              const suggestions = productsData?.allProduct?.data?.filter((p: any) =>
+                                p.name.toLowerCase().includes((item.name || '').toLowerCase())
+                              ) || [];
+
+                              if (suggestions.length === 0) return (
+                                <div className="p-4 text-center">
+                                  <p className="text-[10px] text-slate-400 font-bold">لا توجد منتجات مطابقة</p>
+                                  <button
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setItemModes(prev => ({ ...prev, [idx]: 'manual' }));
+                                      setFocusedProductIndex(null);
+                                    }}
+                                    className="text-[10px] text-indigo-600 font-black mt-1 hover:underline cursor-pointer"
+                                  >
+                                    إدخال يدوي؟
+                                  </button>
+                                </div>
+                              );
+
+                              return suggestions.map((product: any) => (
+                                <button
+                                  key={product.id}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    updateItem(idx, 'name', product.name);
+                                    updateItem(idx, 'price', product.price);
+                                    setFocusedProductIndex(null);
+                                  }}
+                                  className="w-full text-right px-4 py-3 hover:bg-slate-50 flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0"
+                                >
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-black text-slate-700 group-hover:text-indigo-700 transition-colors">{product.name}</span>
+                                    <span className="text-[9px] text-slate-400 font-bold">{product.sku || 'No SKU'}</span>
+                                  </div>
+                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                                    {product.price?.toLocaleString()} دج
+                                  </span>
+                                </button>
+                              ));
+                            })()}
+                          </div>,
+                          document.body
+                        )}
+                      </td>
+                      <td className="p-4 px-4">
+                        <div className="bg-slate-100/50 rounded-lg px-3 py-2 flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${item.variant ? 'bg-indigo-400' : 'bg-slate-300'}`} />
+                          <input
+                            disabled={readOnly}
+                            value={item.variant}
+                            onChange={e => updateItem(idx, 'variant', e.target.value)}
+                            placeholder="النوع..."
+                            className="w-full bg-transparent border-none p-0 text-[10px] font-bold text-slate-600 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                          />
+                        </div>
+                      </td>
+                      <td className="p-4 px-4">
+                        <div className="flex justify-center">
+                          <input
+                            disabled={readOnly}
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
+                            className="w-16 bg-slate-50 border border-slate-200 rounded-lg py-1.5 text-center text-xs font-black text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                          />
+                        </div>
+                      </td>
+                      <td className="p-4 px-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            disabled={readOnly}
+                            type="number"
+                            min="0"
+                            value={item.price}
+                            onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                            className="w-24 text-right bg-transparent border-none p-0 text-xs font-bold text-slate-500 focus:ring-0 focus:outline-none"
+                          />
+                          <span className="text-[9px] text-slate-400 font-bold">دج</span>
+                        </div>
+                      </td>
+                      <td className="p-4 px-4">
+                        <div className="text-left font-black text-indigo-600 text-xs font-mono">
+                          {(item.price * item.quantity).toLocaleString()} <span className="text-[9px] text-indigo-400">دج</span>
+                        </div>
+                      </td>
+                      {!readOnly && (
+                        <td className="p-4 px-4 text-center">
+                          <button
+                            onClick={() => removeItem(idx)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  {editedOrder.items?.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
+                            <ShoppingBag className="w-8 h-8 opacity-50" />
+                          </div>
+                          <div>
+                            <p className="text-slate-400 font-black text-xs">سلة المشتريات فارغة</p>
+                            <p className="text-slate-300 font-bold text-[10px] mt-1">أضف منتجات للبدء</p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </div>
-              ))}
-              {editedOrder.items?.length === 0 && (
-                <div className="py-12 text-center text-slate-300 italic text-xs">سلة المشتريات فارغة</div>
-              )}
+                </tbody>
+              </table>
             </div>
 
-            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
-                <input
-                  disabled={readOnly}
-                  type="number"
-                  value={editedOrder.shippingCost}
-                  onChange={e => setEditedOrder({ ...editedOrder, shippingCost: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-indigo-600"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الخصم (Discount)</label>
-                <input
-                  disabled={readOnly}
-                  type="number"
-                  value={editedOrder.discount || 0}
-                  onChange={e => setEditedOrder({ ...editedOrder, discount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-rose-500"
-                />
-              </div>
-              <div className="md:col-span-1 flex flex-col justify-center items-end">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع النهائي (DZD)</p>
-                <p className="text-3xl font-black text-slate-800 font-mono tracking-tighter">
-                  {(editedOrder.amount - (editedOrder.discount || 0)).toLocaleString()} <span className="text-[10px]">دج</span>
-                </p>
+            <div className="bg-slate-50/50 border-t border-slate-100 p-8">
+              <div className="flex flex-col md:flex-row gap-8 justify-end items-end">
+
+                <div className="flex divide-x divide-slate-200 divide-x-reverse border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden w-full md:w-auto">
+                  <div className="p-4 space-y-1 min-w-[140px]">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">سعر التوصيل</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        disabled={readOnly}
+                        type="number"
+                        value={editedOrder.shippingCost}
+                        onChange={e => setEditedOrder({ ...editedOrder, shippingCost: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-transparent border-none p-0 text-sm font-black text-slate-700 focus:ring-0 outline-none"
+                      />
+                      <span className="text-[9px] font-bold text-slate-400">دج</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-1 min-w-[140px] bg-rose-50/10">
+                    <label className="text-[9px] font-black text-rose-300 uppercase tracking-widest block">الخصم</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        disabled={readOnly}
+                        type="number"
+                        value={editedOrder.discount || 0}
+                        onChange={e => setEditedOrder({ ...editedOrder, discount: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-transparent border-none p-0 text-sm font-black text-rose-500 focus:ring-0 outline-none"
+                      />
+                      <span className="text-[9px] font-bold text-rose-300">دج</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المجموع النهائي</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-black text-indigo-900 font-mono tracking-tighter">
+                      {(editedOrder.amount - (editedOrder.discount || 0)).toLocaleString()}
+                    </p>
+                    <span className="text-sm font-black text-indigo-400">دج</span>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -928,6 +1233,69 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
         </div>
       )}
+      {/* Error Modal */}
+      {isErrorModalOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl border border-rose-100 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 bg-rose-50/50 border-b border-rose-100 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm shadow-rose-100">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-rose-950">فشل الإرسال</h3>
+                <p className="text-xs font-bold text-rose-400 mt-0.5">يرجى تصحيح الأخطاء التالية والمحاولة مجدداً</p>
+              </div>
+              <button onClick={() => setIsErrorModalOpen(false)} className="mr-auto w-8 h-8 flex items-center justify-center rounded-xl hover:bg-rose-100 text-rose-300 hover:text-rose-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {deliveryErrors.map((fail, idx) => (
+                <div key={idx} className="space-y-3">
+                  {deliveryErrors.length > 1 && (
+                    <div className="text-xs font-black text-slate-400 border-b border-slate-100 pb-2 mb-2">
+                      طلب #{fail.data?.numberOrder || 'Unknown'}
+                    </div>
+                  )}
+                  {fail.parsedErrors.map((err: any, i: number) => (
+                    <div key={i} className="flex gap-3 bg-red-50 p-4 rounded-2xl border border-red-100 items-start">
+                      <div className="mt-1 text-red-500">
+                        <AlertCircle className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-red-700 leading-snug">{err.message}</p>
+                        {err.field && err.field !== 'general' && (
+                          <span className="inline-block px-2 py-1 rounded-lg bg-white border border-red-100 text-[9px] font-black text-red-300 uppercase tracking-wider">
+                            {err.field}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <button
+                onClick={() => setIsErrorModalOpen(false)}
+                className="w-full py-3.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-black text-xs hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* Postponed Modal */}
+      <PostponedModal
+        isOpen={isPostponeModalOpen}
+        onClose={() => setIsPostponeModalOpen(false)}
+        onConfirm={handlePostponeConfirm}
+        currentDate={editedOrder.postponementDate || ''}
+      />
     </div>
   );
 };

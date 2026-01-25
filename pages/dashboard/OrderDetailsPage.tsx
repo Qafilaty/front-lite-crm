@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { GET_ORDER } from '../graphql/queries/orderQueries';
-import { UPDATE_ORDER, DELETE_ORDER } from '../graphql/mutations/orderMutations';
-import OrderDetailsView from '../components/OrderDetailsView';
-import { Order, OrderLog } from '../types';
+import { GET_ORDER } from '../../graphql/queries/orderQueries';
+import { UPDATE_ORDER, DELETE_ORDER } from '../../graphql/mutations/orderMutations';
+import OrderDetailsView from '../../components/OrderDetailsView';
+import { Order, OrderLog } from '../../types';
 import { Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -92,7 +92,7 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
                     <h2 className="text-xl font-black text-slate-800">لم يتم العثور على الطلب</h2>
                     <p className="text-slate-400 font-medium">ربما تم حذف الطلب أو أن الرابط غير صحيح</p>
                     <button
-                        onClick={() => navigate('/orders')}
+                        onClick={() => navigate('/dashboard/orders')}
                         className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2 mx-auto"
                     >
                         <ArrowRight className="w-4 h-4" /> العودة للطلبات

@@ -3,6 +3,7 @@ import { View } from '../types';
 import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   currentView: View;
@@ -13,8 +14,23 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
+interface SidebarItem {
+  id: View;
+  label: string;
+  icon: any;
+  hasNotification?: boolean;
+  postponedBadge?: number;
+  badge?: string;
+}
+
+interface SidebarSection {
+  title: string;
+  items: SidebarItem[];
+}
+
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, isCollapsed, onToggleCollapse, onLogout }) => {
-  const { hasNewOrders, markAsRead } = useOrderNotification();
+  const { hasNewOrders, markAsRead, duePostponedCount } = useOrderNotification();
+  const { user } = useAuth();
 
   const handleViewChange = (view: View) => {
     if (view === View.ORDER_CONFIRMATION) {
@@ -23,7 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
     onViewChange(view);
   };
 
-  const sections = [
+  const allSections: SidebarSection[] = [
     {
       title: 'الأساسية',
       items: [
@@ -38,7 +54,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
           id: View.ORDER_CONFIRMATION,
           label: 'تأكيد الطلبيات',
           icon: CheckCircle2,
-          hasNotification: hasNewOrders
+          hasNotification: hasNewOrders,
+          postponedBadge: duePostponedCount
         },
         { id: View.ORDER_ABANDONED, label: 'الطلبات المتروكة', icon: FileWarning },
         { id: View.ORDER_TRACKING, label: 'تتبع الطلبيات', icon: Truck },
@@ -49,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       title: 'المالية',
       items: [
         { id: View.FINANCES, label: 'العمليات المالية', icon: Wallet },
-        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard }, // User called it Order Stats
+        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard },
         { id: View.SALARIES, label: 'الرواتب والعمولات', icon: Banknote },
       ]
     },
@@ -61,9 +78,26 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
+        { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },
       ]
-    },
+    }
   ];
+
+  const sections = allSections.map(section => ({
+    ...section,
+    items: section.items.filter(item => {
+      if (user?.role === 'admin' || user?.role === 'owner') return true;
+      const allowed = [
+        View.DASHBOARD,
+        View.ORDER_CONFIRMATION,
+        View.ORDER_ABANDONED,
+        View.ORDER_TRACKING,
+        View.FINANCIAL_STATS,
+        View.SHIPPING_PRICING
+      ];
+      return allowed.includes(item.id);
+    })
+  })).filter(section => section.items.length > 0);
 
   return (
     <aside className={`
@@ -111,17 +145,32 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                 {!isCollapsed && (
                   <div className="flex-1 flex justify-between items-center">
                     <span className="text-[12px] font-bold">{item.label}</span>
-                    {item.badge && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
+                    <div className="flex items-center gap-2">
+                      {/* @ts-ignore */}
+                      {item.postponedBadge > 0 && (
+                        <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm shadow-amber-500/20 animate-pulse">
+                          {item.postponedBadge} مؤجل
+                        </span>
+                      )}
+                      {item.badge && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
+                    </div>
                   </div>
                 )}
 
-                {/* Red Dot Notification */}
+                {/* Red Dot Notification (New Orders) */}
                 {/* @ts-ignore */}
                 {item.hasNotification && (
-                  <span className={`absolute w-2.5 h-2.5 bg-[#f5b701] rounded-full animate-pulse shadow-sm
+                  <span className={`absolute w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-500/50
                     ${isCollapsed ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2 left-3'}
                   `} />
                 )}
+
+                {/* Postponed Dot (Collapsed Mode) */}
+                {/* @ts-ignore */}
+                {item.postponedBadge > 0 && isCollapsed && (
+                  <span className="absolute bottom-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse shadow-sm shadow-amber-500/50 border border-[#0F172A]" />
+                )}
+
               </button>
             ))}
           </div>

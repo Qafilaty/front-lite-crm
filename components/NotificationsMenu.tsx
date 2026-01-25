@@ -31,10 +31,10 @@ const NotificationsMenu: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const { data, loading, error, refetch } = useQuery(GET_ALL_NOTIFICATIONS, {
-        pollInterval: 30000, // Poll every 30s
         variables: {
             pagination: { page: 1, limit: 10 }
-        }
+        },
+        fetchPolicy: 'cache-and-network'
     });
 
     // Real-time notifications

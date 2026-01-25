@@ -317,6 +317,14 @@ export const SPOTLIGHT_SEARCH = gql`
   }
 `;
 
+export const GET_POSTPONED_COUNT = gql`
+  query GetPostponedCount {
+    allOrder(pagination: { page: 1, limit: 1 }) {
+      numberDeferredOrder
+    }
+  }
+`;
+
 export const GET_ALL_ABANDONED_ORDERS = gql`
   query GetAllAbandonedOrders(
     $pagination: Pagination

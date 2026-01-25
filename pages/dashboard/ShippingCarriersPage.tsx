@@ -1,5 +1,5 @@
 import React from 'react';
-import ShippingCarriersView from '../components/ShippingCarriersView';
+import ShippingCarriersView from '../../components/ShippingCarriersView';
 
 const ShippingCarriersPage: React.FC = () => {
   return <ShippingCarriersView />;

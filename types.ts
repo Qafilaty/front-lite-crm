@@ -111,6 +111,7 @@ export interface Order {
   confirmationTimeLine?: OrderLog[];
   deliveryTimeLine?: OrderLog[];
   trackingNumber?: string;
+  postponementDate?: string;
   carrier?: string;
   deliveryCompany?: {
     deliveryCompany: DeliveryCompany;
@@ -125,7 +126,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'confirmed';
+  role: 'admin' | 'confirmed' | 'owner';
   joinedDate: string;
   ordersLocked?: boolean;
   activation?: boolean;

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { generalService } from '../services/apiService';
-import DashboardView from '../components/DashboardView';
-import { SubscriptionTier, type Order, type Product } from '../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { generalService } from '../../services/apiService';
+import DashboardView from '../../components/DashboardView';
+import { SubscriptionTier, type Order, type Product } from '../../types';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();

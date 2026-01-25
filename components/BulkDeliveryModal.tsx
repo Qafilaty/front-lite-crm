@@ -26,7 +26,7 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
     // Results state
     const [results, setResults] = useState<{
         success: { orderId: string; trackingCode: string }[];
-        failed: { orderId: string; error?: string }[];
+        failed: { orderId: string; parsedErrors: any[] }[];
     } | null>(null);
 
     // Reset state on open
@@ -72,10 +72,18 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                     trackingCode: s.deliveryCompany?.trackingCode || 'Unknown'
                 }));
 
-                const failedMapped = failedOrders.map((f: any) => ({
-                    orderId: f.id,
-                    error: 'فشل الإرسال' // Backend might return specific error?
-                }));
+                const failedMapped = failedOrders.map((f: any) => {
+                    let parsedErrors = [];
+                    try {
+                        parsedErrors = JSON.parse(f.errors);
+                    } catch (e) {
+                        parsedErrors = [{ message: f.errors || 'Unknown Error', field: 'general' }];
+                    }
+                    return {
+                        orderId: f.id,
+                        parsedErrors
+                    };
+                });
 
                 setResults({
                     success: successMapped,
@@ -208,19 +216,36 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                         <CheckCircle2 className="w-5 h-5" />
                                         <span className="text-xs font-black">تم الإرسال بنجاح ({results.success.length})</span>
                                     </div>
-                                    <div className="grid gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                                    <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.success.map((res, idx) => {
                                             const order = selectedOrders.find(o => o.id === res.orderId);
                                             return (
-                                                <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white">
-                                                    <span className="text-[11px] font-bold text-slate-700">{order?.fullName || 'طلب'}</span>
+                                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border border-emerald-100 bg-emerald-50/10 hover:bg-emerald-50/30 transition-colors gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-200/50">
+                                                            <CheckCircle2 className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="text-xs font-black text-slate-800">{order?.fullName || 'طلب'}</h5>
+                                                            <p className="text-[10px] font-bold text-slate-400">
+                                                                {(typeof order?.state === 'object' ? (order.state as any).name : order?.state) || '-'}
+                                                                <span className="mx-1">•</span>
+                                                                {order?.phone}
+                                                            </p>
+                                                        </div>
+                                                    </div>
 
                                                     <div
                                                         onClick={() => { navigator.clipboard.writeText(res.trackingCode); toast.success('تم النسخ') }}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200 group"
+                                                        className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all border border-slate-200 group shadow-sm w-full sm:w-auto justify-between sm:justify-start"
                                                     >
-                                                        <span className="font-mono text-[10px] font-black text-slate-600 select-all">{res.trackingCode}</span>
-                                                        <Copy className="w-3 h-3 text-slate-400 group-hover:text-indigo-600" />
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Tracking ID</span>
+                                                            <span className="font-mono text-sm font-black text-emerald-700 select-all">{res.trackingCode}</span>
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 group-hover:bg-emerald-100 text-emerald-500 group-hover:text-emerald-700 flex items-center justify-center transition-colors">
+                                                            <Copy className="w-4 h-4" />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -236,13 +261,40 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                         <AlertCircle className="w-5 h-5" />
                                         <span className="text-xs font-black">فشل الإرسال ({results.failed.length})</span>
                                     </div>
-                                    <div className="grid gap-2 max-h-[150px] overflow-y-auto custom-scrollbar p-1">
+                                    <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.failed.map((res, idx) => {
                                             const order = selectedOrders.find(o => o.id === res.orderId);
                                             return (
-                                                <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-rose-100 bg-rose-50/30">
-                                                    <span className="text-[11px] font-bold text-slate-700">{order?.fullName || 'طلب'}</span>
-                                                    <span className="text-[10px] font-bold text-rose-500">{res.error || 'خطأ غير معروف'}</span>
+                                                <div key={idx} className="p-4 rounded-2xl border border-rose-100 bg-rose-50/20 space-y-3">
+                                                    {/* Header Info */}
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-sm border border-rose-200/50">
+                                                            <AlertCircle className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="text-sm font-black text-slate-800">{order?.fullName || 'طلب'}</h5>
+                                                            <p className="text-[10px] font-bold text-rose-400">
+                                                                {(typeof order?.state === 'object' ? (order.state as any).name : order?.state) || '-'} • {order?.phone}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Errors List */}
+                                                    <div className="pr-14 space-y-2">
+                                                        {res.parsedErrors.map((err: any, i: number) => (
+                                                            <div key={i} className="flex items-start gap-2 bg-white/60 p-2.5 rounded-xl border border-rose-100/50">
+                                                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                                                                <div className="space-y-0.5">
+                                                                    <p className="text-xs font-bold text-rose-700">{err.message}</p>
+                                                                    {err.field && err.field !== 'general' && (
+                                                                        <span className="inline-block text-[9px] font-black text-rose-400 uppercase tracking-widest bg-rose-50 px-1.5 rounded">
+                                                                            {err.field}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             );
                                         })}

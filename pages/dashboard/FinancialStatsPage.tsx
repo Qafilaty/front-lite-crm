@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import OrderStatsView from '../components/OrderStatsView';
+import OrderStatsView from '../../components/OrderStatsView';
 import { useQuery } from '@apollo/client';
-import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
-import { useAuth } from '../contexts/AuthContext';
+import { GET_ALL_ORDERS } from '../../graphql/queries/orderQueries';
+import { useAuth } from '../../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

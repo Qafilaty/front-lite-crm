@@ -16,7 +16,6 @@ const Layout: React.FC = () => {
   // تحديد الـ view الحالي من الـ pathname
   const getCurrentView = (): View => {
     const path = location.pathname;
-    if (path.includes('/dashboard')) return View.DASHBOARD;
     if (path.includes('/users')) return View.USERS;
     if (path.includes('/orders')) return View.ORDER_CONFIRMATION;
     if (path.includes('/abandoned')) return View.ORDER_ABANDONED;
@@ -31,6 +30,9 @@ const Layout: React.FC = () => {
     if (path.includes('/financial-stats')) return View.FINANCIAL_STATS;
     if (path.includes('/salaries')) return View.SALARIES;
     if (path.includes('/integration-settings')) return View.INTEGRATION_SETTINGS;
+    // Check Dashboard last or exact match
+    if (path === '/dashboard' || path === '/dashboard/') return View.DASHBOARD;
+
     return View.DASHBOARD;
   };
 
@@ -39,20 +41,20 @@ const Layout: React.FC = () => {
   const handleViewChange = (view: View) => {
     const routes: Record<View, string> = {
       [View.DASHBOARD]: '/dashboard',
-      [View.USERS]: '/users',
-      [View.ORDER_CONFIRMATION]: '/orders',
-      [View.ORDER_ABANDONED]: '/abandoned',
-      [View.ORDER_TRACKING]: '/tracking',
-      [View.INVENTORY]: '/inventory',
-      [View.SHIPPING_CARRIERS]: '/carriers',
-      [View.SHIPPING_PRICING]: '/pricing',
-      [View.STORE_LINKING]: '/stores',
-      [View.INTEGRATION_SETTINGS]: '/integration-settings',
-      [View.API_DOCS]: '/api-docs',
-      [View.SUBSCRIPTIONS]: '/subscriptions',
-      [View.FINANCES]: '/finances',
-      [View.FINANCIAL_STATS]: '/financial-stats',
-      [View.SALARIES]: '/salaries',
+      [View.USERS]: '/dashboard/users',
+      [View.ORDER_CONFIRMATION]: '/dashboard/orders',
+      [View.ORDER_ABANDONED]: '/dashboard/abandoned',
+      [View.ORDER_TRACKING]: '/dashboard/tracking',
+      [View.INVENTORY]: '/dashboard/inventory',
+      [View.SHIPPING_CARRIERS]: '/dashboard/carriers',
+      [View.SHIPPING_PRICING]: '/dashboard/pricing',
+      [View.STORE_LINKING]: '/dashboard/stores',
+      [View.INTEGRATION_SETTINGS]: '/dashboard/integration-settings',
+      [View.API_DOCS]: '/dashboard/api-docs',
+      [View.SUBSCRIPTIONS]: '/dashboard/subscriptions',
+      [View.FINANCES]: '/dashboard/finances',
+      [View.FINANCIAL_STATS]: '/dashboard/financial-stats',
+      [View.SALARIES]: '/dashboard/salaries',
       [View.LOGIN]: '/login',
       [View.REGISTER]: '/register',
     };

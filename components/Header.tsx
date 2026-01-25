@@ -151,7 +151,7 @@ const Header: React.FC<HeaderProps> = ({
                 {searchData?.allOrder?.data?.map((order: any) => (
                   <button
                     key={order.id}
-                    onClick={() => navigate(`/orders/${order.id}`)}
+                    onClick={() => navigate(`/dashboard/orders/${order.id}`)}
                     className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition-all group text-right border-b border-slate-50 last:border-0"
                   >
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] shrink-0 font-mono">
