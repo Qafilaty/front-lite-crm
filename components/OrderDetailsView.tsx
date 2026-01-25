@@ -8,7 +8,8 @@ import {
   ArrowRight,
   Save,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronDown
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
@@ -43,9 +44,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
 
   // Use status object or ID directly
-  const [newLog, setNewLog] = useState<{ status: OrderStatus | StatusOrderObject | null; note: string }>({
+  const [newLog, setNewLog] = useState<{ status: OrderStatus | StatusOrderObject | null; note: string; postponeDate: string }>({
     status: typeof order.status === 'object' ? order.status : null,
-    note: ''
+    note: '',
+    postponeDate: ''
   });
 
   // Delete States
@@ -83,6 +85,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const [deliveryErrors, setDeliveryErrors] = useState<any[]>([]);
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+
+  // Timeline accordion state: 'orderInfo' | 'confirmation' | 'delivery' | null
+  const [expandedTimeline, setExpandedTimeline] = useState<'orderInfo' | 'confirmation' | 'delivery' | null>('orderInfo');
 
   const [isPostponeModalOpen, setIsPostponeModalOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<any>(null);
@@ -185,10 +190,68 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       getStatusKey(statusValue) === 'postponed';
 
     if (isPostponed) {
-      setPendingStatusChange({ ...newLog, status: statusValue });
-      setIsAddLogOpen(false);
-      setIsPostponeModalOpen(true);
-      return;
+      // Validate date is provided
+      if (!newLog.postponeDate) {
+        toast.error('الرجاء تحديد تاريخ التأجيل');
+        return;
+      }
+
+      // Validate date is not in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const picked = new Date(newLog.postponeDate);
+      if (picked < today) {
+        toast.error('لا يمكن تأجيل الطلب لتاريخ سابق');
+        return;
+      }
+
+      try {
+        await changeStatusOrder({
+          variables: {
+            id: order.id,
+            content: {
+              status: statusValue,
+              note: newLog.note || `تم التأجيل إلى ${newLog.postponeDate}`,
+              idUser: idUser,
+              requiredFields: [
+                { key: 'postponementDate', value: newLog.postponeDate, type: 'date' }
+              ]
+            }
+          }
+        });
+
+        toast.success(`تم تأجيل الطلب إلى ${new Date(newLog.postponeDate).toLocaleDateString('ar-DZ')}`);
+
+        // Optimistic update
+        const now = new Date().toLocaleString('en-GB');
+        const log: OrderLog = {
+          status: newLog.status,
+          date: now,
+          note: newLog.note || `تم التأجيل إلى ${newLog.postponeDate}`,
+          user: userData?.currentUser?.name || 'مستخدم'
+        };
+
+        const updated = {
+          ...editedOrder,
+          status: newLog.status,
+          postponementDate: newLog.postponeDate,
+          lastStatusDate: now,
+          history: [...(editedOrder.history || []), log],
+          confirmationTimeLine: [...(editedOrder.confirmationTimeLine || []), log],
+          updatedAt: now
+        };
+
+        setEditedOrder(updated);
+        onUpdate(updated);
+        setIsAddLogOpen(false);
+        setNewLog({ status: updated.status, note: '', postponeDate: '' });
+        return;
+
+      } catch (error) {
+        console.error("Postpone Error", error);
+        toast.error('حدث خطأ أثناء تأجيل الطلب');
+        return;
+      }
     }
 
     try {
@@ -433,7 +496,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100"><ArrowRight className="w-6 h-6" /></button>
           <div>
@@ -480,7 +543,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       </div>
 
       {order.deliveryCompany?.trackingCode && (
-        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm overflow-hidden">
               {order.deliveryCompany?.deliveryCompany?.availableDeliveryCompany?.logo ? (
@@ -522,7 +585,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Customer Info Card */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-5">
               <User className="w-5 h-5 text-indigo-500" />
               <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">معلومات العميل والشحن</h3>
@@ -640,7 +703,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
 
           {/* Items / Cart Management Card - Redesigned */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col">
             <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -664,236 +727,204 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px]">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                    <th className="py-4 px-6 w-[35%]">المنتج</th>
-                    <th className="py-4 px-4 w-[20%]">النوع / الخصائص</th>
-                    <th className="py-4 px-4 w-[12%] text-center">الكمية</th>
-                    <th className="py-4 px-4 w-[15%] text-left">السعر</th>
-                    <th className="py-4 px-4 w-[15%] text-left">الإجمالي</th>
-                    {!readOnly && <th className="py-4 px-4 w-[8%] text-center"></th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {editedOrder.items?.map((item, idx) => (
-                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="p-4 px-6 relative">
-                        <div className="relative group/mode">
-                          {/* Input Area */}
-                          {(!itemModes[idx] || itemModes[idx] === 'select') ? (
-                            <div
-                              className={`flex items-center gap-2 border rounded-xl pl-3 pr-10 py-2 bg-white transition-all ${(focusedProductIndex === idx) ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200'}`}
-                              // Update position when this container is interactable or focused
-                              onFocus={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
-                                setFocusedProductIndex(idx);
-                              }}
-                              // Also capture click to ensure position is correct even if already focused
-                              onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
-                              }}
-                            >
-                              <Search className={`w-3.5 h-3.5 ${focusedProductIndex === idx ? 'text-indigo-500' : 'text-slate-400'}`} />
-                              <input
-                                disabled={readOnly}
-                                value={item.name}
-                                onChange={e => updateItem(idx, 'name', e.target.value)}
-                                // Handled by parent div onFocus
-                                placeholder="بحث عن منتج..."
-                                className="w-full bg-transparent border-none p-0 text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
-                                autoComplete="off"
-                              />
-                            </div>
-                          ) : (
-                            <div className="relative">
-                              <input
-                                disabled={readOnly}
-                                value={item.name}
-                                onChange={e => updateItem(idx, 'name', e.target.value)}
-                                placeholder="اسم المنتج (يدوي)..."
-                                className="w-full bg-slate-50 border border-slate-200 px-3 pr-10 py-2.5 rounded-xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
-                              />
-                            </div>
-                          )}
+            <div className="p-5 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+              {editedOrder.items?.map((item, idx) => (
+                <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-3 group relative">
+                  {/* Delete button - top right */}
+                  {!readOnly && (
+                    <button
+                      onClick={() => removeItem(idx)}
+                      className="absolute top-3 left-3 p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
 
-                          {/* Floating Mode Toggle Trigger */}
-                          {!readOnly && (
+                  {/* Row 1: Product Name + Variant */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Product Name with Mode Toggle */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">المنتج</label>
+                        {!readOnly && (
+                          <div className="flex bg-slate-100 rounded-lg p-0.5">
                             <button
-                              onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: 140 });
-                                setOpenModeMenuIndex(openModeMenuIndex === idx ? null : idx);
-                              }}
-                              className={`absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all opacity-0 group-hover/mode:opacity-100 ${openModeMenuIndex === idx ? 'opacity-100 bg-indigo-50 text-indigo-600' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+                              onClick={() => setItemModes(prev => ({ ...prev, [idx]: 'select' }))}
+                              className={`px-2 py-1 text-[8px] font-black rounded-md transition-all ${(!itemModes[idx] || itemModes[idx] === 'select') ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                              <SlidersHorizontal className="w-3.5 h-3.5" />
+                              قائمة
                             </button>
-                          )}
+                            <button
+                              onClick={() => setItemModes(prev => ({ ...prev, [idx]: 'manual' }))}
+                              className={`px-2 py-1 text-[8px] font-black rounded-md transition-all ${itemModes[idx] === 'manual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                              يدوي
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
-                          {/* Portal: Floating Mode Menu */}
-                          {openModeMenuIndex === idx && dropdownPosition && typeof document !== 'undefined' && ReactDOM.createPortal(
-                            <>
-                              <div className="fixed inset-0 z-[9998]" onClick={() => setOpenModeMenuIndex(null)} />
-                              <div
-                                className="fixed bg-white rounded-xl shadow-2xl border border-slate-100 z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-                                style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
-                              >
-                                <div className="p-1">
+                      {(!itemModes[idx] || itemModes[idx] === 'select') ? (
+                        <div className="relative">
+                          <div
+                            className={`flex items-center gap-2 border rounded-xl px-3 py-2.5 bg-white transition-all ${focusedProductIndex === idx ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200'}`}
+                            onFocus={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                              setFocusedProductIndex(idx);
+                            }}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDropdownPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                            }}
+                          >
+                            <Search className={`w-4 h-4 ${focusedProductIndex === idx ? 'text-indigo-500' : 'text-slate-300'}`} />
+                            <input
+                              disabled={readOnly}
+                              value={item.name}
+                              onChange={e => updateItem(idx, 'name', e.target.value)}
+                              placeholder="بحث عن منتج..."
+                              className="flex-1 bg-transparent border-none p-0 text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                              autoComplete="off"
+                            />
+                          </div>
+
+                          {/* Suggestions Dropdown */}
+                          {focusedProductIndex === idx && dropdownPosition && !readOnly && typeof document !== 'undefined' && ReactDOM.createPortal(
+                            <div
+                              className="fixed bg-white border border-slate-100 rounded-xl shadow-2xl z-[9999] max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
+                              style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
+                              onMouseDown={(e) => e.preventDefault()}
+                            >
+                              {(() => {
+                                const suggestions = productsData?.allProduct?.data?.filter((p: any) =>
+                                  p.name.toLowerCase().includes((item.name || '').toLowerCase())
+                                ) || [];
+
+                                if (suggestions.length === 0) return (
+                                  <div className="p-4 text-center">
+                                    <p className="text-[10px] text-slate-400 font-bold">لا توجد منتجات مطابقة</p>
+                                    <button
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setItemModes(prev => ({ ...prev, [idx]: 'manual' }));
+                                        setFocusedProductIndex(null);
+                                      }}
+                                      className="text-[10px] text-indigo-600 font-black mt-1 hover:underline"
+                                    >
+                                      إدخال يدوي؟
+                                    </button>
+                                  </div>
+                                );
+
+                                return suggestions.map((product: any) => (
                                   <button
-                                    onClick={() => {
-                                      setItemModes(prev => ({ ...prev, [idx]: 'select' }));
-                                      setOpenModeMenuIndex(null);
+                                    key={product.id}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      updateItem(idx, 'name', product.name);
+                                      updateItem(idx, 'price', product.price);
+                                      setFocusedProductIndex(null);
                                     }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${(!itemModes[idx] || itemModes[idx] === 'select') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                                    className="w-full text-right px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
                                   >
-                                    <span>قائمة</span>
-                                    {(!itemModes[idx] || itemModes[idx] === 'select') && <Check className="w-3 h-3" />}
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-xs font-bold text-slate-700">{product.name}</span>
+                                      <span className="text-[9px] text-slate-400">{product.sku || 'No SKU'}</span>
+                                    </div>
+                                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                      {product.price?.toLocaleString()} دج
+                                    </span>
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      setItemModes(prev => ({ ...prev, [idx]: 'manual' }));
-                                      setOpenModeMenuIndex(null);
-                                    }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${(itemModes[idx] === 'manual') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
-                                  >
-                                    <span>يدوي</span>
-                                    {(itemModes[idx] === 'manual') && <Check className="w-3 h-3" />}
-                                  </button>
-                                </div>
-                              </div>
-                            </>,
+                                ));
+                              })()}
+                            </div>,
                             document.body
                           )}
                         </div>
-
-                        {/* Portal: Suggestions Dropdown */}
-                        {(!itemModes[idx] || itemModes[idx] === 'select') && focusedProductIndex === idx && dropdownPosition && !readOnly && typeof document !== 'undefined' && ReactDOM.createPortal(
-                          <div
-                            className="fixed bg-white border border-slate-100 rounded-xl shadow-2xl z-[9999] max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
-                            style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
-                            onMouseDown={(e) => e.preventDefault()} // Prevent blur on scroll interaction
-                          >
-                            {(() => {
-                              const suggestions = productsData?.allProduct?.data?.filter((p: any) =>
-                                p.name.toLowerCase().includes((item.name || '').toLowerCase())
-                              ) || [];
-
-                              if (suggestions.length === 0) return (
-                                <div className="p-4 text-center">
-                                  <p className="text-[10px] text-slate-400 font-bold">لا توجد منتجات مطابقة</p>
-                                  <button
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      setItemModes(prev => ({ ...prev, [idx]: 'manual' }));
-                                      setFocusedProductIndex(null);
-                                    }}
-                                    className="text-[10px] text-indigo-600 font-black mt-1 hover:underline cursor-pointer"
-                                  >
-                                    إدخال يدوي؟
-                                  </button>
-                                </div>
-                              );
-
-                              return suggestions.map((product: any) => (
-                                <button
-                                  key={product.id}
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    updateItem(idx, 'name', product.name);
-                                    updateItem(idx, 'price', product.price);
-                                    setFocusedProductIndex(null);
-                                  }}
-                                  className="w-full text-right px-4 py-3 hover:bg-slate-50 flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0"
-                                >
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-xs font-black text-slate-700 group-hover:text-indigo-700 transition-colors">{product.name}</span>
-                                    <span className="text-[9px] text-slate-400 font-bold">{product.sku || 'No SKU'}</span>
-                                  </div>
-                                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                    {product.price?.toLocaleString()} دج
-                                  </span>
-                                </button>
-                              ));
-                            })()}
-                          </div>,
-                          document.body
-                        )}
-                      </td>
-                      <td className="p-4 px-4">
-                        <div className="bg-slate-100/50 rounded-lg px-3 py-2 flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${item.variant ? 'bg-indigo-400' : 'bg-slate-300'}`} />
+                      ) : (
+                        <div className="space-y-1">
                           <input
                             disabled={readOnly}
-                            value={item.variant}
-                            onChange={e => updateItem(idx, 'variant', e.target.value)}
-                            placeholder="النوع..."
-                            className="w-full bg-transparent border-none p-0 text-[10px] font-bold text-slate-600 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                            value={item.name}
+                            onChange={e => updateItem(idx, 'name', e.target.value)}
+                            placeholder="اسم المنتج..."
+                            className="w-full bg-amber-50 border-2 border-amber-200 border-dashed px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 placeholder:text-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-200/50 outline-none transition-all"
                           />
+                          <p className="text-[8px] text-amber-500 font-bold flex items-center gap-1 px-1">
+                            <AlertCircle className="w-3 h-3" />
+                            منتج مدخل يدوياً - غير موجود في المخزون
+                          </p>
                         </div>
-                      </td>
-                      <td className="p-4 px-4">
-                        <div className="flex justify-center">
-                          <input
-                            disabled={readOnly}
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
-                            className="w-16 bg-slate-50 border border-slate-200 rounded-lg py-1.5 text-center text-xs font-black text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
-                          />
-                        </div>
-                      </td>
-                      <td className="p-4 px-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <input
-                            disabled={readOnly}
-                            type="number"
-                            min="0"
-                            value={item.price}
-                            onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
-                            className="w-24 text-right bg-transparent border-none p-0 text-xs font-bold text-slate-500 focus:ring-0 focus:outline-none"
-                          />
-                          <span className="text-[9px] text-slate-400 font-bold">دج</span>
-                        </div>
-                      </td>
-                      <td className="p-4 px-4">
-                        <div className="text-left font-black text-indigo-600 text-xs font-mono">
-                          {(item.price * item.quantity).toLocaleString()} <span className="text-[9px] text-indigo-400">دج</span>
-                        </div>
-                      </td>
-                      {!readOnly && (
-                        <td className="p-4 px-4 text-center">
-                          <button
-                            onClick={() => removeItem(idx)}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
                       )}
-                    </tr>
-                  ))}
-                  {editedOrder.items?.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="py-16 text-center">
-                        <div className="flex flex-col items-center justify-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                            <ShoppingBag className="w-8 h-8 opacity-50" />
-                          </div>
-                          <div>
-                            <p className="text-slate-400 font-black text-xs">سلة المشتريات فارغة</p>
-                            <p className="text-slate-300 font-bold text-[10px] mt-1">أضف منتجات للبدء</p>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    </div>
+
+                    {/* Variant */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">النوع / الخصائص</label>
+                      <input
+                        disabled={readOnly}
+                        value={item.variant}
+                        onChange={e => updateItem(idx, 'variant', e.target.value)}
+                        placeholder="اللون، المقاس..."
+                        className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Quantity + Price + Total */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Quantity */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">الكمية</label>
+                      <input
+                        disabled={readOnly}
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
+                        className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-center text-xs font-black text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">السعر</label>
+                      <div className="relative">
+                        <input
+                          disabled={readOnly}
+                          type="number"
+                          min="0"
+                          value={item.price}
+                          onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                          className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all pl-8"
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold">دج</span>
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-indigo-500 uppercase">الإجمالي</label>
+                      <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-2 rounded-xl text-center shadow-lg shadow-indigo-500/20">
+                        <span className="text-sm font-black text-white font-mono">{(item.price * item.quantity).toLocaleString()}</span>
+                        <span className="text-[10px] text-indigo-200 mr-1">دج</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Empty State */}
+              {(!editedOrder.items || editedOrder.items.length === 0) && (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 mx-auto mb-4">
+                    <ShoppingBag className="w-8 h-8 opacity-50" />
+                  </div>
+                  <p className="text-slate-400 font-black text-xs">سلة المشتريات فارغة</p>
+                  <p className="text-slate-300 font-bold text-[10px] mt-1">أضف منتجات للبدء</p>
+                </div>
+              )}
             </div>
 
             <div className="bg-slate-50/50 border-t border-slate-100 p-8">
@@ -946,105 +977,138 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
         {/* Timeline Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Order Meta Card */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-              <Clock className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">معلومات الطلب</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الإنشاء</p>
-                <p className="text-xs font-bold text-slate-700 dir-ltr">{new Date(editedOrder.createdAt).toLocaleString('ar-DZ')}</p>
+          {/* Order Meta Card - Collapsible */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedTimeline(expandedTimeline === 'orderInfo' ? null : 'orderInfo')}
+              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">معلومات الطلب</h3>
               </div>
-
-              {editedOrder.duplicatePhone && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-600">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-[10px] font-black">رقم هاتف مكرر</span>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'orderInfo' ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'orderInfo' ? 'max-h-[400px]' : 'max-h-0'}`}>
+              <div className="p-5 space-y-4">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الإنشاء</p>
+                  <p className="text-xs font-bold text-slate-700" dir="ltr">{new Date(editedOrder.createdAt).toLocaleString('ar-DZ')}</p>
                 </div>
-              )}
 
-              <div className="space-y-1.5 pt-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة داخلية</label>
-                <textarea
-                  disabled={readOnly}
-                  value={editedOrder.notes || ''}
-                  onChange={e => setEditedOrder({ ...editedOrder, notes: e.target.value })}
-                  className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none"
-                  placeholder="ملاحظات حول الطلب..."
-                />
+                {editedOrder.duplicatePhone && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-[10px] font-black">رقم هاتف مكرر</span>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة داخلية</label>
+                  <textarea
+                    disabled={readOnly}
+                    value={editedOrder.notes || ''}
+                    onChange={e => setEditedOrder({ ...editedOrder, notes: e.target.value })}
+                    className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none"
+                    placeholder="ملاحظات حول الطلب..."
+                  />
+                </div>
               </div>
             </div>
           </div>
-          {/* Confirmation Timeline */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col max-h-[400px]">
-            <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تاريخ التأكيد</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {(!editedOrder.confirmationTimeLine || editedOrder.confirmationTimeLine.length === 0) && <p className="text-center py-10 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل تأكيد بعد</p>}
-              {editedOrder.confirmationTimeLine?.map((log, idx) => {
-                const logStyle = getStatusStyle(log.status);
-                const logKey = getStatusKey(log.status);
-                const logColors = statusColors[logKey] || statusColors.default;
+          {/* Confirmation Timeline - Collapsible */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedTimeline(expandedTimeline === 'confirmation' ? null : 'confirmation')}
+              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تاريخ التأكيد</h3>
+                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {editedOrder.confirmationTimeLine?.length || 0}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'confirmation' ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'confirmation' ? 'max-h-[350px]' : 'max-h-0'}`}>
+              <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
+                {(!editedOrder.confirmationTimeLine || editedOrder.confirmationTimeLine.length === 0) && (
+                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل تأكيد بعد</p>
+                )}
+                {editedOrder.confirmationTimeLine?.map((log, idx) => {
+                  const logStyle = getStatusStyle(log.status);
+                  const logKey = getStatusKey(log.status);
+                  const logColors = statusColors[logKey] || statusColors.default;
 
-                return (
-                  <div key={idx} className="bg-slate-50/60 rounded-[1.5rem] p-5 border border-slate-100 space-y-2 relative">
-                    <div className="flex justify-between items-start">
-                      <span
-                        className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
-                        style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
-                      >
-                        {getStatusLabel(log.status)}
-                      </span>
-                      <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                  return (
+                    <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span
+                          className={`text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
+                          style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
+                        >
+                          {getStatusLabel(log.status)}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                        <span className="text-[8px] font-black text-slate-400">{log.user}</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
-                      <span className="text-[8px] font-black text-slate-400 uppercase">{log.user}</span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Delivery Timeline */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col max-h-[400px]">
-            <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
-              <Truck className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && <p className="text-center py-10 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>}
-              {editedOrder.deliveryTimeLine?.map((log, idx) => {
-                const logStyle = getStatusStyle(log.status);
-                const logKey = getStatusKey(log.status);
-                const logColors = statusColors[logKey] || statusColors.default;
+          {/* Delivery Timeline - Collapsible */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
+              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Truck className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
+                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {editedOrder.deliveryTimeLine?.length || 0}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
+              <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
+                {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
+                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>
+                )}
+                {editedOrder.deliveryTimeLine?.map((log, idx) => {
+                  const logStyle = getStatusStyle(log.status);
+                  const logKey = getStatusKey(log.status);
+                  const logColors = statusColors[logKey] || statusColors.default;
 
-                return (
-                  <div key={idx} className="bg-slate-50/60 rounded-[1.5rem] p-5 border border-slate-100 space-y-2 relative">
-                    <div className="flex justify-between items-start">
-                      <span
-                        className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
-                        style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
-                      >
-                        {getStatusLabel(log.status)}
-                      </span>
-                      <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                  return (
+                    <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span
+                          className={`text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
+                          style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
+                        >
+                          {getStatusLabel(log.status)}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                        <span className="text-[8px] font-black text-slate-400">{log.user}</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
-                      <span className="text-[8px] font-black text-slate-400 uppercase">{log.user}</span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1066,7 +1130,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           {typeof document !== 'undefined' && ReactDOM.createPortal(
             <div className="fixed inset-0 z-[250] grid place-items-center overflow-y-auto py-10 px-4">
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsAddLogOpen(false)}></div>
-              <div className="relative z-10 bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col my-auto h-[600px]">
+              <div className="relative z-10 bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col my-auto h-[600px]">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><CheckCircle2 className="w-5 h-5" /></div>
@@ -1109,13 +1173,43 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     />
                   </div>
 
+                  {/* Postpone Date - Shows only when postponed status is selected */}
+                  {(() => {
+                    const selectedKey = getStatusKey(newLog.status);
+                    const isPostponed =
+                      selectedKey === 'postponed' ||
+                      (typeof newLog.status === 'object' && newLog.status?.nameEN === 'postponed');
+
+                    if (!isPostponed) return null;
+
+                    return (
+                      <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest">تاريخ التأجيل</label>
+                        </div>
+                        <input
+                          type="date"
+                          value={newLog.postponeDate}
+                          onChange={(e) => setNewLog({ ...newLog, postponeDate: e.target.value })}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full bg-white border border-amber-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                        />
+                        <p className="text-[9px] font-bold text-amber-500/80 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          سيتم تذكيرك بهذا الطلب في التاريخ المحدد
+                        </p>
+                      </div>
+                    );
+                  })()}
+
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة (اختياري)</label>
                     <textarea
                       value={newLog.note}
                       onChange={e => setNewLog({ ...newLog, note: e.target.value })}
                       placeholder="اكتب ملاحظة التغيير..."
-                      className="w-full min-h-[120px] px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
+                      className="w-full min-h-[120px] px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -1135,7 +1229,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {isDeliveryModalOpen && (
         <div className="fixed inset-0 z-[250] grid place-items-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsDeliveryModalOpen(false)}></div>
-          <div className="relative z-10 bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="relative z-10 bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
@@ -1204,7 +1298,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-[300] grid place-items-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsSuccessModalOpen(false)}></div>
-          <div className="relative z-10 bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="relative z-10 bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="bg-emerald-500 py-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
               <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-5 ring-4 ring-white/10 shadow-lg">
@@ -1236,7 +1330,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {/* Error Modal */}
       {isErrorModalOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl border border-rose-100 overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-rose-100 overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 bg-rose-50/50 border-b border-rose-100 flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm shadow-rose-100">
                 <AlertCircle className="w-6 h-6" />

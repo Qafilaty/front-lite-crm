@@ -168,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                 {/* Postponed Dot (Collapsed Mode) */}
                 {/* @ts-ignore */}
                 {item.postponedBadge > 0 && isCollapsed && (
-                  <span className="absolute bottom-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse shadow-sm shadow-amber-500/50 border border-[#0F172A]" />
+                  <span className="absolute bottom-2 right-2 ml-2 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse shadow-sm shadow-amber-500/50 border border-[#0F172A]" />
                 )}
 
               </button>
