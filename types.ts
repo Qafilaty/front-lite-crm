@@ -27,6 +27,8 @@ export enum View {
 }
 
 export interface OrderItem {
+  id?: string;
+  productId?: string;
   name: string;
   variant: string;
   quantity: number;
@@ -93,7 +95,8 @@ export interface Order {
   city: string;
   address: string;
   deliveryType: 'home' | 'office';
-  items: OrderItem[];
+  items?: OrderItem[];
+  products?: any[]; // Matches backend structure
   shippingCost: number; // deliveryPrice
   deliveryPrice?: number; // backend field
   amount: number; // totalPrice

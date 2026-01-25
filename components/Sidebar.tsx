@@ -146,12 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                   <div className="flex-1 flex justify-between items-center">
                     <span className="text-[12px] font-bold">{item.label}</span>
                     <div className="flex items-center gap-2">
-                      {/* @ts-ignore */}
-                      {item.postponedBadge > 0 && (
-                        <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm shadow-amber-500/20 animate-pulse">
-                          {item.postponedBadge} مؤجل
-                        </span>
-                      )}
+
                       {item.badge && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
                     </div>
                   </div>
@@ -166,10 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                 )}
 
                 {/* Postponed Dot (Collapsed Mode) */}
-                {/* @ts-ignore */}
-                {item.postponedBadge > 0 && isCollapsed && (
-                  <span className="absolute bottom-2 right-2 ml-2 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse shadow-sm shadow-amber-500/50 border border-[#0F172A]" />
-                )}
+
 
               </button>
             ))}

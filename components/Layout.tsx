@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { View } from '../types';
 import ToastNotifications from './common/ToastNotifications';
+import PostponedOrdersAlert from './common/PostponedOrdersAlert';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();

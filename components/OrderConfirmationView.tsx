@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Order, OrderStatus, OrderItem, StatusOrderObject } from '../types';
 import {
   Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft,
-  Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User, CheckSquare, Square
+  Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User, CheckSquare, Square,
+  LayoutList, FileText, DollarSign, AlertOctagon, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Home, Building2
 } from 'lucide-react';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
 import CreateOrderModal from './CreateOrderModal';
-import { useQuery, useLazyQuery, useSubscription, gql } from '@apollo/client';
+import { useQuery, useLazyQuery, useSubscription, useMutation, gql } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER } from '../graphql/queries';
@@ -17,6 +18,7 @@ import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { ModernSelect, PaginationControl } from './common';
+import PostponedOrdersAlert from './common/PostponedOrdersAlert';
 import { useAuth } from '../contexts/AuthContext';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import { BulkDeliveryModal } from './BulkDeliveryModal';
@@ -45,6 +47,40 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const user = userData?.currentUser; // Override local user from useAuth for this context
 
   const navigate = useNavigate(); // Add hook
+
+  // --- Columns State for Dynamic Table (Merged) ---
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ordersTableColumns_v3'); // Version 3: Split Customer/Location
+      return saved ? JSON.parse(saved) : {
+        customerInfo: true,   // Customer + Phone
+        locationInfo: true,   // State + City (New Split)
+        financials: true,
+        orderSummary: true,
+        statusInfo: true,
+        note: false,
+        actions: true
+      };
+    } catch {
+      return {
+        customerInfo: true, locationInfo: true, financials: true, orderSummary: true, statusInfo: true, note: false, actions: true
+      };
+    }
+  });
+  const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
+
+  // Close menu on outside click
+  React.useEffect(() => {
+    const handleClickOutside = () => setIsColumnsMenuOpen(false);
+    if (isColumnsMenuOpen) document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isColumnsMenuOpen]);
+
+  const toggleColumn = (key: string) => {
+    const newCols: any = { ...visibleColumns, [key]: !(visibleColumns as any)[key] };
+    setVisibleColumns(newCols);
+    localStorage.setItem('ordersTableColumns_v3', JSON.stringify(newCols));
+  };
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // Store ID or 'all'
@@ -199,6 +235,28 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     }
   }, [ordersData]);
 
+  // Parse Query Params for Initial Filter
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get('status');
+
+    if (statusParam && confirmationStatuses.length > 0) {
+      if (statusParam === 'postponed') {
+        const postponedStatus = confirmationStatuses.find((s: any) => s.nameEN === 'postponed' || s.nameAR === 'مؤجلة');
+        if (postponedStatus) {
+          setStatusFilter(postponedStatus.id);
+        }
+      } else {
+        // Handle other statuses if needed, or simple ID match
+        const statusMatch = confirmationStatuses.find((s: any) => s.id === statusParam || s.nameEN === statusParam);
+        if (statusMatch) {
+          setStatusFilter(statusMatch.id);
+        }
+      }
+    }
+  }, [location.search, confirmationStatuses]);
+
   const totalPages = ordersData?.allOrder?.total ? Math.ceil(ordersData.allOrder.total / itemsPerPage) : 0;
 
   // Helpers
@@ -279,6 +337,18 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   return (
     <>
       <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+        <PostponedOrdersAlert
+          deferredCount={ordersData?.allOrder?.numberDeferredOrder || 0}
+          onFilterPostponed={() => {
+            if (confirmationStatuses.length > 0) {
+              const postponedStatus = confirmationStatuses.find((s: any) => s.nameEN === 'postponed' || s.nameAR === 'مؤجلة');
+              if (postponedStatus) {
+                setStatusFilter(postponedStatus.id);
+              }
+            }
+          }}
+        />
+
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="animate-in slide-in-from-right duration-500">
             <h2 className="text-xl font-black text-slate-800 tracking-tight">تأكيد الطلبيات</h2>
@@ -337,6 +407,64 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   </span>
                 )}
               </button>
+
+              {/* Columns Toggle */}
+              <div
+                className="relative"
+                ref={(node) => {
+                  if (node) {
+                    // Simple click outside handler attached to the node logic is tricky inline without useEffect.
+                    // Better to just rely on a document click listener setup in useEffect or a custom hook. 
+                    // But for now, let's remove onBlur and assume user clicks toggle to close or clicks away.
+                    // To implement click-away properly without a hook file:
+                  }
+                }}
+              >
+                {/* We need a useEffect for click outside. Let's add it to the component top level instead. */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsColumnsMenuOpen(!isColumnsMenuOpen);
+                  }}
+                  className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+                >
+                  <LayoutList className="w-4 h-4" />
+                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+                </button>
+
+                {isColumnsMenuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
+                  >
+                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                    <div className="space-y-1">
+                      {Object.keys(visibleColumns).map(key => {
+                        if (key === 'actions') return null;
+                        const labels: any = {
+                          customerInfo: 'العميل',
+                          locationInfo: 'الموقع',
+                          orderSummary: 'الطلبية',
+                          financials: 'المالية والشحن',
+                          statusInfo: 'الحالة والمتابعة',
+                          note: 'الملاحظة'
+                        };
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={(visibleColumns as any)[key]}
+                              onChange={() => toggleColumn(key)}
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span className="text-xs font-bold text-slate-700">{labels[key] || key}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Collapsible Filters Area */}
@@ -469,11 +597,12 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                         onChange={toggleAll}
                       />
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
+                    {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
+                    {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
+                    {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
+                    {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية والشحن</th>}
+                    {(visibleColumns as any).statusInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
+                    {(visibleColumns as any).note && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">ملاحظة</th>}
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
                   </tr>
                 </thead>
@@ -482,6 +611,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     const statusStyle = getStatusStyle(order.status);
                     const statusLabel = getStatusLabel(order.status);
                     const isSelected = selectedOrderIds.includes(order.id);
+                    const displayItems = order.products || order.items || []; // Handle both products (backend) and items (frontend type)
 
                     // Fallback colors if status is object but no color, OR if status is string
                     let fallbackColors = statusColors.default;
@@ -506,71 +636,105 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                             onChange={() => toggleSelection(order.id)}
                           />
                         </td>
-                        <td className="px-6 py-5">
-                          <div className="space-y-0.5">
-                            <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
-                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
-                              {order.phone}
-                              {order.duplicatePhone && order.duplicatePhone > 1 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSearchTerm(order.phone);
-                                  }}
-                                  className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
-                                  title={`${order.duplicatePhone} طلبات لهذا الرقم`}
-                                >
-                                  {order.duplicatePhone}
-                                </button>
-                              )}
-                            </p>
+
+                        {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
+                          <div className="flex flex-col gap-2">
+                            <div className="space-y-0.5">
+                              <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
+                                {order.duplicatePhone && order.duplicatePhone > 1 && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSearchTerm(order.phone);
+                                    }}
+                                    className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
+                                    title={`${order.duplicatePhone} طلبات لهذا الرقم`}
+                                  >
+                                    {order.duplicatePhone}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-5">
+                        </td>}
+
+                        {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">
-                              {/* State Display */}
-                              {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
-                            </span>
-                            {order.city && (
-                              <span className="text-[10px] font-bold text-slate-400 px-1">
-                                {order.city}
+                            <div className="flex items-center gap-1.5 ">
+                              <MapPin className="w-3 h-3 text-slate-300" />
+                              <span className="text-[10px] font-bold text-slate-700">
+                                {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                                {order.city && ` - ${order.city}`}
                               </span>
+                            </div>
+                            {order.address && (
+                              <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>
+                                {order.address}
+                              </p>
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          {order.confirmed ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                                <UserCheck className="w-3 h-3" />
+                        </td>}
+
+                        {(visibleColumns as any).orderSummary && <td className="px-6 py-5">
+                          <div className="flex flex-col gap-1 max-w-[200px]">
+                            {displayItems && displayItems.length > 0 ? displayItems.slice(0, 2).map((item: any, idx: number) => {
+                              const isProductMissing = !item.product;
+                              return (
+                                <span
+                                  key={idx}
+                                  className={`text-[9px] font-bold truncate block text-right ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
+                                  title={isProductMissing ? 'هذا المنتج غير متوفر في المخزون (محذوف)' : item.name}
+                                >
+                                  • {item.name} {item.variant ? `(${item.variant})` : ''}
+                                  {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
+                                  <span className="text-slate-400"> x{item.quantity}</span>
+                                </span>
+                              );
+                            }) : <span className="text-[9px] text-slate-300 font-bold">-</span>}
+                            {displayItems && displayItems.length > 2 && (
+                              <span className="text-[8px] text-indigo-500 font-black">+ {displayItems.length - 2} المزيد</span>
+                            )}
+                          </div>
+                        </td>}
+
+                        {(visibleColumns as any).financials && <td className="px-6 py-5">
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
+                            <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                              {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
+                              <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
+                            </div>
+                          </div>
+                        </td>}
+
+                        {(visibleColumns as any).statusInfo && <td className="px-6 py-5">
+                          <div className="space-y-2">
+                            <span
+                              className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest block w-fit ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                              style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                            >
+                              {statusLabel}
+                            </span>
+
+                            <div className="flex items-center gap-1.5 px-0.5">
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${order.confirmed || (order.confirmationTimeLine && order.confirmationTimeLine.length > 0) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-300'}`}>
+                                <UserCheck className="w-2.5 h-2.5" />
                               </div>
-                              <span className="text-[10px] font-bold text-slate-600">
-                                {order.confirmed.name}
+                              <span className="text-[9px] font-bold text-slate-500">
+                                {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user?.name) || '-'}
                               </span>
                             </div>
-                          ) : (order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                                <UserCheck className="w-3 h-3" />
-                              </div>
-                              <span className="text-[10px] font-bold text-slate-600">
-                                {order.confirmationTimeLine[0].user?.name || 'غير معروف'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-slate-300 font-bold">-</span>
-                          ))}
-                        </td>
-                        <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono">{order.totalPrice || order.amount} دج</td>
-                        <td className="px-6 py-5">
-                          <span
-                            className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
-                            style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                          >
-                            {statusLabel}
-                          </span>
-                        </td>
+                          </div>
+                        </td>}
+
+                        {(visibleColumns as any).note && <td className="px-6 py-5">
+                          <div className="max-w-[150px] truncate text-[9px] font-bold text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100" title={order.notes || order.note}>
+                            {order.notes || order.note || '-'}
+                          </div>
+                        </td>}
+
                         <td className="px-6 py-5 text-center">
                           <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
                             مراجعة <Eye className="w-3.5 h-3.5" />

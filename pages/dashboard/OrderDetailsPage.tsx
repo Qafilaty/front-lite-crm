@@ -32,6 +32,7 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
                 ...data.order,
                 // Map timeLine to history if available
                 items: data.order.products?.map((p: any) => ({
+                    productId: p.product?.id,
                     name: p.name || p.product?.name || 'Unknown Product',
                     variant: p.variantsProduct?.name || '',
                     quantity: p.quantity,
@@ -71,7 +72,8 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
         }
     };
 
-    if (loading) {
+    // Show loader if loading OR if we have data but haven't mapped it to state yet
+    if (loading || (data?.order && !order)) {
         return (
             <div className="flex h-[80vh] items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
@@ -82,7 +84,7 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
         );
     }
 
-    if (error || !order) {
+    if (error || (!loading && !data?.order)) {
         return (
             <div className="flex h-[80vh] items-center justify-center">
                 <div className="text-center space-y-4">

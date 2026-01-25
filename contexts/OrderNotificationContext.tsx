@@ -28,18 +28,8 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     // Use a ref for the audio to avoid recreating it
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Postponed Orders Query
-    useQuery(GET_POSTPONED_COUNT, {
-        skip: !user,
-        pollInterval: 300000, // 5 minutes
-        fetchPolicy: 'network-only',
-        onCompleted: (data) => {
-            setDuePostponedCount(data?.allOrder?.numberDeferredOrder || 0);
-        },
-        onError: (err) => {
-            console.error("Postponed Count Error:", err);
-        }
-    });
+    // Postponed Orders Query removed as it is now handled per-page
+    // useQuery(GET_POSTPONED_COUNT, ...);
 
     useEffect(() => {
         // Initialize audio
@@ -115,7 +105,7 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     };
 
     return (
-        <OrderNotificationContext.Provider value={{ hasNewOrders, markAsRead, duePostponedCount }}>
+        <OrderNotificationContext.Provider value={{ hasNewOrders, markAsRead, duePostponedCount: 0 }}>
             {children}
         </OrderNotificationContext.Provider>
     );

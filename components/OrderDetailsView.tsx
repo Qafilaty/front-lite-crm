@@ -21,6 +21,7 @@ import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
+import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
 import { ModernSelect } from './common';
 
 interface OrderDetailsViewProps {
@@ -78,6 +79,41 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     variables: { pagination: { limit: 100, page: 1 } }
   });
 
+  const { data: deliveryPricesData } = useQuery(GET_ALL_DELIVERY_PRICE_COMPANY);
+
+  const getDeliveryPriceForState = (stateName: string) => {
+    if (!deliveryPricesData?.allDeliveryPriceCompany?.data) return { home: 0, desk: 0 };
+
+    // Find default pricing or first one
+    const pricing = deliveryPricesData.allDeliveryPriceCompany.data.find((d: any) => d.isDefault) ||
+      deliveryPricesData.allDeliveryPriceCompany.data[0];
+
+    if (!pricing || !pricing.prices) return { home: 0, desk: 0 };
+
+    // 1. Find Wilaya Object from name to get the Code
+    const wilayas = wilayasData?.allWilayas || [];
+    const selectedState = wilayas.find((w: any) =>
+      w.name?.toLowerCase().trim() === stateName?.toLowerCase().trim() ||
+      w.code == stateName
+    );
+
+    // 2. Try match pricing by Code first (Most Reliable)
+    if (selectedState?.code) {
+      const matchByCode = pricing.prices.find((p: any) => parseInt(p.code) === parseInt(selectedState.code));
+      if (matchByCode) return { home: matchByCode.home || 0, desk: matchByCode.desk || 0 };
+    }
+
+    // 3. Fallback: Try match by Name directly
+    const matchByName = pricing.prices.find((p: any) =>
+      p.name?.toLowerCase().trim() === stateName?.toLowerCase().trim()
+    );
+
+    return {
+      home: matchByName?.home || 0,
+      desk: matchByName?.desk || 0
+    };
+  };
+
   const [focusedProductIndex, setFocusedProductIndex] = useState<number | null>(null);
   const [itemModes, setItemModes] = useState<Record<number, 'select' | 'manual'>>({});
   const [openModeMenuIndex, setOpenModeMenuIndex] = useState<number | null>(null);
@@ -124,6 +160,23 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   }, [statusData]);
 
   const statusesToDisplay = trackingMode ? trackingStatuses : confirmationStatuses;
+
+  // Detect manual items on load
+  useEffect(() => {
+    if (order.items && order.items.length > 0) {
+      const initialModes: Record<number, 'select' | 'manual'> = {};
+      order.items.forEach((item, idx) => {
+        // If no productId is linked, it's a manual item
+        if (!item.productId) {
+          initialModes[idx] = 'manual';
+        }
+      });
+
+      if (Object.keys(initialModes).length > 0) {
+        setItemModes(prev => ({ ...prev, ...initialModes }));
+      }
+    }
+  }, [order.id, order.items]);
 
   // Recalculate total amount whenever items or shipping cost change
   useEffect(() => {
@@ -379,6 +432,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setEditedOrder({ ...editedOrder, items: newItems });
   };
 
+  const updateItemFields = (index: number, fields: Partial<OrderItem>) => {
+    if (readOnly) return;
+    const newItems = [...editedOrder.items];
+    newItems[index] = { ...newItems[index], ...fields };
+    setEditedOrder({ ...editedOrder, items: newItems });
+  };
+
   const removeItem = (index: number) => {
     if (readOnly) return;
     const items = [...editedOrder.items];
@@ -496,47 +556,67 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100"><ArrowRight className="w-6 h-6" /></button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-black text-slate-800">الطلب <span className="text-indigo-600">#{order.numberOrder || order.id?.slice(-8)}</span></h2>
+      {/* Header Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button onClick={onBack} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 hover:bg-slate-100">
+            <ArrowRight className="w-5 h-5 rtl:rotate-180" />
+          </button>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black text-slate-800">الطلب <span className="font-mono text-indigo-600 text-base">#{order.numberOrder || order.id?.slice(-8)}</span></h2>
               <span
-                className={`px-3 py-1 rounded-xl text-[10px] font-black border uppercase ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                 style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
               >
                 {getStatusLabel(editedOrder.status)}
               </span>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{editedOrder.storeName}</p>
+            <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1.5">
+              <Store className="w-3 h-3" />
+              {editedOrder.storeName}
+            </p>
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 no-scrollbar">
           {!readOnly && onDelete && (
-            <button onClick={() => setIsDeleteModalOpen(true)} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-[11px] hover:bg-rose-100 transition-all uppercase flex items-center justify-center gap-2 border border-rose-100">
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              title="حذف الطلب"
+              className="w-9 h-9 flex-shrink-0 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           )}
+
           {!readOnly && (
             <button
               onClick={handleSave}
               disabled={!isDirty || isUpdating}
-              className={`flex-1 px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] transition-all uppercase flex items-center justify-center gap-2 ${!isDirty || isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+              className={`h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-[10px] transition-all uppercase flex items-center gap-2 whitespace-nowrap ${!isDirty || isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'}`}
             >
-              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isUpdating ? 'جاري الحفظ...' : 'حفظ البيانات'}
+              {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {isUpdating ? 'جاري الحفظ...' : 'حفظ التعديلات'}
             </button>
           )}
-          <button onClick={() => { setIsAddLogOpen(true); }} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center justify-center gap-2">
-            <RefreshCcw className="w-4 h-4" /> تحديث الحالة
+
+          <button
+            onClick={() => { setIsAddLogOpen(true); }}
+            className="h-9 px-4 bg-indigo-600 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
+          >
+            <RefreshCcw className="w-3.5 h-3.5" />
+            <span>تحديث الحالة</span>
           </button>
+
           {!readOnly && !order.deliveryCompany?.trackingCode && getStatusKey(editedOrder.status) === 'confirmed' && (
             <button
               onClick={openDeliveryModal}
-              className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center justify-center gap-2"
+              className="h-9 px-4 bg-slate-900 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
             >
-              <Truck className="w-4 h-4" /> إرسال للتوصيل
+              <Truck className="w-3.5 h-3.5" />
+              <span>إرسال</span>
             </button>
           )}
         </div>
@@ -624,6 +704,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     return currentVal || '';
                   })()}
                   onChange={(val) => {
+                    // Don't auto-update price. Let user click delivery buttons to apply new pricing.
                     setEditedOrder({ ...editedOrder, state: val, city: '' });
                   }}
                   options={[
@@ -685,19 +766,49 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <div className="flex gap-4">
               <button
                 disabled={readOnly}
-                onClick={() => setEditedOrder({ ...editedOrder, deliveryType: 'home' })}
+                onClick={() => {
+                  const currentState = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                    ? (editedOrder.state as any).name
+                    : editedOrder.state;
+                  const prices = getDeliveryPriceForState(currentState || '');
+                  setEditedOrder({ ...editedOrder, deliveryType: 'home', shippingCost: prices.home });
+                }}
                 className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
               >
-                <Home className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمنزل</span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-5 h-5" />
+                    <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمنزل</span>
+                  </div>
+                  {editedOrder.state && (
+                    <span className="text-[10px] font-bold">
+                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).home} دج
+                    </span>
+                  )}
+                </div>
               </button>
               <button
                 disabled={readOnly}
-                onClick={() => setEditedOrder({ ...editedOrder, deliveryType: 'office' })}
+                onClick={() => {
+                  const currentState = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                    ? (editedOrder.state as any).name
+                    : editedOrder.state;
+                  const prices = getDeliveryPriceForState(currentState || '');
+                  setEditedOrder({ ...editedOrder, deliveryType: 'office', shippingCost: prices.desk });
+                }}
                 className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
               >
-                <Building2 className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمكتب</span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمكتب</span>
+                  </div>
+                  {editedOrder.state && (
+                    <span className="text-[10px] font-bold">
+                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).desk} دج
+                    </span>
+                  )}
+                </div>
               </button>
             </div>
           </div>
@@ -740,9 +851,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     </button>
                   )}
 
-                  {/* Row 1: Product Name + Variant */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Product Name with Mode Toggle */}
+                  {/* Row 1: Product Name (Full Width) */}
+                  <div className="w-full">
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-[9px] font-black text-slate-400 uppercase">المنتج</label>
@@ -789,19 +899,51 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                             />
                           </div>
 
-                          {/* Suggestions Dropdown */}
+                          {/* Suggestions Dropdown (Flattened Products & Variants) */}
                           {focusedProductIndex === idx && dropdownPosition && !readOnly && typeof document !== 'undefined' && ReactDOM.createPortal(
                             <div
-                              className="fixed bg-white border border-slate-100 rounded-xl shadow-2xl z-[9999] max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
+                              className="fixed bg-white border border-slate-100 rounded-xl shadow-2xl z-[9999] max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
                               style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
                               onMouseDown={(e) => e.preventDefault()}
                             >
                               {(() => {
-                                const suggestions = productsData?.allProduct?.data?.filter((p: any) =>
-                                  p.name.toLowerCase().includes((item.name || '').toLowerCase())
-                                ) || [];
+                                const searchTerm = (item.name || '').toLowerCase();
+                                const flattenedSuggestions: any[] = [];
 
-                                if (suggestions.length === 0) return (
+                                productsData?.allProduct?.data?.forEach((product: any) => {
+                                  // 1. Add Variants as separate items if they exist
+                                  // Use variantsProbability as per GET_ALL_PRODUCTS query
+                                  const variants = product.variantsProbability || product.variantsProduct;
+                                  if (variants && variants.length > 0) {
+                                    variants.forEach((variant: any) => {
+                                      const variantFullName = `${product.name} - ${variant.name}`; // e.g. "T-Shirt - Red/XL"
+                                      if (variantFullName.toLowerCase().includes(searchTerm)) {
+                                        flattenedSuggestions.push({
+                                          id: variant.id || `${product.id}-${variant.id}`, // specific ID
+                                          name: variantFullName,
+                                          price: variant.price || product.price,
+                                          sku: variant.sku || product.sku,
+                                          isVariant: true,
+                                          originalProduct: product
+                                        });
+                                      }
+                                    });
+                                  } else {
+                                    // 2. Add Simple Product
+                                    if (product.name.toLowerCase().includes(searchTerm)) {
+                                      flattenedSuggestions.push({
+                                        id: product.id,
+                                        name: product.name,
+                                        price: product.price,
+                                        sku: product.sku,
+                                        isVariant: false,
+                                        originalProduct: product
+                                      });
+                                    }
+                                  }
+                                });
+
+                                if (flattenedSuggestions.length === 0) return (
                                   <div className="p-4 text-center">
                                     <p className="text-[10px] text-slate-400 font-bold">لا توجد منتجات مطابقة</p>
                                     <button
@@ -817,23 +959,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                   </div>
                                 );
 
-                                return suggestions.map((product: any) => (
+                                return flattenedSuggestions.map((suggestion, sIdx) => (
                                   <button
-                                    key={product.id}
+                                    key={suggestion.id || sIdx}
                                     onMouseDown={(e) => {
                                       e.preventDefault();
-                                      updateItem(idx, 'name', product.name);
-                                      updateItem(idx, 'price', product.price);
+                                      updateItemFields(idx, {
+                                        name: suggestion.name,
+                                        price: suggestion.price || 0,
+                                        variant: '' // Clear variant separately as it's merged in name
+                                      });
                                       setFocusedProductIndex(null);
                                     }}
-                                    className="w-full text-right px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
+                                    className="w-full text-right px-4 py-3 hover:bg-slate-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0 group/item"
                                   >
                                     <div className="flex flex-col gap-0.5">
-                                      <span className="text-xs font-bold text-slate-700">{product.name}</span>
-                                      <span className="text-[9px] text-slate-400">{product.sku || 'No SKU'}</span>
+                                      <span className="text-xs font-bold text-slate-700 group-hover/item:text-indigo-700 transition-colors">{suggestion.name}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[9px] text-slate-400">{suggestion.sku || 'No SKU'}</span>
+                                        {suggestion.isVariant && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded">Option</span>}
+                                      </div>
                                     </div>
                                     <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                                      {product.price?.toLocaleString()} دج
+                                      {suggestion.price?.toLocaleString()} دج
                                     </span>
                                   </button>
                                 ));
@@ -857,18 +1005,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           </p>
                         </div>
                       )}
-                    </div>
-
-                    {/* Variant */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">النوع / الخصائص</label>
-                      <input
-                        disabled={readOnly}
-                        value={item.variant}
-                        onChange={e => updateItem(idx, 'variant', e.target.value)}
-                        placeholder="اللون، المقاس..."
-                        className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
-                      />
                     </div>
                   </div>
 
@@ -905,10 +1041,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                     {/* Total */}
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-indigo-500 uppercase">الإجمالي</label>
-                      <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-2 rounded-xl text-center shadow-lg shadow-indigo-500/20">
-                        <span className="text-sm font-black text-white font-mono">{(item.price * item.quantity).toLocaleString()}</span>
-                        <span className="text-[10px] text-indigo-200 mr-1">دج</span>
+                      <label className="text-[9px] font-black text-slate-400 uppercase">الإجمالي</label>
+                      <div className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-700 font-mono">{(item.price * item.quantity).toLocaleString()}</span>
+                        <span className="text-[9px] font-bold text-slate-400">دج</span>
                       </div>
                     </div>
                   </div>
@@ -1065,52 +1201,54 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
 
           {/* Delivery Timeline - Collapsible */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-            <button
-              onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
-              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Truck className="w-5 h-5 text-emerald-500" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
-                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {editedOrder.deliveryTimeLine?.length || 0}
-                </span>
-              </div>
-              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
-            </button>
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
-              <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
-                {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
-                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>
-                )}
-                {editedOrder.deliveryTimeLine?.map((log, idx) => {
-                  const logStyle = getStatusStyle(log.status);
-                  const logKey = getStatusKey(log.status);
-                  const logColors = statusColors[logKey] || statusColors.default;
+          {(editedOrder.deliveryTimeLine && editedOrder.deliveryTimeLine.length > 0) && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
+                className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Truck className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
+                  <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {editedOrder.deliveryTimeLine?.length || 0}
+                  </span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
+                <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
+                  {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
+                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>
+                  )}
+                  {editedOrder.deliveryTimeLine?.map((log, idx) => {
+                    const logStyle = getStatusStyle(log.status);
+                    const logKey = getStatusKey(log.status);
+                    const logColors = statusColors[logKey] || statusColors.default;
 
-                  return (
-                    <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <span
-                          className={`text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
-                          style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
-                        >
-                          {getStatusLabel(log.status)}
-                        </span>
-                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                    return (
+                      <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <span
+                            className={`text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${!logStyle ? `${logColors.bg} ${logColors.text} ${logColors.border}` : ''}`}
+                            style={logStyle ? { backgroundColor: logStyle.backgroundColor, color: logStyle.color, borderColor: logStyle.borderColor } : {}}
+                          >
+                            {getStatusLabel(log.status)}
+                          </span>
+                          <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                          <span className="text-[8px] font-black text-slate-400">{log.user}</span>
+                        </div>
                       </div>
-                      <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
-                        <span className="text-[8px] font-black text-slate-400">{log.user}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
