@@ -33,7 +33,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         stateCode: '',
         city: '', // City
         address: '',
-        deliveryType: 'home' as 'home' | 'office',
+        deliveryType: 'home' as 'home' | "inDesk",
         shippingCost: 0,
         weight: 0,
         notes: '',
@@ -77,7 +77,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
     // Effect: Fetch centers when state or company changes
     useEffect(() => {
-        if (newOrder.stateCode && newOrder.deliveryCompanyId && newOrder.deliveryType === 'office') {
+        if (newOrder.stateCode && newOrder.deliveryCompanyId && newOrder.deliveryType === "inDesk") {
             const selectedCompany = deliveryCompaniesData?.allDeliveryCompany?.find((c: any) => c.id === newOrder.deliveryCompanyId);
             if (selectedCompany?.availableDeliveryCompany?.id) {
                 getCenters({
@@ -426,8 +426,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 )}
                             </button>
                             <button
-                                onClick={() => setNewOrder({ ...newOrder, deliveryType: 'office' })}
-                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                                onClick={() => setNewOrder({ ...newOrder, deliveryType: "inDesk" })}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === "inDesk" ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمكتب</span>
@@ -438,7 +438,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             </button>
                         </div>
 
-                        {newOrder.deliveryType === 'office' && (
+                        {newOrder.deliveryType === "inDesk" && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>

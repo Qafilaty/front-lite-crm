@@ -76,7 +76,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
 
     if (error) {
         return (
-            <div className="w-full p-8 text-center bg-red-50 rounded-3xl text-red-600 font-bold">
+            <div className="w-full p-8 text-center bg-red-50 rounded-2xl text-red-600 font-bold">
                 حدث خطأ أثناء جلب الإحصائيات. يرجى المحاولة مرة أخرى.
             </div>
         );
@@ -88,7 +88,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
             {/* Header & Controls */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-3xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-600/20">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-600/20">
                         <Activity className="w-7 h-7" />
                     </div>
                     <div>
@@ -102,7 +102,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
 
                     {/* Period Buttons */}
-                    <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm flex order-2 xl:order-1 flex-1 xl:flex-none">
+                    <div className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex order-2 xl:order-1 flex-1 xl:flex-none">
                         {[
                             { id: 'week', label: 'الأسبوع' },
                             { id: 'month', label: 'الشهر' },
@@ -112,7 +112,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                             <button
                                 key={p.id}
                                 onClick={() => setPeriod(p.id as any)}
-                                className={`flex-1 xl:flex-none px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${period === p.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'}`}
+                                className={`flex-1 xl:flex-none px-4 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${period === p.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'}`}
                             >
                                 {p.label}
                             </button>
@@ -157,7 +157,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
             {/* KPIs Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Confirmation Rate */}
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
                     <div className="w-28 h-28 relative mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -176,7 +176,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 </div>
 
                 {/* Delivery Rate */}
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
                     <div className="w-28 h-28 relative mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -195,7 +195,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 </div>
 
                 {/* Total Orders */}
-                <div className="bg-slate-900 p-8 rounded-[2rem] shadow-2xl text-white flex flex-col justify-between relative overflow-hidden">
+                <div className="bg-slate-900 p-8 rounded-2xl shadow-2xl text-white flex flex-col justify-between relative overflow-hidden">
                     <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-600/20 rounded-full blur-3xl"></div>
                     <Package className="w-6 h-6 text-indigo-400 mb-6" />
                     <div>
@@ -205,8 +205,8 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 </div>
 
                 {/* Delivered Count */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-6"><Trophy className="w-5 h-5" /></div>
+                <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-6"><Trophy className="w-5 h-5" /></div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">تم توصيلها بنجاح</p>
                         <h3 className="text-3xl font-black text-slate-800 font-mono tracking-tighter mt-1">{stats.kpis.deliveredCount} <span className="text-xs opacity-40">طرد</span></h3>
@@ -218,16 +218,16 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* 1. Best Confirmers */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><Trophy className="w-5 h-5" /></div>
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><Trophy className="w-5 h-5" /></div>
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">نجوم التأكيد</h3>
                     </div>
                     <div className="space-y-6">
                         {stats.topPerformers.bestConfirmers.length > 0 ? stats.topPerformers.bestConfirmers.map((c: any, i: number) => (
                             <div key={i} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[10px] ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</div>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</div>
                                     <p className="text-[11px] font-black text-slate-800 leading-none">{c.name}</p>
                                 </div>
                                 <div className="text-left"><p className="text-sm font-black text-indigo-600 font-mono">{c.count}</p></div>
@@ -237,9 +237,9 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 </div>
 
                 {/* 2. Best States */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm"><MapPin className="w-5 h-5" /></div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm"><MapPin className="w-5 h-5" /></div>
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">أفضل الولايات</h3>
                     </div>
                     <div className="space-y-6">
@@ -258,14 +258,14 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 </div>
 
                 {/* 3. Best Products */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm"><ShoppingBag className="w-5 h-5" /></div>
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm"><ShoppingBag className="w-5 h-5" /></div>
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">المنتجات الأكثر مبيعاً</h3>
                     </div>
                     <div className="space-y-4">
                         {stats.topPerformers.bestProducts.length > 0 ? stats.topPerformers.bestProducts.map((p: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-all group">
+                            <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group">
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <div className="w-8 h-8 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all"><Package className="w-4 h-4" /></div>
                                     <p className="text-[10px] font-black text-slate-700 leading-none truncate">{p.name}</p>
@@ -278,9 +278,9 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
             </div>
 
             {/* Status Analysis Circles */}
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <div className="bg-white p-10 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-4 mb-10">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg"><PieIcon className="w-6 h-6" /></div>
+                    <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg"><PieIcon className="w-6 h-6" /></div>
                     <div>
                         <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest leading-none">تحليل تفصيلي لحالات الطلب</h3>
                         <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">توزيع الحالات حسب دورة الحياة</p>
@@ -290,7 +290,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
                     {/* Stage A: Confirmation Lifecycle */}
-                    <div className="flex flex-col md:flex-row items-center gap-10 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
+                    <div className="flex flex-col md:flex-row items-center gap-10 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
                         <div className="w-48 h-48 shrink-0">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -318,7 +318,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                     </div>
 
                     {/* Stage B: Logistics Lifecycle */}
-                    <div className="flex flex-col md:flex-row items-center gap-10 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
+                    <div className="flex flex-col md:flex-row items-center gap-10 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
                         <div className="w-48 h-48 shrink-0">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>

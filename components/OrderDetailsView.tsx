@@ -92,7 +92,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   // Fetch centers if we have a company and office delivery
   useEffect(() => {
     // Only fetch if office and we have basic info
-    if (editedOrder.deliveryType === 'office' && editedOrder.state && editedOrder.deliveryCompanyId) {
+    if (editedOrder.deliveryType === "inDesk" && editedOrder.state && editedOrder.deliveryCompanyId) {
       const selectedCompany = deliveryCompaniesData?.allDeliveryCompany?.find((c: any) => c.id === editedOrder.deliveryCompanyId);
 
       // Need state code
@@ -553,8 +553,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }
   };
 
-  const handleSendToDelivery = async (overrideCompanyId?: string) => {
-    const companyId = overrideCompanyId || selectedCompanyId;
+  const handleSendToDelivery = async (overrideCompanyId?: string | any) => {
+    const companyId = (typeof overrideCompanyId === 'string' && overrideCompanyId) ? overrideCompanyId : selectedCompanyId;
     if (!companyId || !idCompany) return;
 
     setIsSendingToDelivery(true);
@@ -856,9 +856,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     ? (editedOrder.state as any).name
                     : editedOrder.state;
                   const prices = getDeliveryPriceForState(currentState || '');
-                  setEditedOrder({ ...editedOrder, deliveryType: 'office', shippingCost: prices.desk });
+                  setEditedOrder({ ...editedOrder, deliveryType: "inDesk", shippingCost: prices.desk });
                 }}
-                className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
+                className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl border-2 transition-all ${editedOrder.deliveryType === "inDesk" ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
               >
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-center gap-2">
@@ -874,7 +874,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </button>
             </div>
 
-            {editedOrder.deliveryType === 'office' && (
+            {editedOrder.deliveryType === "inDesk" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 mt-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>

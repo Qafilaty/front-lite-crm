@@ -14,7 +14,7 @@ export const transformBackendOrder = (order: any): Order => {
     state: order.state || '', // Changed to allow object if backend sends it
     city: order.city || '',
     address: order.address || '',
-    deliveryType: order.deliveryType === 'home' ? 'home' : 'office',
+    deliveryType: order.deliveryType === 'home' ? 'home' : "inDesk",
     items: order.products?.map((p: any) => ({
       name: p.name || p.product?.name || '',
       variant: p.variantsProduct?.name || '',

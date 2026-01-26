@@ -99,7 +99,7 @@ export interface Order {
   state: string | { name: string; code?: string; idState?: string };
   city: string;
   address: string;
-  deliveryType: 'home' | 'office';
+  deliveryType: 'home' | 'inDesk';
   items?: OrderItem[];
   products?: any[]; // Matches backend structure
   shippingCost: number; // deliveryPrice
