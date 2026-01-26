@@ -59,6 +59,14 @@ export const GET_ORDER = gql`
         trackingCode
         color
       }
+      deliveryCompanyCenter {
+        id
+        name
+        codeCenter
+        address
+        commune
+        communeAr
+      }
       products {
         product {
           id
@@ -190,6 +198,14 @@ export const GET_ALL_ORDERS = gql`
           status
           trackingCode
           color
+        }
+        deliveryCompanyCenter {
+          id
+          name
+          codeCenter
+          address
+          commune
+          communeAr
         }
         products {
           product {

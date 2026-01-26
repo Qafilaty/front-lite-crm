@@ -86,7 +86,7 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     };
 
     useSubscription(SYNC_ORDERS_SUBSCRIPTION, {
-        // skip: !user || !user.company?.id,
+        skip: !user?.company?.id,
         variables: { idCompany: user?.company?.id },
         onData: ({ data }) => {
             // console.log("Sync Orders Data:", data);

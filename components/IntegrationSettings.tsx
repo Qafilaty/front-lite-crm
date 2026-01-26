@@ -264,6 +264,68 @@ export const IntegrationSettings: React.FC = () => {
     }
 
     // Initialize state from fetched data
+
+    const validateSpreadsheetId = async (type: SheetType, id: string) => {
+        if (!id || !googleAccount?.id) return;
+
+        setSheetValidation(prev => ({
+            ...prev,
+            [type]: { ...prev[type], status: 'loading', message: undefined }
+        }));
+
+        try {
+            const { data, error } = await getSheetsSpreadsheet({
+                variables: {
+                    idGoogleSheets: googleAccount.id,
+                    spreadsheetId: id
+                }
+            });
+
+            if (data?.allSheetsSpreadsheet?.length > 0) {
+                setSheetValidation(prev => ({
+                    ...prev,
+                    [type]: {
+                        status: 'success',
+                        sheets: data.allSheetsSpreadsheet,
+                        message: undefined
+                    }
+                }));
+            } else {
+                // If it returns empty array but no error, it might be an issue or just empty spreadsheet
+                throw new Error("No sheets found");
+            }
+
+        } catch (err: any) {
+            setSheetValidation(prev => ({
+                ...prev,
+                [type]: {
+                    status: 'error',
+                    sheets: [],
+                    message: 'لم يتم العثور على الملف. تأكد من صحة المعرف (ID) ومن صلاحيات الوصول.'
+                }
+            }));
+        }
+    };
+
+    const fetchHeaders = async (type: SheetType, sheetName: string, spreadId: string) => {
+        if (!googleAccount?.id || !spreadId || !sheetName) return;
+
+        try {
+            const { data } = await getFirstRowSheets({
+                variables: {
+                    idGoogleSheets: googleAccount.id,
+                    spreadsheetId: spreadId,
+                    sheetName: sheetName
+                }
+            });
+
+            if (data?.firstRowSheets && Array.isArray(data.firstRowSheets)) {
+                setSheetHeaders(prev => ({ ...prev, [type]: data.firstRowSheets }));
+            }
+        } catch (err) {
+            console.error("Error fetching headers", err);
+        }
+    };
     useEffect(() => {
         if (googleAccount?.sheets) {
             const newConfigs: Record<SheetType, SheetConfig> = {
@@ -291,6 +353,9 @@ export const IntegrationSettings: React.FC = () => {
                         });
                         newMappings[type] = mapping;
                     }
+
+                    // Trigger header fetch for saved config
+                    fetchHeaders(type, sheet.nameSheet, sheet.idFile);
                 }
             });
 
@@ -472,67 +537,7 @@ export const IntegrationSettings: React.FC = () => {
         }
     };
 
-    const validateSpreadsheetId = async (type: SheetType, id: string) => {
-        if (!id || !googleAccount?.id) return;
 
-        setSheetValidation(prev => ({
-            ...prev,
-            [type]: { ...prev[type], status: 'loading', message: undefined }
-        }));
-
-        try {
-            const { data, error } = await getSheetsSpreadsheet({
-                variables: {
-                    idGoogleSheets: googleAccount.id,
-                    spreadsheetId: id
-                }
-            });
-
-            if (data?.allSheetsSpreadsheet?.length > 0) {
-                setSheetValidation(prev => ({
-                    ...prev,
-                    [type]: {
-                        status: 'success',
-                        sheets: data.allSheetsSpreadsheet,
-                        message: undefined
-                    }
-                }));
-            } else {
-                // If it returns empty array but no error, it might be an issue or just empty spreadsheet
-                throw new Error("No sheets found");
-            }
-
-        } catch (err: any) {
-            setSheetValidation(prev => ({
-                ...prev,
-                [type]: {
-                    status: 'error',
-                    sheets: [],
-                    message: 'لم يتم العثور على الملف. تأكد من صحة المعرف (ID) ومن صلاحيات الوصول.'
-                }
-            }));
-        }
-    };
-
-    const fetchHeaders = async (type: SheetType, sheetName: string, spreadId: string) => {
-        if (!googleAccount?.id || !spreadId || !sheetName) return;
-
-        try {
-            const { data } = await getFirstRowSheets({
-                variables: {
-                    idGoogleSheets: googleAccount.id,
-                    spreadsheetId: spreadId,
-                    sheetName: sheetName
-                }
-            });
-
-            if (data?.firstRowSheets && Array.isArray(data.firstRowSheets)) {
-                setSheetHeaders(prev => ({ ...prev, [type]: data.firstRowSheets }));
-            }
-        } catch (err) {
-            console.error("Error fetching headers", err);
-        }
-    };
 
     // Auto-fetch headers when validation succeeds
     useEffect(() => {

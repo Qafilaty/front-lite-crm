@@ -9,6 +9,7 @@ import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_WILAYAS } from '../graphql/queries';
 import { CREATE_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
+import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
 import { ModernSelect } from './common';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,7 +35,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         address: '',
         deliveryType: 'home' as 'home' | 'office',
         shippingCost: 0,
-        notes: ''
+        weight: 0,
+        notes: '',
+        deliveryCompanyId: '',
+        deliveryCenterId: ''
     });
 
     const [cart, setCart] = useState<{
@@ -66,6 +70,25 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         variables: { pagination: { limit: 100, page: 1 } },
         fetchPolicy: 'cache-first'
     });
+
+    // 4. Delivery Companies
+    const { data: deliveryCompaniesData } = useQuery(GET_ALL_DELIVERY_COMPANIES);
+    const [getCenters, { data: centersData, loading: loadingCenters }] = useLazyQuery(GET_DELIVERY_COMPANY_CENTER);
+
+    // Effect: Fetch centers when state or company changes
+    useEffect(() => {
+        if (newOrder.stateCode && newOrder.deliveryCompanyId && newOrder.deliveryType === 'office') {
+            const selectedCompany = deliveryCompaniesData?.allDeliveryCompany?.find((c: any) => c.id === newOrder.deliveryCompanyId);
+            if (selectedCompany?.availableDeliveryCompany?.id) {
+                getCenters({
+                    variables: {
+                        stateCode: newOrder.stateCode,
+                        idAvailableDeliveryCompany: selectedCompany.availableDeliveryCompany.id
+                    }
+                });
+            }
+        }
+    }, [newOrder.stateCode, newOrder.deliveryCompanyId, newOrder.deliveryType, deliveryCompaniesData]);
 
     const products: Product[] = productsData?.allProduct?.data || [];
 
@@ -236,9 +259,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         city: newOrder.city,
                         address: newOrder.address,
 
-                        deliveryType: newOrder.deliveryType, // 'home' or 'office'
-                        deliveryPrice: newOrder.shippingCost,
+                        idDeliveryCompanyCenter: newOrder.deliveryCenterId || undefined,
+                        deliveryCompany: newOrder.deliveryCompanyId ? { idDeliveryCompany: newOrder.deliveryCompanyId } : undefined,
 
+                        deliveryType: newOrder.deliveryType,
+                        deliveryPrice: newOrder.shippingCost,
+                        weight: newOrder.weight,
                         note: newOrder.notes,
 
                         totalPrice,
@@ -247,9 +273,9 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
                         products: cart.map(item => ({
                             idProduct: item.id,
-                            idVariantsProduct: item.idVariant,
+                            idVariantsProduct: item.idVariant || null,
                             name: item.name,
-                            sku: item.sku,
+                            sku: item.sku || "",
                             price: item.price,
                             quantity: item.quantity
                         })),
@@ -267,7 +293,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
             // Reset form
             setNewOrder({
                 customer: '', phone: '', state: '', stateCode: '', city: '',
-                address: '', deliveryType: 'home', shippingCost: 0, notes: ''
+                address: '', deliveryType: 'home', shippingCost: 0, weight: 0, notes: '',
+                deliveryCompanyId: '', deliveryCenterId: ''
             });
             setCart([]);
             setErrors({});
@@ -356,7 +383,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
                                 <ModernSelect
                                     value={newOrder.state}
-                                    onChange={(val) => setNewOrder({ ...newOrder, state: val, city: '' })}
+                                    onChange={(val) => {
+                                        const w = wilayas.find(w => w.name === val);
+                                        setNewOrder({ ...newOrder, state: val, stateCode: w?.code || '', city: '' });
+                                    }}
                                     options={[
                                         { value: '', label: 'اختر الولاية...' },
                                         ...wilayas.map(w => ({ value: w.name, label: `${w.code} - ${w.name}` }))
@@ -392,7 +422,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     <Home className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمنزل</span>
                                 </div>
                                 {currentPricing && (
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing.home || 0} دج</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.home || 0} دج</span>
                                 )}
                             </button>
                             <button
@@ -403,10 +433,46 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمكتب</span>
                                 </div>
                                 {currentPricing && (
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing.desk || 0} دج</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.desk || 0} دج</span>
                                 )}
                             </button>
                         </div>
+
+                        {newOrder.deliveryType === 'office' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>
+                                    <ModernSelect
+                                        value={newOrder.deliveryCompanyId}
+                                        onChange={(val) => setNewOrder({ ...newOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
+                                        options={[
+                                            { value: '', label: 'اختر الشركة...' },
+                                            ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
+                                                value: c.id,
+                                                label: c.name
+                                            })) || [])
+                                        ]}
+                                        placeholder="اختر شركة التوصيل..."
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مركز التوصيل</label>
+                                    <ModernSelect
+                                        disabled={!newOrder.deliveryCompanyId || loadingCenters}
+                                        value={newOrder.deliveryCenterId}
+                                        onChange={(val) => setNewOrder({ ...newOrder, deliveryCenterId: val })}
+                                        options={[
+                                            { value: '', label: loadingCenters ? 'جاري التحميل...' : 'اختر المركز...' },
+                                            ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
+                                                value: c.id,
+                                                label: `${c.name} (${c.commune || c.communeAr})`
+                                            })) || [])
+                                        ]}
+                                        placeholder="اختر المركز..."
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* 3. Product Picker */}
@@ -525,6 +591,20 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     />
                                 </div>
                                 {errors.shippingCost && <p className="text-red-500 text-[9px] font-bold px-1">{errors.shippingCost}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الوزن (كلغ)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        value={newOrder.weight || ''}
+                                        onChange={e => setNewOrder({ ...newOrder, weight: parseFloat(e.target.value) || 0 })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
+                                        placeholder="0.0"
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظات (اختياري)</label>

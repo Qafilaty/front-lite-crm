@@ -29,6 +29,11 @@ export enum View {
 export interface OrderItem {
   id?: string;
   productId?: string;
+  // Mapped from backend logic
+  variantId?: string;
+  idVariantsProduct?: string;
+  sku?: string;
+
   name: string;
   variant: string;
   quantity: number;
@@ -104,6 +109,7 @@ export interface Order {
   subTotalPrice?: number;
   totalQuantity?: number;
   discount?: number;
+  weight?: number;
   status: OrderStatus | StatusOrderObject;
   storeName: string;
   notes?: string;

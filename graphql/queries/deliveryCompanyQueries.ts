@@ -70,3 +70,20 @@ export const GET_AVAILABLE_DELIVERY_COMPANIES = gql`
     }
   }
 `;
+
+export const GET_DELIVERY_COMPANY_CENTER = gql`
+  query GetDeliveryCompanyCenter($stateCode: String!, $idAvailableDeliveryCompany: ID!) {
+    allDeliveryCompanyCenter(stateCode: $stateCode, idAvailableDeliveryCompany: $idAvailableDeliveryCompany) {
+      id
+      stateName
+      stateCode
+      communes {
+        id
+        name
+        address
+        commune
+        codeCenter
+      }
+    }
+  }
+`;

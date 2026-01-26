@@ -48,17 +48,37 @@ export const ConfirmerStatsView: React.FC = () => {
     // 4. Financials
     const totalEarnings = stats.totalEarnings || (deliveredCount * commissionPrice);
 
-    // 5. Pie Charts Data
+    // 5. Pie Charts Data & Logic
+    const confirmedCountVal = stats.confirmationBreakdown?.confirmed || 0;
+
+    // Derive Total Orders for "Out of Total" calculation
+    // If confirmationRate > 0, Total = Confirmed / (Rate/100)
+    // Else, fallback to sum of parts (though less accurate if parts missing)
+    let totalOrdersEstimate = 0;
+    if (stats.confirmationRate > 0) {
+        totalOrdersEstimate = Math.round(confirmedCountVal / (stats.confirmationRate / 100));
+    } else {
+        totalOrdersEstimate = (stats.confirmationBreakdown?.confirmed || 0) +
+            (stats.confirmationBreakdown?.cancelled || 0) +
+            (stats.confirmationBreakdown?.postponed || 0);
+    }
+
+    const calcPct = (val: number, total: number) => {
+        if (!total || total === 0) return 0;
+        return parseFloat(((val / total) * 100).toFixed(1));
+    };
+
     const confirmationStats = stats.confirmationBreakdown ? [
-        { name: 'مؤكدة', value: stats.confirmationBreakdown.confirmed || 0, color: '#4F46E5' },
-        { name: 'ملغاة', value: stats.confirmationBreakdown.cancelled || 0, color: '#E11D48' },
-        { name: 'مؤجلة', value: stats.confirmationBreakdown.postponed || 0, color: '#D97706' },
+        { name: 'مؤكدة', value: calcPct(stats.confirmationBreakdown.confirmed || 0, totalOrdersEstimate), color: '#4F46E5' },
+        { name: 'ملغاة', value: calcPct(stats.confirmationBreakdown.cancelled || 0, totalOrdersEstimate), color: '#E11D48' },
+        { name: 'مؤجلة', value: calcPct(stats.confirmationBreakdown.postponed || 0, totalOrdersEstimate), color: '#D97706' },
     ] : CONFIRMATION_STATS_MOCK;
 
+    // For Delivery Breakdown: Base is Confirmed Count (Strict Subset)
     const deliveryStats = stats.deliveryBreakdown ? [
-        { name: 'تم التسليم', value: stats.deliveryBreakdown.delivered || 0, color: '#059669' },
-        { name: 'قيد التوصيل', value: stats.deliveryBreakdown.delivering || 0, color: '#4F46E5' },
-        { name: 'مرتجع', value: stats.deliveryBreakdown.returned || 0, color: '#E11D48' },
+        { name: 'تم التسليم', value: calcPct(stats.deliveryBreakdown.delivered || 0, confirmedCountVal), color: '#059669' },
+        { name: 'قيد التوصيل', value: calcPct(stats.deliveryBreakdown.delivering || 0, confirmedCountVal), color: '#4F46E5' },
+        { name: 'مرتجع', value: calcPct(stats.deliveryBreakdown.returned || 0, confirmedCountVal), color: '#E11D48' },
     ] : DELIVERY_STATS_MOCK;
 
     // 6. Invoices

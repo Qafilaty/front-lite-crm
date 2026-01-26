@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import { Order, OrderLog, OrderItem, OrderStatus, StatusOrderObject } from '../types';
 import {
   User, Phone, MapPin, ShoppingBag, PlusCircle, Trash2, Plus, Clock, Truck, Home, Building2, Store, Check,
@@ -22,6 +22,7 @@ import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
+import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
 import { ModernSelect } from './common';
 
 interface OrderDetailsViewProps {
@@ -41,6 +42,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     customer: order.customer || order.fullName || '',
     state: typeof order.state === 'object' && order.state !== null ? (order.state as any).name : order.state,
     city: typeof order.city === 'object' && order.city !== null ? (order.city as any).name : order.city,
+    weight: order.weight || 0,
+    deliveryCompanyId: order.deliveryCompany?.deliveryCompany?.id || '',
+    deliveryCenterId: order.deliveryCompanyCenter?.id || '', // Using id to match dropdown values
+    shippingCost: order.deliveryPrice || 0
   }));
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
 
@@ -80,6 +85,36 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   });
 
   const { data: deliveryPricesData } = useQuery(GET_ALL_DELIVERY_PRICE_COMPANY);
+
+  const { data: deliveryCompaniesData } = useQuery(GET_ALL_DELIVERY_COMPANIES);
+  const [getCenters, { data: centersData, loading: loadingCenters }] = useLazyQuery(GET_DELIVERY_COMPANY_CENTER);
+
+  // Fetch centers if we have a company and office delivery
+  useEffect(() => {
+    // Only fetch if office and we have basic info
+    if (editedOrder.deliveryType === 'office' && editedOrder.state && editedOrder.deliveryCompanyId) {
+      const selectedCompany = deliveryCompaniesData?.allDeliveryCompany?.find((c: any) => c.id === editedOrder.deliveryCompanyId);
+
+      // Need state code
+      let stateCode = '';
+      if (typeof editedOrder.state === 'object' && (editedOrder.state as any).code) {
+        stateCode = (editedOrder.state as any).code;
+      } else {
+        // Try to find code from wilayas
+        const found = wilayasData?.allWilayas?.find((w: any) => w.name === editedOrder.state);
+        if (found) stateCode = found.code;
+      }
+
+      if (stateCode && selectedCompany?.availableDeliveryCompany?.id) {
+        getCenters({
+          variables: {
+            stateCode: stateCode,
+            idAvailableDeliveryCompany: selectedCompany.availableDeliveryCompany.id
+          }
+        });
+      }
+    }
+  }, [editedOrder.deliveryType, editedOrder.state, editedOrder.deliveryCompanyId, deliveryCompaniesData, wilayasData]);
 
   const getDeliveryPriceForState = (stateName: string) => {
     if (!deliveryPricesData?.allDeliveryPriceCompany?.data) return { home: 0, desk: 0 };
@@ -202,10 +237,18 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         deliveryType: editedOrder.deliveryType,
         deliveryPrice: editedOrder.shippingCost,
         totalPrice: editedOrder.amount - (editedOrder.discount || 0),
+        weight: editedOrder.weight,
+
+        idDeliveryCompanyCenter: editedOrder.deliveryCenterId || undefined,
+        deliveryCompany: editedOrder.deliveryCompanyId ? { idDeliveryCompany: editedOrder.deliveryCompanyId } : undefined,
+
         note: editedOrder.notes,
         discount: editedOrder.discount,
         // Map items
         products: editedOrder.items.map(item => ({
+          idProduct: item.productId,
+          idVariantsProduct: item.idVariantsProduct || item.variantId,
+          sku: item.sku,
           name: item.name,
           price: Number(item.price),
           quantity: Number(item.quantity)
@@ -485,6 +528,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   // Delivery Handlers
   const openDeliveryModal = async () => {
+    // If we already have a selected company (from edit or saved), set it as selected
+    const preSelectedId = editedOrder.deliveryCompanyId || order.deliveryCompany?.deliveryCompany?.id;
+
+    if (preSelectedId) {
+      setSelectedCompanyId(preSelectedId);
+    }
+
     setIsDeliveryModalOpen(true);
 
     if (deliveryCompanies.length === 0 && idCompany) {
@@ -503,12 +553,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }
   };
 
-  const handleSendToDelivery = async () => {
-    if (!selectedCompanyId || !idCompany) return;
+  const handleSendToDelivery = async (overrideCompanyId?: string) => {
+    const companyId = overrideCompanyId || selectedCompanyId;
+    if (!companyId || !idCompany) return;
 
     setIsSendingToDelivery(true);
     const result = await deliveryCompanyService.addOrderToDeliveryCompany(
-      selectedCompanyId,
+      companyId,
       [order.id]
     );
 
@@ -517,7 +568,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     if (result.success && result.data?.successOrder?.length > 0) {
       const successOrder = result.data.successOrder[0];
       const tracking = successOrder.deliveryCompany?.trackingCode || 'Unknown';
-      const companyName = deliveryCompanies.find(c => c.id === selectedCompanyId)?.name || 'الشركة';
+
+      // Try to find name from list or use generic if list empty/not found
+      // If we auto-sent, deliveryCompanies might be empty, so we might not have the name immediately available 
+      // unless we fetch it or it's in the order data.
+      const companyName = deliveryCompanies.find(c => c.id === companyId)?.name ||
+        (order.deliveryCompany?.deliveryCompany?.id === companyId ? order.deliveryCompany?.deliveryCompany?.name : 'الشركة');
 
       setSuccessTrackingCode(tracking);
       setSuccessCompanyName(companyName);
@@ -530,7 +586,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       const failures = result.data.failedOrder.map((fail: any) => {
         let parsedErrors = [];
         try {
-          parsedErrors = JSON.parse(fail.errors);
+          const parsed = JSON.parse(fail.errors);
+          parsedErrors = Array.isArray(parsed) ? parsed : [parsed];
         } catch (e) {
           parsedErrors = [{ message: fail.errors || 'Unknown Error', field: 'general' }];
         }
@@ -816,6 +873,43 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               </button>
             </div>
+
+            {editedOrder.deliveryType === 'office' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 mt-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>
+                  <ModernSelect
+                    disabled={readOnly}
+                    value={editedOrder.deliveryCompanyId}
+                    onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
+                    options={[
+                      { value: '', label: 'اختر الشركة...' },
+                      ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
+                        value: c.id,
+                        label: c.name
+                      })) || [])
+                    ]}
+                    placeholder="اختر شركة التوصيل..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مركز التوصيل</label>
+                  <ModernSelect
+                    disabled={readOnly || !editedOrder.deliveryCompanyId || loadingCenters}
+                    value={editedOrder.deliveryCenterId}
+                    onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCenterId: val })}
+                    options={[
+                      { value: '', label: loadingCenters ? 'جاري التحميل...' : 'اختر المركز...' },
+                      ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
+                        value: c.id,
+                        label: `${c.name} (${c.commune || c.communeAr})`
+                      })) || [])
+                    ]}
+                    placeholder="اختر المركز..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Items / Cart Management Card - Redesigned */}
@@ -972,7 +1066,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                       updateItemFields(idx, {
                                         name: suggestion.name,
                                         price: suggestion.price || 0,
-                                        variant: '' // Clear variant separately as it's merged in name
+                                        sku: suggestion.sku,
+                                        productId: suggestion.originalProduct.id,
+                                        idVariantsProduct: suggestion.isVariant ? suggestion.id.split('-').pop() : undefined, // Assumes mapping or needs refinement if ID is composed
+                                        variant: ''
                                       });
                                       setFocusedProductIndex(null);
                                     }}
@@ -1097,6 +1194,21 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         className="w-full bg-transparent border-none p-0 text-sm font-black text-rose-500 focus:ring-0 outline-none"
                       />
                       <span className="text-[9px] font-bold text-rose-300">دج</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-1 min-w-[140px] bg-slate-50/50">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الوزن (كلغ)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        disabled={readOnly}
+                        type="number"
+                        step="0.1"
+                        value={editedOrder.weight || 0}
+                        onChange={e => setEditedOrder({ ...editedOrder, weight: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-transparent border-none p-0 text-sm font-black text-slate-600 focus:ring-0 outline-none"
+                      />
+                      <span className="text-[9px] font-bold text-slate-400">kg</span>
                     </div>
                   </div>
                 </div>
