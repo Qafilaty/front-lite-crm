@@ -144,6 +144,11 @@ export interface User {
   company?: {
     id: string;
     name: string;
+    plans?: {
+      name?: string;
+      dateExpiry?: string;
+      pointes?: number;
+    };
   };
 }
 

@@ -17,6 +17,11 @@ export const LOGIN = gql`
         company {
           id
           name
+          plans {
+            name
+            dateExpiry
+            pointes
+          }
         }
       }
     }
@@ -36,6 +41,11 @@ export const GET_CURRENT_USER = gql`
       company {
         id
         name
+        plans {
+          name
+          dateExpiry
+          pointes
+        }
       }
       createdAt
       updatedAt

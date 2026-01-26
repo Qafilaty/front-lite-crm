@@ -281,8 +281,8 @@ const ShippingPricingView: React.FC = () => {
                 <thead>
                   <tr className="bg-white text-slate-400 border-b border-slate-100">
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">الولاية</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمنزل (ر.س)</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمكتب (ر.س)</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمنزل (د.ج)</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمكتب (د.ج)</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">الحالة</th>
                   </tr>
                 </thead>

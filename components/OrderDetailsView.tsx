@@ -617,7 +617,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button onClick={onBack} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 hover:bg-slate-100">
-            <ArrowRight className="w-5 h-5 rtl:rotate-180" />
+            <ArrowRight className="w-5 h-5 " />
           </button>
 
           <div className="flex flex-col gap-1">

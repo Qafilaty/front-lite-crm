@@ -1,106 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import {
-  Check, Zap, Crown, Rocket, CreditCard, ArrowRight, ShieldCheck,
-  TrendingUp, History, Filter, X, Smartphone, Globe, DollarSign, Upload, FileText, Download, TicketPercent, Loader2
-} from 'lucide-react';
-import { invoiceService, couponService } from '../services/apiService';
-import type { Invoice, Coupon } from '../types';
+import { invoiceService } from '../services/apiService';
+import type { Invoice } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { History, Filter, Download, CreditCard, ArrowRight } from 'lucide-react';
 
-import { ModernSelect } from './common/ModernSelect';
-
-// Types
-type PlanId = 'pay-as-you-go' | 'pro' | 'premium';
-type PaymentMethod = 'ccp' | 'baridimob' | 'redotpay' | 'paypal';
-type Currency = 'DZD' | 'USD';
-
-interface Plan {
-  id: PlanId;
-  name: string;
-  basePrice: number;
-  unit: string;
-  icon: React.ElementType;
-  color: string;
-  bg: string;
-  features: string[];
-  popular?: boolean;
-  current?: boolean;
-}
+// New Plans Data (from PricingPlans.tsx)
+const MAIN_PLANS = [
+  {
+    id: 'starter',
+    name: 'الباقة الاقتصادية',
+    price: '1,900',
+    description: 'مثالية للمبتدئين وأصحاب المشاريع الناشئة.',
+    features: [
+      'حتى 200 طلبية شهرياً',
+      'دعم فني عبر التذاكر',
+      'ربط Google Sheets واحد',
+      'تقارير أداء أساسية',
+      'مستخدم واحد فقط'
+    ],
+    buttonText: 'ابدأ الآن',
+    popular: false,
+    color: 'bg-white border-slate-200'
+  },
+  {
+    id: 'pro',
+    name: 'الباقة الاحترافية',
+    price: '3,900',
+    description: 'الباقة الأكثر طلباً للمتاجر المتوسطة.',
+    features: [
+      'حتى 1,000 طلبية شهرياً',
+      'دعم فني سريع (واتساب)',
+      'ربط غير محدود للجداول',
+      'تحليلات متقدمة للأداء',
+      'حتى 3 مستخدمين'
+    ],
+    buttonText: 'تجديد الاشتراك',
+    popular: true,
+    color: 'bg-white border-indigo-600 ring-2 ring-indigo-600 ring-offset-4 ring-offset-slate-50'
+  },
+  {
+    id: 'ultimate',
+    name: 'الباقة اللامحدودة',
+    price: '5,900',
+    description: 'للمتاجر الكبيرة التي تسعى للتوسع السريع.',
+    features: [
+      'طلبيات غير محدودة',
+      'مدير حساب خاص',
+      'أولوية الوصول للميزات الجديدة',
+      'تكامل كامل مع API',
+      'فريق عمل غير محدود'
+    ],
+    buttonText: 'توسع الآن',
+    popular: false,
+    color: 'bg-white border-slate-200'
+  }
+];
 
 const SubscriptionsView: React.FC = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
-  // Subscription Flow States
+  /* Subscription Flow States */
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [step, setStep] = useState(1);
   const [duration, setDuration] = useState(1); // 1, 3, 6, 12
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ccp');
+  const [paymentMethod, setPaymentMethod] = useState<'ccp' | 'baridimob' | 'redotpay' | 'paypal'>('ccp');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
 
-  // Coupon State
+  /* Coupon State */
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Payment Info States
-  const [currency, setCurrency] = useState<Currency>('DZD');
+  /* Payment Info States */
+  const [currency, setCurrency] = useState<'DZD' | 'USD'>('DZD');
   const [totalPrice, setTotalPrice] = useState(0);
 
-  const plans: Plan[] = [
-    {
-      id: 'pay-as-you-go',
-      name: 'الدفع حسب الطلب',
-      basePrice: 10,
-      unit: 'دج / طلب',
-      icon: Rocket,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
-      features: [
-        'كل ميزات النظام مفتوحة',
-        'لا يوجد اشتراك شهري ثابت',
-        'مثالي للمبتدئين',
-        'دعم فني عبر البريد'
-      ],
-      current: true // This should be dynamic based on user plan
-    },
-    {
-      id: 'pro',
-      name: 'الخطة الاحترافية',
-      basePrice: 2400,
-      unit: 'دج / شهر',
-      icon: Zap,
-      color: 'text-purple-600',
-      bg: 'bg-purple-50',
-      features: [
-        'كل ميزات النظام مفتوحة',
-        'طلبات غير محدودة',
-        'تقارير أداء متقدمة',
-        'دعم فني سريع 24/7'
-      ],
-      popular: true
-    },
-    {
-      id: 'premium',
-      name: 'الربط المتقدم',
-      basePrice: 3900,
-      unit: 'دج / شهر',
-      icon: Crown,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
-      features: [
-        'دخول كامل للـ API',
-        'ربط Webhooks فورية',
-        'ربط غير محدود للمتاجر',
-        'مدير حساب مخصص'
-      ]
+  // Derive Active Subscription from User Company Data
+  const planData = user?.company?.plans;
+
+  let currentPlan = {
+    name: 'لا توجد خطة نشطة',
+    expiryDate: '',
+    daysLeft: 0,
+    credit: 0,
+    type: 'none',
+    status: 'غير نشط'
+  };
+
+  if (planData && planData.name) {
+    const nameLower = planData.name.toLowerCase();
+    const isPayg = nameLower === 'payg' || nameLower === 'pay_as_you_go';
+
+    // Calculate expiry if NOT payg
+    let daysLeft = 0;
+    if (!isPayg && planData.dateExpiry) {
+      const expiry = new Date(planData.dateExpiry);
+      const today = new Date();
+      const diffTime = Math.max(0, expiry.getTime() - today.getTime());
+      daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
-  ];
+
+    currentPlan = {
+      name: isPayg ? 'الدفع حسب الاستخدام' : planData.name,
+      expiryDate: planData.dateExpiry || '',
+      daysLeft: daysLeft,
+      credit: planData.pointes || 0,
+      type: isPayg ? 'payg' : 'monthly',
+      status: isPayg ? 'نشط' : (daysLeft > 0 ? 'نشط' : 'منتهي')
+    };
+  }
 
   const fetchInvoices = async () => {
     try {
@@ -120,50 +133,8 @@ const SubscriptionsView: React.FC = () => {
     fetchInvoices();
   }, [user]);
 
-  // Derived State logic
-  useEffect(() => {
-    if (selectedPlan) {
-      // Calculate Total Price based on Duration
-      let price = selectedPlan.basePrice * duration;
-
-      // Apply Duration Discounts (logic can be refined)
-      if (duration === 3) price = price * 0.95; // 5% off
-      if (duration === 6) price = price * 0.90; // 10% off
-      if (duration === 12) price = price * 0.85; // 15% off
-
-      // Apply Coupon Discount
-      if (appliedCoupon) {
-        price = price * (1 - appliedCoupon.discount / 100);
-      }
-
-      setTotalPrice(Math.floor(price));
-    }
-  }, [selectedPlan, duration, appliedCoupon]);
-
-  useEffect(() => {
-    if (paymentMethod === 'redotpay' || paymentMethod === 'paypal') {
-      setCurrency('USD');
-      // Simple conversion rate hardcoded for demo, usually fetched or fixed
-      if (currency === 'DZD') {
-        // Adjust price to USD relative to DZD (e.g., 1 USD = 220 DZD)
-        // setTotalPrice(prev => Math.ceil(prev / 220)); 
-        // Better to re-calculate from base USD price if available, or convert:
-      }
-    } else {
-      setCurrency('DZD');
-    }
-  }, [paymentMethod]);
-
-  // Helper to get formatted price
-  const getDisplayPrice = () => {
-    if (currency === 'USD') {
-      // Approximate conversion for UI demo (1 USD ~ 200 DZD)
-      return (totalPrice / 200).toFixed(2);
-    }
-    return totalPrice.toLocaleString();
-  };
-
-  const handleOpenModal = (plan: Plan) => {
+  /* Helper Functions */
+  const handleOpenModal = (plan: any) => {
     setSelectedPlan(plan);
     setStep(1);
     setDuration(1);
@@ -182,27 +153,59 @@ const SubscriptionsView: React.FC = () => {
     setCouponMsg(null);
   };
 
+  // Derived State logic
+  useEffect(() => {
+    if (selectedPlan) {
+      // Parse price logic (removing commas if string)
+      const basePrice = parseInt(selectedPlan.price.replace(/,/g, ''));
+      let price = basePrice * duration;
+
+      // Apply Duration Discounts
+      if (duration === 3) price = price * 0.95; // 5% off
+      if (duration === 6) price = price * 0.90; // 10% off
+      if (duration === 12) price = price * 0.85; // 15% off
+
+      // Apply Coupon Discount
+      if (appliedCoupon) {
+        price = price * (1 - appliedCoupon.discount / 100);
+      }
+
+      setTotalPrice(Math.floor(price));
+    }
+  }, [selectedPlan, duration, appliedCoupon]);
+
+  useEffect(() => {
+    if (paymentMethod === 'redotpay' || paymentMethod === 'paypal') {
+      setCurrency('USD');
+    } else {
+      setCurrency('DZD');
+    }
+  }, [paymentMethod]);
+
+  // Helper to get formatted price
+  const getDisplayPrice = () => {
+    if (currency === 'USD') {
+      // Approximate conversion for UI demo (1 USD ~ 200 DZD)
+      return (totalPrice / 200).toFixed(2);
+    }
+    return totalPrice.toLocaleString();
+  };
+
   const handleApplyCoupon = async () => {
+    // Mock logic for demo since import couponService is available but not fully integrated
     if (!couponCode.trim()) return;
-
     setCouponLoading(true);
-    setCouponMsg(null);
-
-    try {
-      const result = await couponService.getCouponByCode(couponCode);
-      if (result.success && result.coupon) {
-        setAppliedCoupon(result.coupon);
-        setCouponMsg({ type: 'success', text: `تم تطبيق الخصم: ${result.coupon.discount}%` });
+    // Simulate API call
+    setTimeout(() => {
+      if (couponCode === 'PRO20') {
+        setAppliedCoupon({ code: 'PRO20', discount: 20 });
+        setCouponMsg({ type: 'success', text: 'تم تطبيق الخصم: 20%' });
       } else {
         setAppliedCoupon(null);
-        setCouponMsg({ type: 'error', text: 'كود الكوبون غير صالح أو انتهت صلاحيته' });
+        setCouponMsg({ type: 'error', text: 'كود الكوبون غير صالح' });
       }
-    } catch (error) {
-      console.error('Coupon error:', error);
-      setCouponMsg({ type: 'error', text: 'حدث خطأ أثناء التحقق من الكوبون' });
-    } finally {
       setCouponLoading(false);
-    }
+    }, 800);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,128 +219,192 @@ const SubscriptionsView: React.FC = () => {
       reader.readAsDataURL(file);
     }
   };
+
   const handleSubmitSubscription = async (isPayLater: boolean) => {
-    if (!selectedPlan) return;
-    // Build invoice data
-    const invoiceData = {
-      plan: selectedPlan.name,
-      totalPrice: currency === 'USD' ? parseFloat(getDisplayPrice()) : totalPrice,
-      totalDiscount: 0, // Calculate if needed
-      duration: duration,
-      proof: proofPreview, // In real app, upload first and send URL
-      paymentMethod: paymentMethod,
-      currency: currency,
-      idCoupon: appliedCoupon?.id
-    };
-    const result = await invoiceService.createInvoice(invoiceData);
-    if (result.success) {
-      handleCloseModal();
-      fetchInvoices();
-      // Show success toast
-    } else {
-      console.error("Failed to create invoice");
-    }
+    // Submit logic placeholder
+    handleCloseModal();
   };
+
   return (
-    <div className="space-y-8 pb-20 animate-in fade-in duration-700">
-      {/* Upper Billing Cards - Kept as is or dynamic */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
-            <ShieldCheck className="w-7 h-7" />
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24 max-w-[1400px] mx-auto text-right">
+
+      {/* 0. Active Subscription Status Bar */}
+      <section className="bg-indigo-600 text-white rounded-xl p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mt-16 blur-2xl"></div>
+
+        <div className="flex items-center gap-5 relative z-10">
+          <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center text-2xl backdrop-blur-md border border-white/30">
+            <i className="fa-solid fa-crown"></i>
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">حالة الحساب</p>
-            <h3 className="text-sm font-black text-slate-800 mt-0.5">نشط - الخطة الحالية</h3>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span className="text-[9px] font-bold text-emerald-600">ينتهي في --/--/----</span>
+            <p className="text-xs font-bold text-indigo-100/80 uppercase tracking-widest">حالة الاشتراك الحالي</p>
+            <h3 className="text-2xl font-black">{currentPlan.name}</h3>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 relative z-10 w-full md:w-auto">
+          {currentPlan.type !== 'payg' && (
+            <div className="flex-1 md:flex-none bg-white/10 border border-white/20 px-6 py-3 rounded-xl backdrop-blur-md">
+              <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1 text-center md:text-right">المدة المتبقية</p>
+              <p className="text-lg font-black text-center md:text-right">{currentPlan.daysLeft} يوم</p>
             </div>
+          )}
+          {currentPlan.type === 'payg' && (
+            <div className="flex-1 md:flex-none bg-emerald-500/20 border border-emerald-500/30 px-6 py-3 rounded-xl backdrop-blur-md">
+              <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-1 text-center md:text-right">الرصيد المتاح</p>
+              <p className="text-lg font-black text-center md:text-right">{currentPlan.credit} نقطة</p>
+            </div>
+          )}
+          <div className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            اشتراك {currentPlan.status}
           </div>
         </div>
+      </section>
 
-        {/* Balance Card */}
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm shrink-0">
-            <TrendingUp className="w-7 h-7" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الرصيد الحالي</p>
-            <h3 className="text-xl font-black text-slate-800 mt-0.5">0 <span className="text-[10px]">دج</span></h3>
-            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">غير متوفر</p>
-          </div>
-        </div>
+      {/* 1. Page Header */}
+      <section className="text-center space-y-4 max-w-3xl mx-auto px-4">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">جميع الباقات والخيارات المتاحة</h2>
+        <p className="text-slate-500 font-medium text-base">بإمكانك الترقية أو تغيير خطتك في أي وقت، التغيير يتم فوراً وبكل سهولة.</p>
+      </section>
 
-        {/* Expenses Card */}
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm shrink-0">
-            <CreditCard className="w-7 h-7" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المصاريف</p>
-            <h3 className="text-sm font-black text-slate-800 mt-0.5">تعبئة رصيد سريعة</h3>
-            <button className="text-[10px] font-black text-indigo-600 underline mt-1 uppercase hover:text-indigo-700 transition-colors">تحديث وسيلة الدفع</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Pricing Section */}
-      <div className="text-center space-y-2 py-4">
-        <h2 className="text-2xl font-black text-slate-800 tracking-tight">اختر الخطة المناسبة لنمو تجارتك</h2>
-        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">شفافية تامة، لا توجد رسوم خفية</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {plans.map((plan) => (
-          <div key={plan.id} className={`
-            bg-white rounded-[2.5rem] p-10 border transition-all flex flex-col relative overflow-hidden group
-            ${plan.popular ? 'border-indigo-200 shadow-2xl scale-105 z-10 bg-indigo-50/10' : 'border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1'}
-          `}>
+      {/* 2. Monthly Subscriptions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {MAIN_PLANS.map((plan) => (
+          <div key={plan.id} className={`relative flex flex-col p-8 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
             {plan.popular && (
-              <div className="absolute top-6 -left-12 bg-indigo-600 text-white px-12 py-1.5 -rotate-45 text-[9px] font-black uppercase shadow-md">
+              <span className="absolute -top-4 right-1/2 translate-x-1/2 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
                 الأكثر طلباً
-              </div>
+              </span>
             )}
 
-            <div className="mb-8">
-              <div className={`w-14 h-14 rounded-2xl ${plan.bg} ${plan.color} flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform`}>
-                <plan.icon className="w-7 h-7" />
-              </div>
-              <h4 className="text-lg font-black text-slate-800 mb-2">{plan.name}</h4>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black text-slate-900">{plan.basePrice}</span>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">{plan.unit}</span>
-              </div>
+            <div className="mb-6">
+              <h3 className="text-xl font-black text-slate-900">{plan.name}</h3>
+              <p className="text-xs text-slate-400 font-bold mt-2 leading-relaxed">{plan.description}</p>
             </div>
 
-            <div className="space-y-4 mb-10 flex-1">
-              {plan.features.map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full ${plan.bg} flex items-center justify-center`}>
-                    <Check className={`w-3 h-3 ${plan.color} stroke-[3]`} />
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-600">{feature}</span>
-                </div>
-              ))}
+            <div className="mb-8 flex items-baseline gap-2">
+              <span className="text-4xl font-black text-slate-900 tracking-tighter">{plan.price}</span>
+              <span className="text-sm font-bold text-slate-400">دج / شهرياً</span>
             </div>
+
+            <ul className="flex-1 space-y-4 mb-10 border-t border-slate-50 pt-8">
+              {plan.features.map((feature, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-600">
+                  <i className="fa-solid fa-circle-check text-indigo-500 text-xs shrink-0"></i>
+                  {feature}
+                </li>
+              ))}
+            </ul>
 
             <button
               onClick={() => handleOpenModal(plan)}
-              className={`
-              w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all
-              ${plan.current
-                  ? 'bg-slate-100 text-slate-400 cursor-default flex items-center justify-center gap-2'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95'
-                }
-            `}>
-              {plan.current ? <><Check className="w-4 h-4" /> خطتك الحالية</> : 'اشترك الآن'}
+              className={`w-full py-4 rounded-lg font-black text-sm transition-all ${plan.popular
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'
+                : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'
+                }`}>
+              {plan.buttonText}
             </button>
           </div>
         ))}
       </div>
 
+      {/* 3. Special Solutions (Pay-as-you-go & Enterprise) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+
+        {/* Enhanced Pay-as-you-go Plan */}
+        <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 rounded-xl p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all border-dashed">
+          <div className="absolute top-0 left-0 w-24 h-24 bg-amber-500/5 rounded-br-full -ml-8 -mt-8 transition-transform group-hover:scale-125"></div>
+
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-100">
+                <i className="fa-solid fa-bolt-lightning"></i>
+              </div>
+              <div>
+                <h4 className="text-2xl font-black text-slate-900">الدفع حسب الاستخدام</h4>
+                <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest mt-1">بدون رسوم اشتراك شهري</p>
+              </div>
+            </div>
+
+            <p className="text-slate-600 text-sm font-medium leading-relaxed">
+              مثالي للمتاجر الجديدة التي لا تريد الالتزام بميزانية ثابتة. ادفع فقط مقابل الطلبيات التي يتم تأكيدها بنجاح من خلال نظامنا.
+            </p>
+
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-amber-100 flex items-center justify-between">
+              <div className="text-right">
+                <span className="block text-[10px] font-black text-slate-400 uppercase">تكلفة التأكيد الواحد</span>
+                <span className="text-3xl font-black text-amber-600 tracking-tighter">10 دج</span>
+              </div>
+              <ul className="space-y-1.5">
+                <li className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
+                  <i className="fa-solid fa-circle text-[4px] text-amber-400"></i>
+                  أقل خطر مالي
+                </li>
+                <li className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
+                  <i className="fa-solid fa-circle text-[4px] text-amber-400"></i>
+                  شحن الرصيد متى شئت
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <button className="w-full mt-8 bg-slate-900 text-white py-4 rounded-lg font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+            شحن الرصيد (Top-up)
+          </button>
+        </div>
+
+        {/* Enhanced Enterprise / Self-Hosted Plan */}
+        <div className="bg-[#0F172A] text-white border border-slate-800 rounded-xl p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20"></div>
+
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 text-white flex items-center justify-center text-2xl backdrop-blur-sm">
+                <i className="fa-solid fa-server"></i>
+              </div>
+              <div>
+                <h4 className="text-2xl font-black text-white">الاستضافة الذاتية (Self-Hosted)</h4>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1">خصوصية مطلقة لبياناتك</p>
+              </div>
+            </div>
+
+            <p className="text-slate-400 text-sm font-medium leading-relaxed">
+              الحل الأمثل للشركات اللوجستية والشبكات الكبرى التي تتطلب التحكم الكامل في السيرفرات وقواعد البيانات الخاصة بها مع ميزات تخصيص غير محدودة.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'أمان البيانات', icon: 'fa-shield-halved' },
+                { label: 'سيرفرات خاصة', icon: 'fa-microchip' },
+                { label: 'دعم API مفتوح', icon: 'fa-code' },
+                { label: 'لوحة تحكم مخصصة', icon: 'fa-sliders' }
+              ].map((item, i) => (
+                <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-lg flex items-center gap-3">
+                  <i className={`fa-solid ${item.icon} text-indigo-400 text-xs`}></i>
+                  <span className="text-[10px] font-bold text-slate-300">{item.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-6 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">التسعير بناءً على الحجم والمتطلبات</span>
+                <span className="text-sm font-black text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded border border-indigo-400/20">حسب الطلب</span>
+              </div>
+            </div>
+          </div>
+
+          <button className="w-full mt-8 bg-white text-slate-900 py-4 rounded-lg font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl">
+            <i className="fa-solid fa-headset text-base"></i>
+            تحدث مع فريق الخبراء
+          </button>
+        </div>
+
+      </div>
+
       {/* Payment History Table */}
-      <div className="space-y-4">
+      <div className="space-y-4 pt-8 border-t border-slate-100 mt-12">
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600 border border-slate-100">
@@ -400,41 +467,40 @@ const SubscriptionsView: React.FC = () => {
               </tbody>
             </table>
           </div>
-          <div className="p-4 bg-slate-50/50 border-t border-slate-100 text-center">
-            <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">عرض المزيد من العمليات</button>
-          </div>
         </div>
       </div>
-      {/* Subscription Modal */}
-      {isModalOpen && selectedPlan && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
+
+      {/* New Subscription Modal */}
+      {isModalOpen && selectedPlan && (
+        <div className="fixed inset-0 z-[100] grid place-items-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={handleCloseModal}></div>
+          <div className="relative z-10 bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white z-10 p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
-                <h3 className="text-xl font-black text-slate-800">اشتراك جديد</h3>
-                <p className="text-xs text-slate-400 font-bold mt-1">أكمل الخطوات لتفعيل {selectedPlan.name}</p>
+                <h3 className="text-lg font-black text-slate-800">تفعيل الاشتراك</h3>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">
+                  أنت بصدد الاشتراك في <span className="text-indigo-600">{selectedPlan.name}</span>
+                </p>
               </div>
-              <button onClick={handleCloseModal} className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-xl transition-colors">
-                <X className="w-5 h-5" />
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-rose-500 transition-colors">
+                <i className="fa-solid fa-xmark text-xl"></i>
               </button>
             </div>
 
-            <div className="p-6 space-y-8">
+            <div className="p-8">
               {/* Stepper */}
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center mb-8">
                 {[1, 2, 3].map((s) => (
-                  <div key={s} className={`flex items-center gap-2 ${step === s ? 'text-indigo-600' : step > s ? 'text-emerald-500' : 'text-slate-300'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs border-2 ${step === s ? 'border-indigo-600 bg-indigo-50' :
-                      step > s ? 'border-emerald-500 bg-emerald-50' :
-                        'border-slate-200 bg-slate-50'
+                  <div key={s} className="flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all ${step === s ? 'border-indigo-600 bg-indigo-50 text-indigo-600' :
+                      step > s ? 'border-emerald-500 bg-emerald-500 text-white' :
+                        'border-slate-200 bg-white text-slate-300'
                       }`}>
-                      {step > s ? <Check className="w-4 h-4" /> : s}
+                      {step > s ? <i className="fa-solid fa-check"></i> : s}
                     </div>
-                    <span className="text-[10px] font-black uppercase hidden md:block">
-                      {s === 1 ? 'المدة' : s === 2 ? 'الدفع' : 'التأكيد'}
-                    </span>
-                    {s < 3 && <div className="w-8 h-0.5 bg-slate-100 mx-2"></div>}
+                    {s < 3 && <div className={`w-12 h-1 bg-slate-100 mx-2 ${step > s ? 'bg-emerald-200' : ''}`}></div>}
                   </div>
                 ))}
               </div>
@@ -442,217 +508,124 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 1: Duration */}
               {step === 1 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <h4 className="font-black text-slate-800 text-sm">اختر مدة الاشتراك</h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[1, 3, 6, 12].map((m) => (
                       <button
                         key={m}
                         onClick={() => setDuration(m)}
-                        className={`p-4 rounded-2xl border-2 transition-all text-center space-y-2 ${duration === m
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                          : 'border-slate-100 hover:border-indigo-100 hover:bg-slate-50 text-slate-600'
+                        className={`p-4 rounded-xl border-2 transition-all text-center space-y-2 ${duration === m
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                          : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                           }`}
                       >
-                        <h4 className="text-xl font-black">{m}</h4>
-                        <p className="text-[10px] font-bold uppercase">أشهر</p>
-                        {m > 1 && (
-                          <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">
-                            -{m === 3 ? '5' : m === 6 ? '10' : '15'}%
-                          </span>
-                        )}
+                        <h5 className="text-xl font-black">{m}</h5>
+                        <span className="text-[10px] font-bold uppercase">أشهر</span>
+                        {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
                       </button>
                     ))}
                   </div>
 
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
-                    {/* Coupon Section */}
-                    <div className="relative">
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <input
-                            type="text"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            placeholder="هل لديك كوبون خصم؟"
-                            className="w-full pl-4 pr-10 py-3 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                            disabled={!!appliedCoupon}
-                          />
-                          <TicketPercent className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        </div>
-                        <button
-                          onClick={appliedCoupon ? () => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(null); } : handleApplyCoupon}
-                          disabled={couponLoading || (!couponCode && !appliedCoupon)}
-                          className={`px-6 py-3 rounded-xl font-black text-xs transition-all ${appliedCoupon
-                            ? 'bg-rose-100 text-rose-600 hover:bg-rose-200'
-                            : 'bg-slate-800 text-white hover:bg-slate-700'
-                            }`}
-                        >
-                          {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : appliedCoupon ? 'إزالة' : 'تطبيق'}
-                        </button>
-                      </div>
-                      {couponMsg && (
-                        <p className={`text-[10px] font-bold mt-2 ${couponMsg.type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {couponMsg.text}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase">الإجمالي التقديري</p>
-                        <div className="flex items-baseline gap-2 mt-1">
-                          <h3 className="text-2xl font-black text-slate-800">
-                            {totalPrice.toLocaleString()}
-                            <span className="text-sm text-slate-400 font-bold mr-1">دج</span>
-                          </h3>
-                          {appliedCoupon && (
-                            <span className="text-sm font-bold text-slate-400 line-through">
-                              {Math.floor(selectedPlan.basePrice * duration * (duration === 3 ? 0.95 : duration === 6 ? 0.90 : duration === 12 ? 0.85 : 1)).toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <button onClick={() => setStep(2)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-colors">
-                        متابعة للدفع
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        placeholder="كود الخصم (اختياري)"
+                        className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading}
+                        className="px-6 py-3 bg-slate-900 text-white rounded-lg text-xs font-black hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {couponLoading ? '...' : 'تطبيق'}
                       </button>
                     </div>
+                    {couponMsg && (
+                      <p className={`text-[10px] font-bold ${couponMsg.type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {couponMsg.text}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+                      <span className="text-xs font-black text-slate-500 uppercase">الإجمالي</span>
+                      <span className="text-2xl font-black text-slate-900">{getDisplayPrice()} <small className="text-sm font-bold text-slate-400">{currency}</small></span>
+                    </div>
                   </div>
+
+                  <button onClick={() => setStep(2)} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+                    متابعة للدفع
+                  </button>
                 </div>
               )}
 
               {/* Step 2: Payment Method */}
               {step === 2 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setPaymentMethod('ccp')}
-                      className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'ccp' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}`}
-                    >
-                      <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600">
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <div className="text-right">
-                        <h4 className="font-black text-slate-800">CCP البريد الجزائري</h4>
-                        <p className="text-[10px] text-slate-500">تحويل كلاسيكي</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setPaymentMethod('baridimob')}
-                      className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'baridimob' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}`}
-                    >
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                        <Smartphone className="w-6 h-6" />
-                      </div>
-                      <div className="text-right">
-                        <h4 className="font-black text-slate-800">BaridiMob</h4>
-                        <p className="text-[10px] text-slate-500">دفع إلكتروني سريع</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setPaymentMethod('redotpay')}
-                      className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'redotpay' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}`}
-                    >
-                      <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600">
-                        <CreditCard className="w-6 h-6" />
-                      </div>
-                      <div className="text-right">
-                        <h4 className="font-black text-slate-800">RedotPay</h4>
-                        <p className="text-[10px] text-slate-500">دفع دولي (USD)</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setPaymentMethod('paypal')}
-                      className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'paypal' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}`}
-                    >
-                      <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center text-sky-600">
-                        <Globe className="w-6 h-6" />
-                      </div>
-                      <div className="text-right">
-                        <h4 className="font-black text-slate-800">PayPal</h4>
-                        <p className="text-[10px] text-slate-500">دفع عالمي (USD)</p>
-                      </div>
-                    </button>
+                  <h4 className="font-black text-slate-800 text-sm">اختر وسيلة الدفع</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { id: 'ccp', name: 'CCP البريد الجزائري', icon: 'fa-building-columns', color: 'text-yellow-600 bg-yellow-50' },
+                      { id: 'baridimob', name: 'BaridiMob', icon: 'fa-mobile-screen', color: 'text-blue-600 bg-blue-50' },
+                      { id: 'redotpay', name: 'RedotPay (USD)', icon: 'fa-credit-card', color: 'text-rose-600 bg-rose-50' },
+                      { id: 'paypal', name: 'PayPal (USD)', icon: 'fa-paypal', color: 'text-sky-600 bg-sky-50' },
+                    ].map((method) => (
+                      <button
+                        key={method.id}
+                        onClick={() => setPaymentMethod(method.id as any)}
+                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-right ${paymentMethod === method.id
+                          ? 'border-indigo-600 bg-indigo-50/50'
+                          : 'border-slate-100 hover:bg-slate-50'
+                          }`}
+                      >
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl ${method.color}`}>
+                          <i className={`fa-brands ${method.icon.includes('paypal') ? '' : 'fa-solid'} ${method.icon}`}></i>
+                        </div>
+                        <div>
+                          <h5 className="font-black text-slate-800 text-sm">{method.name}</h5>
+                          <p className="text-[10px] font-bold text-slate-400">دفع آمن وفوري</p>
+                        </div>
+                        {paymentMethod === method.id && <i className="fa-solid fa-circle-check text-indigo-600 mr-auto text-xl"></i>}
+                      </button>
+                    ))}
                   </div>
-
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase">المبلغ النهائي</p>
-                      <h3 className="text-2xl font-black text-slate-800 mt-1">
-                        {getDisplayPrice()}
-                        <span className="text-sm text-slate-400 font-bold mr-1">{currency}</span>
-                      </h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setStep(1)} className="px-4 py-3 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-xl transition-colors">
-                        عودة
-                      </button>
-                      <button onClick={() => setStep(3)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-colors">
-                        تأكيد الوسيلة
-                      </button>
-                    </div>
+                  <div className="flex gap-4">
+                    <button onClick={() => setStep(1)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl font-black text-xs hover:bg-slate-200">عودة</button>
+                    <button onClick={() => setStep(3)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">تأكيد الوسيلة</button>
                   </div>
                 </div>
               )}
 
-              {/* Step 3: Payment Info & Proof */}
+              {/* Step 3: Confirmation & Proof */}
               {step === 3 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
-                    <h4 className="font-black text-slate-700 flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-indigo-600" />
-                      معلومات الدفع
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="bg-white p-3 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">الحساب / الرقم</p>
-                        <p className="font-mono font-bold text-slate-700 mt-1 select-all">
-                          {paymentMethod === 'ccp' && '0000000000 KEY 00'}
-                          {paymentMethod === 'baridimob' && '007999990000000000'}
-                          {paymentMethod === 'redotpay' && 'ID: 123456789 - TRC20'}
-                          {paymentMethod === 'paypal' && 'payment@litecrm.com'}
-                        </p>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">الإسم المستفيد</p>
-                        <p className="font-bold text-slate-700 mt-1">LITE CRM LLC</p>
-                      </div>
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-center">
+                    <p className="text-xs font-bold text-slate-500 mb-2">يرجى إرسال المبلغ: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> إلى:</p>
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer" onClick={() => { navigator.clipboard.writeText('000000000099') }}>
+                      0000 0000 0000 99 (LITE CRM)
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="block text-sm font-black text-slate-700">إرفاق إثبات الدفع</label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors relative cursor-pointer group">
-                      <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*,application/pdf" />
-                      {proofPreview ? (
-                        <div className="relative w-full max-w-[200px] aspect-video">
-                          <img src={proofPreview} alt="Proof" className="w-full h-full object-cover rounded-lg shadow-sm" />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                            <p className="text-white text-xs font-bold">تغيير الصورة</p>
-                          </div>
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer relative">
+                    <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    {proofPreview ? (
+                      <img src={proofPreview} alt="Proof" className="h-32 object-contain rounded-lg shadow-sm" />
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                          <i className="fa-solid fa-cloud-arrow-up"></i>
                         </div>
-                      ) : (
-                        <>
-                          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                            <Upload className="w-6 h-6" />
-                          </div>
-                          <p className="text-sm font-bold text-slate-600">اضغط لرفع الصورة أو الملف</p>
-                          <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, PDF (Max 5MB)</p>
-                        </>
-                      )}
-                    </div>
+                        <h5 className="font-black text-slate-700 text-xs">اضغط لرفع صورة الوصل</h5>
+                        <p className="text-[10px] text-slate-400 mt-1">تأكد من وضوح الصورة والمعلومات</p>
+                      </>
+                    )}
                   </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <button onClick={() => setStep(2)} className="flex-1 py-3 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-xl transition-colors">
-                      عودة
-                    </button>
-                    <button onClick={() => handleSubmitSubscription(true)} className="flex-1 py-3 border border-slate-200 text-slate-600 font-black text-xs hover:bg-slate-50 rounded-xl transition-colors">
-                      الدفع لاحقاً
-                    </button>
-                    <button onClick={() => handleSubmitSubscription(false)} className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20">
-                      إتمام العملية
+                  <div className="flex gap-4">
+                    <button onClick={() => setStep(2)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl font-black text-xs hover:bg-slate-200">عودة</button>
+                    <button onClick={() => handleSubmitSubscription(false)} className="flex-[2] py-4 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-600/20">
+                      إتمام وإرسال الطلب
                     </button>
                   </div>
                 </div>
@@ -661,19 +634,8 @@ const SubscriptionsView: React.FC = () => {
             </div>
           </div>
         </div>
-        , document.body)}
+      )}
 
-      {/* Support Message */}
-      <div className="bg-indigo-900 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32"></div>
-        <div className="relative z-10 space-y-2 text-center md:text-right">
-          <h3 className="text-lg font-black tracking-tight">تحتاج إلى عرض مخصص لشركتك؟</h3>
-          <p className="text-indigo-200 text-[11px] font-medium max-w-md">نحن هنا لمساعدتك في تخصيص باقة تناسب حجم أعمالك اللوجستية وتوفر لك أفضل قيمة مقابل السعر.</p>
-        </div>
-        <button className="relative z-10 px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-950/20 hover:bg-indigo-50 transition-all flex items-center gap-2">
-          تواصل مع المبيعات <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from '../types';
 import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen } from 'lucide-react';
 import logo from '../assets/logo.png';
+import logoIcon from '../assets/logo-icon.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -114,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
             <div className="bg-amber-400/10 text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-amber-400/20 tracking-wider">PRO</div>
           </>
         ) : (
-          <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
+          <img src={logoIcon} alt="Logo" className="w-10 h-10 object-contain" />
         )}
       </div>
 

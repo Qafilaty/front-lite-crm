@@ -209,7 +209,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     if (deliveryCompanies.length === 0 && user?.company?.id) {
       setLoadingCompanies(true);
       try {
-        const result = await deliveryCompanyService.getAllDeliveryCompanies(user.company.id);
+        const result = await deliveryCompanyService.getAllDeliveryCompanies();
         if (result.success && result.deliveryCompanies) {
           setDeliveryCompanies(result.deliveryCompanies);
         }
@@ -227,7 +227,6 @@ const OrdersView: React.FC<OrdersViewProps> = ({
 
     setIsSendingToDelivery(true);
     const result = await deliveryCompanyService.addOrderToDeliveryCompany(
-      user.company.id,
       selectedCompanyId,
       [selectedOrderForDelivery]
     );
@@ -304,7 +303,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                     <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">#{order.id}</td>
                     <td className="px-6 py-4 text-[12px] text-slate-800 font-black">{order.customer}</td>
                     <td className="px-6 py-4 text-[11px] text-slate-500 font-medium">{order.product}</td>
-                    <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} ر.س</td>
+                    <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} د.ج</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${getStatusStyle(order.status)}`}>
                         {getStatusLabel(order.status)}

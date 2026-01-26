@@ -75,15 +75,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       const prices = p.variantsProbability.map(v => v.price);
       const min = Math.min(...prices);
       const max = Math.max(...prices);
-      if (min === max) return <span className="font-bold text-slate-900">{min} ر.س</span>;
+      if (min === max) return <span className="font-bold text-slate-900">{min} د.ج</span>;
       return (
         <div className="flex flex-col text-xs">
-          <span className="font-bold text-slate-900">{min} - {max} ر.س</span>
+          <span className="font-bold text-slate-900">{min} - {max} د.ج</span>
           <span className="text-gray-400">حسب الخيار</span>
         </div>
       );
     }
-    return <span className="font-bold text-slate-900">{p.price} ر.س</span>;
+    return <span className="font-bold text-slate-900">{p.price} د.ج</span>;
   };
 
   const getCostDisplay = (p: Product) => {
@@ -91,14 +91,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       const costs = p.variantsProbability.map(v => v.cost || 0);
       const min = Math.min(...costs);
       const max = Math.max(...costs);
-      if (min === max) return <span className="font-medium text-gray-500">{min} ر.س</span>;
+      if (min === max) return <span className="font-medium text-gray-500">{min} د.ج</span>;
       return (
         <div className="flex flex-col text-xs">
-          <span className="font-medium text-gray-600">{min} - {max} ر.س</span>
+          <span className="font-medium text-gray-600">{min} - {max} د.ج</span>
         </div>
       );
     }
-    return <span className="font-medium text-gray-500">{p.cost || 0} ر.س</span>;
+    return <span className="font-medium text-gray-500">{p.cost || 0} د.ج</span>;
   };
 
   // --- Actions ---
@@ -372,8 +372,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                           <tr key={idx} className="hover:bg-gray-50/50">
                                             <td className="px-4 py-3 font-medium text-slate-700">{variant.name}</td>
                                             <td className="px-4 py-3 font-mono text-xs text-gray-500">{variant.sku}</td>
-                                            <td className="px-4 py-3 text-slate-700 font-bold">{variant.price} ر.س</td>
-                                            <td className="px-4 py-3 text-gray-500">{variant.cost} ر.س</td>
+                                            <td className="px-4 py-3 text-slate-700 font-bold">{variant.price} د.ج</td>
+                                            <td className="px-4 py-3 text-gray-500">{variant.cost} د.ج</td>
                                             <td className="px-4 py-3">
                                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variant.quantity > 5 ? 'bg-green-50 text-green-700' : variant.quantity > 0 ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
                                                 {variant.quantity} قطعة
