@@ -7,13 +7,14 @@ import {
   History, FileText, Package, Globe, Building, Check,
   ChevronRight, Filter, AlertCircle, Calendar, ArrowUpRight,
   ClipboardCheck, Sparkles, LayoutList, ArrowRight, ListOrdered, Trophy,
-  Loader2
+  Loader2, CheckSquare, Square
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
-import { PaginationControl } from './common';
+import { PaginationControl, DeleteConfirmationModal } from './common';
 import { salaryService, userService, orderService } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { Trash2 } from 'lucide-react';
 
 interface SalariesViewProps { }
 
@@ -38,6 +39,14 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Selection Logic for Payout
+  const [isPayoutMode, setIsPayoutMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [salaryToDelete, setSalaryToDelete] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -133,26 +142,40 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Handle Logic for Payment Processing
-  const handleProcessPayment = async (userId: string) => {
-    // @ts-ignore
-    const data = salariesData.find(d => d.user.id === userId);
+  const handleProcessPayment = async () => {
+    if (!selectedUserForOrders) return;
+    const userId = selectedUserForOrders.id;
 
-    if (!data || data.unpaidAmount === 0) {
-      toast.error("لا يوجد مبلغ مستحق للصرف");
+    // Calculate totals from selected orders
+    const selectedOrders = userOrders.filter(o => selectedOrderIds.includes(o.id));
+    // If not all loaded, we might need a safer way, but we only select from loaded. 
+    // Wait, selection across pages is hard. Let's assume selection from CURRENT functionality is required.
+    // Ideally we pass just IDs and backend calculates? But we need to show total on Frontend.
+    // For now, let's assume we pay based on IDs.
+
+    // We need to know the 'orderPrice' for the user to calculate total.
+    // @ts-ignore
+    const userSalaryData = salariesData.find(d => d.user.id === userId);
+    const orderPrice = userSalaryData?.orderPrice || 0;
+
+    const count = selectedOrderIds.length;
+    const amount = count * orderPrice;
+
+    if (count === 0) {
+      toast.error("يرجى تحديد طلب واحد على الأقل");
       return;
     }
 
     setIsProcessing(true);
     try {
-      const companyId = user?.company?.id;
-
       // 1. Create Salary Record
       const salaryPayload = {
-        ordersCount: data.deliveredCount,
-        orderPrice: data.orderPrice,
-        total: data.unpaidAmount,
-        note: `صرف مستحقات لـ ${data.deliveredCount} طلب (سعر الطلب: ${data.orderPrice})`,
-        userId: data.user.id,
+        ordersCount: count,
+        orderPrice: orderPrice,
+        total: amount,
+        note: `صرف مستحقات لـ ${count} طلب (سعر الطلب: ${orderPrice})`,
+        userId: userId,
+        idsOrder: selectedOrderIds,
         date: new Date().toISOString()
       };
 
@@ -160,7 +183,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
       if (createResult.success) {
         toast.success('تم صرف المستحقات وتصفير العداد بنجاح');
-        setSelectedUserForPayout(null);
+        setSelectedUserForOrders(null);
         fetchData(); // Refresh data to show 0 due
       } else {
         toast.error('فشل إنشاء سجل الراتب');
@@ -173,14 +196,18 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     }
   };
 
-  const fetchEmployeeOrders = async (userId: string, page: number) => {
+  const fetchEmployeeOrders = async (userId: string, page: number, mode: boolean = isPayoutMode) => {
     setLoadingOrders(true);
     try {
       const companyId = user?.company?.id;
       if (!companyId) return;
 
+      const filter = mode
+        ? { idConfirmed: userId, isDelivered: true, "commissions.0": { $exists: false } }
+        : { idConfirmed: userId, isDelivered: true };
+
       const result = await orderService.getAllOrders({
-        advancedFilter: { idConfirmed: userId },
+        advancedFilter: filter,
         pagination: { limit: ordersPerPage, page: page }
       });
 
@@ -198,12 +225,53 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     }
   };
 
-  const handleShowOrders = (userData: User) => {
+
+
+  const handleDeleteClick = (id: string) => {
+    setSalaryToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteSalary = async () => {
+    if (!salaryToDelete) return;
+
+    setLoading(true); // Or separate deleting state if preferred to not block whole table
+    try {
+      const result = await salaryService.deleteSalary(salaryToDelete);
+      if (result.success) {
+        toast.success("تم حذف الراتب بنجاح");
+        fetchData();
+        setDeleteModalOpen(false);
+        setSalaryToDelete(null);
+      } else {
+        toast.error("فشل في حذف الراتب");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("حدث خطأ ما");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
+  const handleShowOrders = (userData: User, payoutMode: boolean = false) => {
     setSelectedUserForOrders(userData);
+    setIsPayoutMode(payoutMode);
+    setSelectedOrderIds([]); // Reset selection
     setOrdersPage(1);
     setUserOrders([]);
-    fetchEmployeeOrders(userData.id, 1);
+    // We need to set the state first before fetching? 
+    // Fetch relies on isPayoutMode state? NO, fetchEmployeeOrders uses the param or state.
+    // But `fetchEmployeeOrders` is defined outside. It reads `isPayoutMode` from closure?
+    // Closure capture might be stale if called immediately.
+    // Better to pass mode to fetch function.
+
+    // Slight Refactor: pass mode to fetch
+    fetchEmployeeOrders(userData.id, 1, payoutMode);
   };
+
 
   const handlePageChangeOrders = (newPage: number) => {
     if (!selectedUserForOrders) return;
@@ -326,6 +394,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">الكمية</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">سعر الطلب</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">إجمالي المستحق</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">الحالة</th>
                   {activeTab === 'history' && <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">التاريخ</th>}
                   <th className="px-8 py-5 text-center">الإجراء</th>
                 </tr>
@@ -359,23 +428,40 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                       <span className="text-xs font-black text-slate-400">{(activeTab === 'due' ? data.orderPrice : data.orderPrice).toLocaleString()} دج</span>
                     </td>
                     <td className="px-6 py-5 text-center font-black text-indigo-600 font-mono">{(activeTab === 'due' ? data.unpaidAmount : (data.total || data.amount)).toLocaleString()} دج</td>
+                    <td className="px-6 py-5 text-center">
+                      {activeTab === 'due' ? (
+                        <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">بانتظار الصرف</span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">مدفوعة</span>
+                      )}
+                    </td>
                     {activeTab === 'history' && (
                       <td className="px-6 py-5 text-center text-[10px] font-black text-slate-500">{new Date(data.date).toLocaleDateString('ar-SA')}</td>
                     )}
                     <td className="px-8 py-5 text-center">
                       {activeTab === 'due' ? (
-                        <button onClick={() => setSelectedUserForPayout(data.user)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                          صرف العمولات
-                        </button>
+                        <div className="flex gap-2 justify-center">
+                          <button onClick={() => handleShowOrders(data.user, true)} className="px-6 py-3 bg-indigo-600 text-white border border-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+                            <DollarSign className="w-3 h-3" /> صرف العمولات
+                          </button>
+                        </div>
                       ) : (
-                        <div className="text-[10px] font-bold text-emerald-500">تم الدفع</div>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleDeleteClick(data.id)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            title="حذف السجل"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
                 {paginatedData.length === 0 && (
                   <tr>
-                    <td colSpan={activeTab === 'history' ? 6 : 5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
+                    <td colSpan={activeTab === 'history' ? 7 : 6} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
                   </tr>
                 )}
               </tbody>
@@ -383,81 +469,21 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
           )}
         </div>
 
-        {totalPages > 1 && (
-          <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center items-center gap-4">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
-            <div className="flex items-center gap-2">
-              {[...Array(totalPages)].map((_, i) => (
-                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[11px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-              ))}
-            </div>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
-          </div>
-        )}
-      </div>
-
-      {selectedUserForPayout && createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[85vh] border border-slate-200">
-            <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-600/20"><DollarSign className="w-7 h-7" /></div>
-                <div>
-                  <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">تأكيد صرف المستحقات</h4>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{selectedUserForPayout.name}</p>
-                </div>
+        {
+          totalPages > 1 && (
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center items-center gap-4">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
+              <div className="flex items-center gap-2">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[11px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
+                ))}
               </div>
-              <button onClick={() => setSelectedUserForPayout(null)} className="text-slate-400 hover:text-rose-500 p-3 rounded-2xl hover:bg-rose-50"><X className="w-6 h-6" /></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
             </div>
+          )
+        }
+      </div >
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar bg-slate-50/20">
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-[2rem] text-white shadow-2xl shadow-indigo-600/30 flex flex-col items-center text-center">
-                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em] mb-3">إجمالي مبلغ العمولة</p>
-                <h3 className="text-4xl font-black font-mono tracking-tighter">
-                  {/* @ts-ignore */}
-                  {salariesData.find(d => d.user.id === selectedUserForPayout.id)?.unpaidAmount.toLocaleString()} <span className="text-sm opacity-60">دج</span>
-                </h3>
-                <div className="flex items-center gap-3 mt-6 text-[11px] font-black bg-white/10 px-6 py-2 rounded-2xl border border-white/10">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  {/* @ts-ignore */}
-                  <span>تأكيد {salariesData.find(d => d.user.id === selectedUserForPayout.id)?.deliveredCount} طلب ناجح</span>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 text-amber-700">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <p className="text-xs font-bold leading-relaxed">
-                  تنبيه: عند تأكيد هذه العملية، سيتم إنشاء سجل دفع جديد وسيتم
-                  <span className="font-black underline mx-1">تصفير عداد الطلبات الموصلة</span>
-                  للموظف تلقائياً.
-                </p>
-              </div>
-
-              <button
-                onClick={() => handleShowOrders(selectedUserForPayout)}
-                className="w-full py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
-              >
-                <LayoutList className="w-4 h-4" /> استعراض قائمة الطلبات المؤكدة ({
-                  // @ts-ignore
-                  salariesData.find(d => d.user.id === selectedUserForPayout.id)?.deliveredCount || 0
-                })
-              </button>
-
-            </div>
-
-            <div className="p-8 border-t border-slate-200 bg-white shrink-0 flex gap-4">
-              <button disabled={isProcessing} onClick={() => setSelectedUserForPayout(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-50">إلغاء</button>
-              <button disabled={isProcessing} onClick={() => handleProcessPayment(selectedUserForPayout.id)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed">
-                {isProcessing ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>تأكيد وتصفير العداد <Check className="w-5 h-5" /></>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>, document.body
-      )}
 
       {selectedUserForOrders && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
@@ -466,7 +492,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><LayoutList className="w-6 h-6" /></div>
                 <div>
-                  <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">سجل الطلبات المؤكدة</h4>
+                  <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">{isPayoutMode ? 'اختيار الطلبات للصرف' : 'سجل الطلبات المؤكدة'}</h4>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{selectedUserForOrders.name} - الصفحة {ordersPage}</p>
                 </div>
               </div>
@@ -483,6 +509,27 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                   <table className="w-full text-right border-collapse flex-1">
                     <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                       <tr>
+                        {isPayoutMode && (
+                          <th className="px-6 py-4 w-16">
+                            <button
+                              onClick={() => {
+                                // Select All logic for CURRENT page
+                                const allIds = userOrders.map(o => o.id);
+                                const allSelected = allIds.every(id => selectedOrderIds.includes(id));
+                                if (allSelected) {
+                                  setSelectedOrderIds(prev => prev.filter(id => !allIds.includes(id)));
+                                } else {
+                                  setSelectedOrderIds(prev => [...prev.filter(id => !allIds.includes(id)), ...allIds]);
+                                }
+                              }}
+                              className="w-5 h-5 rounded-lg border-2 border-slate-300 flex items-center justify-center text-indigo-600 hover:border-indigo-600 transition-colors"
+                            >
+                              {/* Check if all visible are selected */
+                                userOrders.every(o => selectedOrderIds.includes(o.id)) && <CheckSquare className="w-4 h-4" />
+                              }
+                            </button>
+                          </th>
+                        )}
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">رقم الطلب</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">العميل</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">الحالة</th>
@@ -490,58 +537,124 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
-                      {userOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 text-xs font-black text-indigo-600 font-mono">
-                            {order.numberOrder || order.id?.substring(0, 8)}
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-xs font-bold text-slate-700">{order.fullName}</p>
-                            <p className="text-[10px] text-slate-400">{order.phone}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className="px-2.5 py-1 rounded-lg text-[10px] font-black"
-                              style={{
-                                backgroundColor: (order.status?.color || '#cbd5e1') + '20',
-                                color: order.status?.color || '#64748b'
-                              }}
-                            >
-                              {order.status?.nameAR || 'غير محدد'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-[10px] font-bold text-slate-400">
-                            {new Date(order.createdAt).toLocaleDateString('ar-SA')}
-                          </td>
-                        </tr>
-                      ))}
+                      {userOrders.map((order) => {
+                        const isSelected = selectedOrderIds.includes(order.id);
+                        return (
+                          <tr key={order.id}
+                            onClick={() => {
+                              if (!isPayoutMode) return;
+                              if (isSelected) {
+                                setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
+                              } else {
+                                setSelectedOrderIds(prev => [...prev, order.id]);
+                              }
+                            }}
+                            className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}`}
+                          >
+                            {isPayoutMode && (
+                              <td className="px-6 py-4">
+                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
+                                  {isSelected && <Check className="w-3 h-3" />}
+                                </div>
+                              </td>
+                            )}
+                            <td className="px-6 py-4 text-xs font-black text-indigo-600 font-mono">
+                              {order.numberOrder || order.id?.substring(0, 8)}
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-xs font-bold text-slate-700">{order.fullName}</p>
+                              <p className="text-[10px] text-slate-400">{order.phone}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-black"
+                                style={{
+                                  backgroundColor: (order.status?.color || '#cbd5e1') + '20',
+                                  color: order.status?.color || '#64748b'
+                                }}
+                              >
+                                {order.status?.nameAR || 'غير محدد'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-[10px] font-bold text-slate-400">
+                              {new Date(order.createdAt).toLocaleDateString('ar-SA')}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
 
                   {/* Pagination Stats inside Modal */}
-                  <div className="sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                    <PaginationControl
-                      currentPage={ordersPage}
-                      totalPages={Math.ceil(ordersTotal / ordersPerPage)}
-                      onPageChange={handlePageChangeOrders}
-                      limit={ordersPerPage}
-                      onLimitChange={setOrdersPerPage}
-                      totalItems={ordersTotal}
-                      isLoading={loadingOrders}
-                    />
+                  <div className="sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] bg-slate-50 border-t border-slate-200">
+                    <div className="flex flex-col">
+                      <PaginationControl
+                        currentPage={ordersPage}
+                        totalPages={Math.ceil(ordersTotal / ordersPerPage)}
+                        onPageChange={handlePageChangeOrders}
+                        limit={ordersPerPage}
+                        onLimitChange={setOrdersPerPage}
+                        totalItems={ordersTotal}
+                        isLoading={loadingOrders}
+                      />
+
+                      {isPayoutMode && (
+                        <div className="px-8 py-4 border-t border-slate-200 bg-white flex justify-between items-center gap-6">
+                          <div className="flex items-center gap-6">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">عدد الطلبات المختارة</p>
+                              <p className="text-lg font-black text-slate-800">{selectedOrderIds.length} <span className="text-xs text-slate-400">طلب</span></p>
+                            </div>
+                            <div className="h-8 w-px bg-slate-100"></div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">المبلغ الإجمالي</p>
+                              {/* Need to get orderPrice from context. salariesData might not be efficient to search. But we have selectedUserForOrders. 
+                                   We can find it in salariesData or assume we have it. 
+                                   salariesData available in scope. 
+                               */}
+                              <p className="text-lg font-black text-indigo-600 font-mono">
+                                {(() => {
+                                  // @ts-ignore
+                                  const userSalaryData = salariesData.find(d => d.user.id === selectedUserForOrders.id);
+                                  const price = userSalaryData?.orderPrice || 0;
+                                  return (selectedOrderIds.length * price).toLocaleString();
+                                })()} <span className="text-xs text-indigo-400">دج</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleProcessPayment}
+                            disabled={selectedOrderIds.length === 0 || isProcessing}
+                            className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
+                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                            تأكيد وصرف ({selectedOrderIds.length})
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
                   <Package className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="text-xs font-bold">لا توجد طلبات مؤكدة لهذا الموظف</p>
+                  <p className="text-xs font-bold">لا توجد طلبات {isPayoutMode ? 'مستحقة للدفع' : 'مؤكدة'}</p>
                 </div>
               )}
             </div>
           </div>
         </div>, document.body
       )}
+
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setSalaryToDelete(null); }}
+        onConfirm={confirmDeleteSalary}
+        title="حذف سجل الراتب"
+        description='هل أنت متأكد من حذف هذا السجل؟ سيتم إعادة جميع الطلبات المرتبطة به إلى حالة "غير مدفوعة" ويمكنك دفعها لاحقاً.'
+        isDeleting={loading}
+      />
 
     </div>
   );

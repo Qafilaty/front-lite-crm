@@ -38,8 +38,6 @@ export const GET_ORDER = gql`
       deliveryPrice
       discount
       weight
-      trackingReplaced
-      reasonReplaced
       duplicatePhone
       store {
         store {
@@ -123,22 +121,6 @@ export const GET_ORDER = gql`
         deleted
         createdAt
       }
-      lastTimeLine {
-        id
-        status
-        oreginalStatus {
-          id
-          nameAR
-          nameFR
-          nameEN
-          color
-          group
-          style
-          order
-        }
-        note
-        createdAt
-      }
       createdAt
       updatedAt
       updatedAtStatus
@@ -189,7 +171,6 @@ export const GET_ALL_ORDERS = gql`
         deliveryPrice
         discount
         weight
-        trackingReplaced
         duplicatePhone
         store {
           store {
@@ -224,22 +205,6 @@ export const GET_ALL_ORDERS = gql`
           sku
           price
           quantity
-        }
-        lastTimeLine {
-          id
-          status
-          oreginalStatus {
-            id
-            nameAR
-            nameFR
-            nameEN
-            color
-            group
-            style
-            order
-          }
-          note
-          createdAt
         }
         createdAt
         updatedAt
@@ -368,7 +333,6 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
         deliveryPrice
         discount
         weight
-        trackingReplaced
         duplicatePhone
         store {
           store {

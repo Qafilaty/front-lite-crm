@@ -863,7 +863,7 @@ export const salaryService = {
         mutation: CREATE_SALARY,
         variables: { content: salaryData },
       });
-      return { success: true, salary: data?.createSalary };
+      return { success: !!data?.createSalary, salary: data?.createSalary };
     } catch (error: any) {
       console.error('Create salary error:', error);
       return { success: false, error: error.message };
