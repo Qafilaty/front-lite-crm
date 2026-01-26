@@ -51,19 +51,20 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   // --- Columns State for Dynamic Table (Merged) ---
   const [visibleColumns, setVisibleColumns] = useState(() => {
     try {
-      const saved = localStorage.getItem('ordersTableColumns_v3'); // Version 3: Split Customer/Location
+      const saved = localStorage.getItem('ordersTableColumns_v4'); // Version 4: Split Status/ConfirmedBy
       return saved ? JSON.parse(saved) : {
-        customerInfo: true,   // Customer + Phone
-        locationInfo: true,   // State + City (New Split)
+        customerInfo: true,
+        locationInfo: true,
         financials: true,
         orderSummary: true,
-        statusInfo: true,
+        status: true,       // Split
+        confirmedBy: true,  // Split
         note: false,
         actions: true
       };
     } catch {
       return {
-        customerInfo: true, locationInfo: true, financials: true, orderSummary: true, statusInfo: true, note: false, actions: true
+        customerInfo: true, locationInfo: true, financials: true, orderSummary: true, status: true, confirmedBy: true, note: false, actions: true
       };
     }
   });
@@ -79,7 +80,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const toggleColumn = (key: string) => {
     const newCols: any = { ...visibleColumns, [key]: !(visibleColumns as any)[key] };
     setVisibleColumns(newCols);
-    localStorage.setItem('ordersTableColumns_v3', JSON.stringify(newCols));
+    localStorage.setItem('ordersTableColumns_v4', JSON.stringify(newCols));
   };
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchTerm, setSearchTerm] = useState('');
@@ -446,7 +447,8 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           locationInfo: 'الموقع',
                           orderSummary: 'الطلبية',
                           financials: 'المالية والشحن',
-                          statusInfo: 'الحالة والمتابعة',
+                          status: 'الحالة',
+                          confirmedBy: 'مؤكد الطلب',
                           note: 'الملاحظة'
                         };
                         return (
@@ -601,7 +603,8 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
                     {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
                     {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية والشحن</th>}
-                    {(visibleColumns as any).statusInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
+                    {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
+                    {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
                     {(visibleColumns as any).note && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">ملاحظة</th>}
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
                   </tr>
@@ -709,23 +712,23 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           </div>
                         </td>}
 
-                        {(visibleColumns as any).statusInfo && <td className="px-6 py-5">
-                          <div className="space-y-2">
-                            <span
-                              className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest block w-fit ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
-                              style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                            >
-                              {statusLabel}
-                            </span>
+                        {(visibleColumns as any).status && <td className="px-6 py-5">
+                          <span
+                            className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest block w-fit ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                            style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                          >
+                            {statusLabel}
+                          </span>
+                        </td>}
 
-                            <div className="flex items-center gap-1.5 px-0.5">
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${order.confirmed || (order.confirmationTimeLine && order.confirmationTimeLine.length > 0) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-300'}`}>
-                                <UserCheck className="w-2.5 h-2.5" />
-                              </div>
-                              <span className="text-[9px] font-bold text-slate-500">
-                                {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user?.name) || '-'}
-                              </span>
+                        {(visibleColumns as any).confirmedBy && <td className="px-6 py-5">
+                          <div className="flex items-center gap-1.5 px-0.5">
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${order.confirmed || (order.confirmationTimeLine && order.confirmationTimeLine.length > 0) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-300'}`}>
+                              <UserCheck className="w-2.5 h-2.5" />
                             </div>
+                            <span className="text-[9px] font-bold text-slate-500">
+                              {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user?.name) || '-'}
+                            </span>
                           </div>
                         </td>}
 

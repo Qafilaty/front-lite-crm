@@ -205,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             <div className="text-right hidden sm:block">
               <p className="text-[11px] font-black text-slate-800 leading-none mb-0.5 group-hover:text-indigo-600 transition-colors">{currentUser.name}</p>
-              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{currentUser.role === 'admin' ? 'أدمن' : 'مؤكد'}</p>
+              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{["admin", "owner"].includes(currentUser.role) ? 'مدير' : 'مؤكد'}</p>
             </div>
             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-sm ring-2 ring-transparent group-hover:ring-indigo-100 transition-all">
               {currentUser.name.charAt(0)}
@@ -330,7 +330,7 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-2 text-center">
                       <Shield className="w-5 h-5 text-indigo-500" />
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">الصلاحية</span>
-                      <span className="text-[10px] sm:text-[11px] font-black text-slate-800 truncate w-full">{currentUser.role === 'admin' ? 'مدير كامل' : 'مؤكد طلبات'}</span>
+                      <span className="text-[10px] sm:text-[11px] font-black text-slate-800 truncate w-full">{["admin", "owner"].includes(currentUser.role) ? 'مدير' : 'مؤكد'}</span>
                     </div>
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-2 text-center">
                       <Calendar className="w-5 h-5 text-emerald-500" />

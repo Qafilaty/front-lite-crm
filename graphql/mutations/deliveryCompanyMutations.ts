@@ -51,6 +51,8 @@ export const ADD_ORDER_TO_DELIVERY_COMPANY = gql`
       successOrder {
         id
         numberOrder
+        fullName
+        phone
         deliveryCompany {
           trackingCode
         }
@@ -59,6 +61,8 @@ export const ADD_ORDER_TO_DELIVERY_COMPANY = gql`
         data {
           id
           numberOrder
+          fullName
+          phone
           deliveryCompany {
             trackingCode
           }

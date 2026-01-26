@@ -25,8 +25,8 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
 
     // Results state
     const [results, setResults] = useState<{
-        success: { orderId: string; trackingCode: string }[];
-        failed: { orderId: string; parsedErrors: any[] }[];
+        success: { orderId: string; trackingCode: string; fullName: string; phone: string; }[];
+        failed: { orderId: string; parsedErrors: any[]; fullName: string; phone: string; }[];
     } | null>(null);
 
     // Reset state on open
@@ -69,19 +69,54 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                 // Transform to our internal result format
                 const successMapped = successOrders.map((s: any) => ({
                     orderId: s.id, // Ensure your backend returns the order ID inside successOrder objects
-                    trackingCode: s.deliveryCompany?.trackingCode || 'Unknown'
+                    trackingCode: s.deliveryCompany?.trackingCode || 'Unknown',
+                    fullName: s.fullName,
+                    phone: s.phone,
                 }));
 
                 const failedMapped = failedOrders.map((f: any) => {
-                    let parsedErrors = [];
+                    let parsedErrors: any[] = [];
                     try {
-                        parsedErrors = JSON.parse(f.errors);
+                        const parsed = JSON.parse(f.errors);
+
+                        if (Array.isArray(parsed)) {
+                            parsedErrors = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            // Handle object format (e.g. { message: "...", errors: { field: ["msg"] } })
+                            if (parsed.errors && typeof parsed.errors === 'object' && !Array.isArray(parsed.errors)) {
+                                Object.keys(parsed.errors).forEach(key => {
+                                    const val = parsed.errors[key];
+                                    if (Array.isArray(val)) {
+                                        val.forEach(v => parsedErrors.push({ message: v, field: key }));
+                                    } else {
+                                        parsedErrors.push({ message: String(val), field: key });
+                                    }
+                                });
+                            }
+
+                            // If we extracted nothing but there is a top-level message
+                            if (parsedErrors.length === 0 && parsed.message) {
+                                parsedErrors.push({ message: parsed.message, field: 'general' });
+                            }
+
+                            // If still empty (e.g. just some other object), stringify it or use as is
+                            if (parsedErrors.length === 0) {
+                                // If it looks like { message: "..." } but didn't hit above for some reason or just generic
+                                parsedErrors.push({ message: parsed.message || JSON.stringify(parsed), field: 'general' });
+                            }
+                        } else {
+                            // String or number or boolean
+                            parsedErrors = [{ message: String(parsed), field: 'general' }];
+                        }
+
                     } catch (e) {
                         parsedErrors = [{ message: f.errors || 'Unknown Error', field: 'general' }];
                     }
                     return {
-                        orderId: f.id,
-                        parsedErrors
+                        orderId: f.data?.id || f.id,
+                        parsedErrors,
+                        fullName: f.data?.fullName,
+                        phone: f.data?.phone,
                     };
                 });
 
@@ -218,7 +253,6 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                     </div>
                                     <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.success.map((res, idx) => {
-                                            const order = selectedOrders.find(o => o.id === res.orderId);
                                             return (
                                                 <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border border-emerald-100 bg-emerald-50/10 hover:bg-emerald-50/30 transition-colors gap-4">
                                                     <div className="flex items-center gap-3">
@@ -226,11 +260,9 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                                             <CheckCircle2 className="w-5 h-5" />
                                                         </div>
                                                         <div>
-                                                            <h5 className="text-xs font-black text-slate-800">{order?.fullName || 'طلب'}</h5>
+                                                            <h5 className="text-xs font-black text-slate-800">{res.fullName || 'طلب'}</h5>
                                                             <p className="text-[10px] font-bold text-slate-400">
-                                                                {(typeof order?.state === 'object' ? (order.state as any).name : order?.state) || '-'}
-                                                                <span className="mx-1">•</span>
-                                                                {order?.phone}
+                                                                {res.phone}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -263,7 +295,6 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                     </div>
                                     <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.failed.map((res, idx) => {
-                                            const order = selectedOrders.find(o => o.id === res.orderId);
                                             return (
                                                 <div key={idx} className="p-4 rounded-2xl border border-rose-100 bg-rose-50/20 space-y-3">
                                                     {/* Header Info */}
@@ -272,9 +303,9 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                                             <AlertCircle className="w-5 h-5" />
                                                         </div>
                                                         <div>
-                                                            <h5 className="text-sm font-black text-slate-800">{order?.fullName || 'طلب'}</h5>
+                                                            <h5 className="text-sm font-black text-slate-800">{res.fullName || 'طلب'}</h5>
                                                             <p className="text-[10px] font-bold text-rose-400">
-                                                                {(typeof order?.state === 'object' ? (order.state as any).name : order?.state) || '-'} • {order?.phone}
+                                                                {res.phone}
                                                             </p>
                                                         </div>
                                                     </div>

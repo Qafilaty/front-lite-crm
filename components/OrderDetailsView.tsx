@@ -704,8 +704,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     return currentVal || '';
                   })()}
                   onChange={(val) => {
-                    // Don't auto-update price. Let user click delivery buttons to apply new pricing.
-                    setEditedOrder({ ...editedOrder, state: val, city: '' });
+                    // Auto-update price based on new state and current delivery type
+                    let newShippingCost = editedOrder.shippingCost;
+                    if (val && editedOrder.deliveryType) {
+                      const prices = getDeliveryPriceForState(val);
+                      newShippingCost = editedOrder.deliveryType === 'home' ? prices.home : prices.desk;
+                    }
+                    setEditedOrder({ ...editedOrder, state: val, city: '', shippingCost: newShippingCost });
                   }}
                   options={[
                     { value: '', label: 'اختر الولاية' },

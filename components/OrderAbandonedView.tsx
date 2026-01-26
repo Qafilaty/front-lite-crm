@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
 import {
-    Search, Filter, Eye, ChevronLeft, ChevronRight
+    Search, Filter, Eye, ChevronLeft, ChevronRight, LayoutList, MapPin, AlertTriangle, Home, Building2, User, UserCheck
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
 import { useQuery, useLazyQuery } from '@apollo/client';
@@ -21,6 +21,37 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<Order[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // --- Dynamic Columns State ---
+    const [visibleColumns, setVisibleColumns] = useState(() => {
+        try {
+            const saved = localStorage.getItem('abandonedTableColumns_v1');
+            return saved ? JSON.parse(saved) : {
+                customerInfo: true,
+                locationInfo: true,
+                dateInfo: true,
+                financials: true,
+                status: true,
+                actions: true
+            };
+        } catch {
+            return { customerInfo: true, locationInfo: true, dateInfo: true, financials: true, status: true, actions: true };
+        }
+    });
+    const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
+
+    // Close menu on outside click
+    useEffect(() => {
+        const handleClickOutside = () => setIsColumnsMenuOpen(false);
+        if (isColumnsMenuOpen) document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [isColumnsMenuOpen]);
+
+    const toggleColumn = (key: string) => {
+        const newCols: any = { ...visibleColumns, [key]: !(visibleColumns as any)[key] };
+        setVisibleColumns(newCols);
+        localStorage.setItem('abandonedTableColumns_v1', JSON.stringify(newCols));
+    };
 
     // Filters
     const [storeFilter, setStoreFilter] = useState('all');
@@ -116,7 +147,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
             <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
                 <div className="flex flex-col gap-4">
-                    {/* Top Row: Search + Filter Toggle */}
+                    {/* Top Row: Search + Filter Toggle + Columns */}
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1">
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
@@ -129,6 +160,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                             />
                         </div>
 
+                        {/* Filter Toggle */}
                         <button
                             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
                             className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
@@ -141,6 +173,52 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                 </span>
                             )}
                         </button>
+
+                        {/* Columns Toggle */}
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsColumnsMenuOpen(!isColumnsMenuOpen);
+                                }}
+                                className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+                            >
+                                <LayoutList className="w-4 h-4" />
+                                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+                            </button>
+
+                            {isColumnsMenuOpen && (
+                                <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
+                                >
+                                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                                    <div className="space-y-1">
+                                        {Object.keys(visibleColumns).map(key => {
+                                            if (key === 'actions') return null;
+                                            const labels: any = {
+                                                customerInfo: 'العميل',
+                                                locationInfo: 'الموقع',
+                                                dateInfo: 'التاريخ',
+                                                financials: 'المالية',
+                                                status: 'الحالة'
+                                            };
+                                            return (
+                                                <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={(visibleColumns as any)[key]}
+                                                        onChange={() => toggleColumn(key)}
+                                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-xs font-bold text-slate-700">{labels[key] || key}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Collapsible Filters Area */}
@@ -200,11 +278,11 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                         <table className="w-full text-right border-collapse min-w-[1100px]">
                             <thead>
                                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
+                                    {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
+                                    {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
+                                    {(visibleColumns as any).dateInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>}
+                                    {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
+                                    {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
                                 </tr>
                             </thead>
@@ -218,53 +296,81 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
                                     return (
                                         <tr key={order.id} onClick={() => navigate(`/dashboard/orders/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
-                                            <td className="px-6 py-5">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
-                                                        {order.phone}
-                                                        {order.duplicatePhone && order.duplicatePhone > 1 && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSearchTerm(order.phone);
-                                                                }}
-                                                                className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
-                                                                title={`${order.duplicatePhone} طلبات لهذا الرقم`}
-                                                            >
-                                                                {order.duplicatePhone}
-                                                            </button>
-                                                        )}
-                                                    </p>
+
+                                            {/* Customer Info */}
+                                            {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
+                                                            {order.duplicatePhone && order.duplicatePhone > 1 && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSearchTerm(order.phone);
+                                                                    }}
+                                                                    className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
+                                                                    title={`${order.duplicatePhone} طلبات لهذا الرقم`}
+                                                                >
+                                                                    {order.duplicatePhone}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-5">
+                                            </td>}
+
+                                            {/* Location Info */}
+                                            {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">
-                                                        {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
-                                                    </span>
-                                                    {order.city && (
-                                                        <span className="text-[10px] font-bold text-slate-400 px-1">{order.city}</span>
+                                                    <div className="flex items-center gap-1.5 ">
+                                                        <MapPin className="w-3 h-3 text-slate-300" />
+                                                        <span className="text-[10px] font-bold text-slate-700">
+                                                            {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                                                            {order.city && ` - ${order.city}`}
+                                                        </span>
+                                                    </div>
+                                                    {order.address && (
+                                                        <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>
+                                                            {order.address}
+                                                        </p>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-5">
+                                            </td>}
+
+                                            {/* Date Info */}
+                                            {(visibleColumns as any).dateInfo && <td className="px-6 py-5">
                                                 <div className="text-[11px] font-bold text-slate-600">
                                                     {new Date(order.createdAt).toLocaleDateString('ar-DZ')}
                                                 </div>
                                                 <div className="text-[9px] font-bold text-slate-400">
                                                     {new Date(order.createdAt).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono">{order.totalPrice || order.amount} دج</td>
-                                            <td className="px-6 py-5">
+                                            </td>}
+
+                                            {/* Financials */}
+                                            {(visibleColumns as any).financials && <td className="px-6 py-5">
+                                                <div className="flex flex-col gap-1.5 items-start">
+                                                    <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
+                                                    <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                        {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
+                                                        <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
+                                                    </div>
+                                                </div>
+                                            </td>}
+
+                                            {/* Status */}
+                                            {(visibleColumns as any).status && <td className="px-6 py-5">
                                                 <span
                                                     className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                                                     style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
                                                 >
                                                     {statusLabel}
                                                 </span>
-                                            </td>
+                                            </td>}
+
+                                            {/* Actions */}
                                             <td className="px-6 py-5 text-center">
                                                 <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
                                                     مراجعة <Eye className="w-3.5 h-3.5" />
@@ -275,7 +381,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                 })}
                                 {orders.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات متروكة حالياً</td>
+                                        <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات متروكة حالياً</td>
                                     </tr>
                                 )}
                             </tbody>

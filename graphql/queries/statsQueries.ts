@@ -39,3 +39,32 @@ export const GET_ORDER_STATS = gql`
     }
   }
 `;
+
+export const GET_CONFIRMER_STATS = gql`
+  query GetConfirmerStats {
+    confirmerStats {
+      commissionPrice
+      deliveredCount
+      postponedCount
+      confirmationRate
+      deliveryRate
+      totalEarnings
+      confirmationBreakdown {
+        confirmed
+        cancelled
+        postponed
+      }
+      deliveryBreakdown {
+        delivered
+        delivering
+        returned
+      }
+      invoices {
+        id
+        total
+        date
+        note
+      }
+    }
+  }
+`;

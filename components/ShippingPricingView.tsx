@@ -19,6 +19,8 @@ const ShippingPricingView: React.FC = () => {
   const [pricingId, setPricingId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
+  const canEdit = user?.role === 'admin' || user?.role === 'owner';
+
   const loadData = async () => {
     if (!user?.company?.id) return;
 
@@ -171,7 +173,7 @@ const ShippingPricingView: React.FC = () => {
           <h2 className="text-xl font-black text-slate-800 tracking-tight">تسعير التوصيل</h2>
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة تكاليف الشحن حسب الولايات ونوع التوصيل</p>
         </div>
-        {isDirty && !loading && (
+        {isDirty && canEdit && !loading && (
           <button
             onClick={handleSave}
             disabled={isSubmitting}
@@ -210,15 +212,17 @@ const ShippingPricingView: React.FC = () => {
                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input
                       type="number"
+                      disabled={!canEdit}
                       value={globalHomePrice}
                       onChange={(e) => setGlobalHomePrice(e.target.value)}
                       placeholder="مثال: 500"
-                      className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                      className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all disabled:opacity-60"
                     />
                   </div>
                   <button
                     onClick={applyToAllHome}
-                    className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
+                    disabled={!canEdit}
+                    className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     تطبيق
                   </button>
@@ -234,15 +238,17 @@ const ShippingPricingView: React.FC = () => {
                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input
                       type="number"
+                      disabled={!canEdit}
                       value={globalOfficePrice}
                       onChange={(e) => setGlobalOfficePrice(e.target.value)}
                       placeholder="مثال: 300"
-                      className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                      className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all disabled:opacity-60"
                     />
                   </div>
                   <button
                     onClick={applyToAllOffice}
-                    className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
+                    disabled={!canEdit}
+                    className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     تطبيق
                   </button>
@@ -296,9 +302,10 @@ const ShippingPricingView: React.FC = () => {
                           <Home className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-indigo-500" />
                           <input
                             type="number"
+                            disabled={!canEdit}
                             value={state.homePrice}
                             onChange={(e) => updatePricing(state.id, 'homePrice', Number(e.target.value))}
-                            className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
+                            className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                           />
                         </div>
                       </td>
@@ -307,9 +314,10 @@ const ShippingPricingView: React.FC = () => {
                           <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-indigo-500" />
                           <input
                             type="number"
+                            disabled={!canEdit}
                             value={state.officePrice}
                             onChange={(e) => updatePricing(state.id, 'officePrice', Number(e.target.value))}
-                            className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
+                            className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                           />
                         </div>
                       </td>

@@ -15,6 +15,7 @@ import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useQuery, useLazyQuery } from '@apollo/client';
 import { ModernSelect, StatsSkeleton } from './common';
 import { GET_ALL_USERS } from '../graphql/queries';
+import { ConfirmerStatsView } from './ConfirmerStatsView';
 
 interface OrderStatsViewProps {
     currentUser: User;
@@ -23,6 +24,11 @@ interface OrderStatsViewProps {
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#475569'];
 
 const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
+
+    if (["confirmed", "confirmation"].includes(currentUser?.role)) {
+        return <ConfirmerStatsView />;
+    }
+
     const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
     // Auth logic for initial states

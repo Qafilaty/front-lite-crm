@@ -5,7 +5,7 @@ import { Order, OrderStatus } from '../types';
 import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
-  PlusCircle, Check, RefreshCcw, Info, UserCheck, User
+  PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
@@ -33,6 +33,41 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // --- Dynamic Columns State ---
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('trackingTableColumns_v1');
+      return saved ? JSON.parse(saved) : {
+        customerInfo: true,
+        locationInfo: true,
+        trackingInfo: true,
+        confirmedBy: true,
+        financials: true,
+        status: true,
+        actions: true
+      };
+    } catch {
+      return {
+        customerInfo: true, locationInfo: true, trackingInfo: true,
+        confirmedBy: true, financials: true, status: true, actions: true
+      };
+    }
+  });
+  const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setIsColumnsMenuOpen(false);
+    if (isColumnsMenuOpen) document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isColumnsMenuOpen]);
+
+  const toggleColumn = (key: string) => {
+    const newCols: any = { ...visibleColumns, [key]: !(visibleColumns as any)[key] };
+    setVisibleColumns(newCols);
+    localStorage.setItem('trackingTableColumns_v1', JSON.stringify(newCols));
+  };
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [storeFilter, setStoreFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
@@ -213,6 +248,53 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 </span>
               )}
             </button>
+
+            {/* Columns Toggle */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsColumnsMenuOpen(!isColumnsMenuOpen);
+                }}
+                className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+              >
+                <LayoutList className="w-4 h-4" />
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+              </button>
+
+              {isColumnsMenuOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
+                >
+                  <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                  <div className="space-y-1">
+                    {Object.keys(visibleColumns).map(key => {
+                      if (key === 'actions') return null;
+                      const labels: any = {
+                        customerInfo: 'العميل',
+                        locationInfo: 'الموقع',
+                        trackingInfo: 'كود التتبع',
+                        confirmedBy: 'مؤكد الطلب',
+                        financials: 'المالية',
+                        status: 'الحالة'
+                      };
+                      return (
+                        <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={(visibleColumns as any)[key]}
+                            onChange={() => toggleColumn(key)}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-xs font-bold text-slate-700">{labels[key] || key}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Collapsible Filters Area */}
@@ -337,12 +419,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
             <table className="w-full text-right border-collapse min-w-[1100px]">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
+                  {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
+                  {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
+                  {(visibleColumns as any).trackingInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>}
+                  {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
+                  {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
+                  {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
                 </tr>
               </thead>
@@ -354,7 +436,9 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
                   return (
                     <tr key={order.id} onClick={() => navigate(`/dashboard/tracking/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
-                      <td className="px-6 py-5">
+
+                      {/* Customer Info */}
+                      {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
                         <div className="space-y-0.5">
                           <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer}</p>
                           <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
@@ -373,22 +457,26 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                             )}
                           </p>
                         </div>
-                      </td>
-                      <td className="px-6 py-5">
+                      </td>}
+
+                      {/* Location Info */}
+                      {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">
-                            {/* State Display */}
-                            {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
-                          </span>
-                          {order.city && (
-                            <span className="text-[10px] font-bold text-slate-400 px-1">
-                              {order.city}
+                          <div className="flex items-center gap-1.5 ">
+                            <MapPin className="w-3 h-3 text-slate-300" />
+                            <span className="text-[10px] font-bold text-slate-700">
+                              {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                              {order.city && ` - ${order.city}`}
                             </span>
-                          )}
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{trackingCode}</td>
-                      <td className="px-6 py-5">
+                      </td>}
+
+                      {/* Tracking Info */}
+                      {(visibleColumns as any).trackingInfo && <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{trackingCode}</td>}
+
+                      {/* Confirmed By */}
+                      {(visibleColumns as any).confirmedBy && <td className="px-6 py-5">
                         {order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
@@ -401,15 +489,29 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         ) : (
                           <span className="text-[10px] text-slate-300 font-bold">-</span>
                         )}
-                      </td>
-                      <td className="px-6 py-5 font-black text-slate-800 text-[11px]">{order.totalPrice || order.amount} دج</td>
-                      <td className="px-6 py-5">
+                      </td>}
+
+                      {/* Financials */}
+                      {(visibleColumns as any).financials && <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1.5 items-start">
+                          <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
+                          <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
+                            <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
+                          </div>
+                        </div>
+                      </td>}
+
+                      {/* Status */}
+                      {(visibleColumns as any).status && <td className="px-6 py-5">
                         <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black border uppercase tracking-widest`}
                           style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
                         >
                           {statusName}
                         </span>
-                      </td>
+                      </td>}
+
+                      {/* Actions */}
                       <td className="px-6 py-5 text-center">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/tracking/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">
                           تتبع <Eye className="w-3.5 h-3.5" />
@@ -420,7 +522,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-slate-400 font-bold">لا توجد شحنات تطابق معايير البحث</td>
+                    <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">لا توجد شحنات تطابق معايير البحث</td>
                   </tr>
                 )}
               </tbody>
