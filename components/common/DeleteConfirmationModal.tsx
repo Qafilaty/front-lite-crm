@@ -47,14 +47,14 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
                             <button
                                 onClick={onClose}
                                 disabled={isDeleting}
-                                className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all disabled:opacity-50"
+                                className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-xs uppercase hover:bg-slate-50 transition-all disabled:opacity-50"
                             >
                                 إلغاء
                             </button>
                             <button
                                 onClick={onConfirm}
                                 disabled={isDeleting}
-                                className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-rose-600/30 hover:bg-rose-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="flex-1 py-3 bg-rose-600 text-white rounded-lg font-black text-xs uppercase shadow-lg shadow-rose-600/30 hover:bg-rose-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {isDeleting ? (
                                     <>جاري الحذف...</>

@@ -313,12 +313,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
     return createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300" dir="rtl">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] border border-slate-200">
+            <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] border border-slate-200">
 
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md">
                             <ShoppingCart className="w-6 h-6" />
                         </div>
                         <div>
@@ -351,7 +351,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         if (errors.customer) setErrors({ ...errors, customer: '' });
                                     }}
                                     onBlur={(e) => handleBlur('customer', e.target.value)}
-                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all ${errors.customer ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
+                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-lg text-xs font-bold transition-all ${errors.customer ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
                                 />
                                 {errors.customer && <p className="text-red-500 text-[9px] font-bold px-1">{errors.customer}</p>}
                             </div>
@@ -365,7 +365,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         if (errors.phone) setErrors({ ...errors, phone: '' });
                                     }}
                                     onBlur={(e) => handleBlur('phone', e.target.value)}
-                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all ${errors.phone ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
+                                    className={`w-full px-4 py-3 bg-slate-50 border rounded-lg text-xs font-bold transition-all ${errors.phone ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-500'}`}
                                 />
                                 {errors.phone && <p className="text-red-500 text-[9px] font-bold px-1">{errors.phone}</p>}
                             </div>
@@ -410,13 +410,13 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             </div>
                             <div className="col-span-full space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>
-                                <textarea placeholder="اسم الشارع، رقم البيت..." value={newOrder.address} onChange={e => setNewOrder({ ...newOrder, address: e.target.value })} className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white outline-none transition-all resize-none" />
+                                <textarea placeholder="اسم الشارع، رقم البيت..." value={newOrder.address} onChange={e => setNewOrder({ ...newOrder, address: e.target.value })} className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:bg-white outline-none transition-all resize-none" />
                             </div>
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setNewOrder({ ...newOrder, deliveryType: 'home' })}
-                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-lg border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <Home className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمنزل</span>
@@ -427,7 +427,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             </button>
                             <button
                                 onClick={() => setNewOrder({ ...newOrder, deliveryType: "inDesk" })}
-                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 transition-all ${newOrder.deliveryType === "inDesk" ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-lg border-2 transition-all ${newOrder.deliveryType === "inDesk" ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمكتب</span>
@@ -490,7 +490,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     }
                                     setIsProductPickerOpen(!isProductPickerOpen);
                                 }}
-                                className="w-full px-5 py-4 bg-slate-900 text-white rounded-xl font-bold text-[11px] uppercase flex items-center justify-between hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
+                                className="w-full px-5 py-4 bg-slate-900 text-white rounded-lg font-bold text-[11px] uppercase flex items-center justify-between hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
                             >
                                 <div className="flex items-center gap-3">
                                     <PlusCircle className="w-4 h-4 text-indigo-400" />
@@ -500,7 +500,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             </button>
 
                             {isProductPickerOpen && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 flex flex-col border-indigo-100 max-h-60">
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 flex flex-col border-indigo-100 max-h-60">
                                     <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2 sticky top-0">
                                         <Search className="w-4 h-4 text-slate-400" />
                                         <input
@@ -547,16 +547,16 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         {/* Cart Items */}
                         <div className="space-y-2">
                             {cart.map((item, idx) => (
-                                <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between group animate-in slide-in-from-left-2">
+                                <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between group animate-in slide-in-from-left-2">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-600"><Package className="w-4 h-4" /></div>
+                                        <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-indigo-600"><Package className="w-4 h-4" /></div>
                                         <div>
                                             <p className="text-[11px] font-black text-slate-800 leading-none">{item.name}</p>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">{item.variant}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200">
+                                        <div className="flex items-center gap-2 bg-white rounded-md p-1 border border-slate-200">
                                             <button onClick={() => { const u = [...cart]; u[idx].quantity = Math.max(1, u[idx].quantity - 1); setCart(u); }} className="p-1 text-slate-300 hover:text-rose-500"><MinusCircle className="w-4 h-4" /></button>
                                             <span className="w-6 text-center text-[11px] font-black text-slate-800">{item.quantity}</span>
                                             <button onClick={() => { const u = [...cart]; u[idx].quantity += 1; setCart(u); }} className="p-1 text-slate-300 hover:text-indigo-600"><PlusCircle className="w-4 h-4" /></button>
@@ -587,7 +587,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                             if (errors.shippingCost) setErrors({ ...errors, shippingCost: '' });
                                         }}
                                         onBlur={(e) => handleBlur('shippingCost', e.target.value)}
-                                        className={`w-full pr-10 pl-4 py-3 bg-slate-50 border rounded-xl text-xs font-black text-indigo-600 transition-all ${errors.shippingCost ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-400'}`}
+                                        className={`w-full pr-10 pl-4 py-3 bg-slate-50 border rounded-lg text-xs font-black text-indigo-600 transition-all ${errors.shippingCost ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:bg-white focus:border-indigo-400'}`}
                                     />
                                 </div>
                                 {errors.shippingCost && <p className="text-red-500 text-[9px] font-bold px-1">{errors.shippingCost}</p>}
@@ -601,14 +601,14 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         step="0.1"
                                         value={newOrder.weight || ''}
                                         onChange={e => setNewOrder({ ...newOrder, weight: parseFloat(e.target.value) || 0 })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
                                         placeholder="0.0"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظات (اختياري)</label>
-                                <input value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} placeholder="تعليمات التوصيل..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" />
+                                <input value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} placeholder="تعليمات التوصيل..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" />
                             </div>
                         </div>
                     </div>
@@ -621,7 +621,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">إجمالي المبلغ المطلوب</p>
                             <p className="text-2xl font-black text-slate-800 font-mono tracking-tighter">{total} <span className="text-[10px] opacity-40">دج</span></p>
                         </div>
-                        <button disabled={isSubmitting} onClick={handleConfirmOrder} className="w-full sm:w-auto px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:scale-100">
+                        <button disabled={isSubmitting} onClick={handleConfirmOrder} className="w-full sm:w-auto px-10 py-4 bg-indigo-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:scale-100">
                             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>تأكيد إنشاء الطلبية <ChevronLeft className="w-5 h-5" /></>}
                         </button>
                     </div>

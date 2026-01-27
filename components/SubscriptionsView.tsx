@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useMutation } from '@apollo/client';
 import { invoiceService } from '../services/apiService';
 import type { Invoice } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { History, Filter, Download, CreditCard, ArrowRight } from 'lucide-react';
+import { History, Filter, Download, CreditCard, ArrowRight, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { SINGLE_UPLOAD } from '../graphql/mutations/uploadMutations';
+import { CREATE_INVOICE } from '../graphql/mutations/invoiceMutations';
 
 // New Plans Data (from PricingPlans.tsx)
 const MAIN_PLANS = [
@@ -105,8 +110,12 @@ const SubscriptionsView: React.FC = () => {
       daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
+    // Find Arabic name from MAIN_PLANS
+    const planDetails = MAIN_PLANS.find(p => p.id === nameLower);
+    const displayName = isPayg ? 'الدفع حسب الاستخدام' : (planDetails ? planDetails.name : planData.name);
+
     currentPlan = {
-      name: isPayg ? 'الدفع حسب الاستخدام' : planData.name,
+      name: displayName,
       expiryDate: planData.dateExpiry || '',
       daysLeft: daysLeft,
       credit: planData.pointes || 0,
@@ -220,20 +229,69 @@ const SubscriptionsView: React.FC = () => {
     }
   };
 
+  /* Mutations */
+  const [singleUpload] = useMutation(SINGLE_UPLOAD);
+  const [createInvoice] = useMutation(CREATE_INVOICE);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmitSubscription = async (isPayLater: boolean) => {
-    // Submit logic placeholder
-    handleCloseModal();
+    if (!proofFile) {
+      toast.error('يرجى إرفاق وصل الدفع للمتابعة');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 1. Upload Proof
+      const uploadResult = await singleUpload({
+        variables: { file: proofFile }
+      });
+
+      const proofFilename = uploadResult.data?.singleUpload?.filename;
+
+      if (!proofFilename) {
+        throw new Error('فشل رفع الصورة');
+      }
+
+      // 2. Create Invoice
+      const invoiceContent = {
+        plan: selectedPlan.id,
+        totalPrice: totalPrice,
+        totalDiscount: 0, // already applied in totalPrice calculation logic if needed, or send separate
+        duration: duration,
+        proof: proofFilename,
+        paymentMethod: paymentMethod,
+        currency: currency,
+        idCoupon: appliedCoupon ? appliedCoupon.id : null // Assuming coupon object has id if from DB, or just null for now
+      };
+
+      const result = await createInvoice({
+        variables: { content: invoiceContent }
+      });
+
+      if (result.data?.createInvoice) {
+        toast.success('تم إرسال طلب الاشتراك بنجاح! سيتم مراجعته قريباً.');
+        handleCloseModal();
+        fetchInvoices(); // Refresh list
+      }
+
+    } catch (error) {
+      console.error('Subscription Error:', error);
+      toast.error('حدث خطأ أثناء الاشتراك. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24 max-w-[1400px] mx-auto text-right">
 
       {/* 0. Active Subscription Status Bar */}
-      <section className="bg-indigo-600 text-white rounded-xl p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mt-16 blur-2xl"></div>
+      <section className="bg-indigo-600 text-white rounded-lg p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mt-16 blur-xl"></div>
 
         <div className="flex items-center gap-5 relative z-10">
-          <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center text-2xl backdrop-blur-md border border-white/30">
+          <div className="w-14 h-14 rounded-lg bg-white/20 flex items-center justify-center text-2xl backdrop-blur-md border border-white/30">
             <i className="fa-solid fa-crown"></i>
           </div>
           <div>
@@ -244,18 +302,18 @@ const SubscriptionsView: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-4 relative z-10 w-full md:w-auto">
           {currentPlan.type !== 'payg' && (
-            <div className="flex-1 md:flex-none bg-white/10 border border-white/20 px-6 py-3 rounded-xl backdrop-blur-md">
+            <div className="flex-1 md:flex-none bg-white/10 border border-white/20 px-6 py-3 rounded-lg backdrop-blur-md">
               <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1 text-center md:text-right">المدة المتبقية</p>
               <p className="text-lg font-black text-center md:text-right">{currentPlan.daysLeft} يوم</p>
             </div>
           )}
           {currentPlan.type === 'payg' && (
-            <div className="flex-1 md:flex-none bg-emerald-500/20 border border-emerald-500/30 px-6 py-3 rounded-xl backdrop-blur-md">
+            <div className="flex-1 md:flex-none bg-emerald-500/20 border border-emerald-500/30 px-6 py-3 rounded-lg backdrop-blur-md">
               <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-1 text-center md:text-right">الرصيد المتاح</p>
               <p className="text-lg font-black text-center md:text-right">{currentPlan.credit} نقطة</p>
             </div>
           )}
-          <div className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs shadow-lg">
+          <div className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-black text-xs shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             اشتراك {currentPlan.status}
           </div>
@@ -271,7 +329,7 @@ const SubscriptionsView: React.FC = () => {
       {/* 2. Monthly Subscriptions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {MAIN_PLANS.map((plan) => (
-          <div key={plan.id} className={`relative flex flex-col p-8 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
+          <div key={plan.id} className={`relative flex flex-col p-8 rounded-lg border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
             {plan.popular && (
               <span className="absolute -top-4 right-1/2 translate-x-1/2 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
                 الأكثر طلباً
@@ -299,7 +357,7 @@ const SubscriptionsView: React.FC = () => {
 
             <button
               onClick={() => handleOpenModal(plan)}
-              className={`w-full py-4 rounded-lg font-black text-sm transition-all ${plan.popular
+              className={`w-full py-4 rounded-md font-black text-sm transition-all ${plan.popular
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'
                 : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'
                 }`}>
@@ -313,12 +371,12 @@ const SubscriptionsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
 
         {/* Enhanced Pay-as-you-go Plan */}
-        <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 rounded-xl p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all border-dashed">
+        <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 rounded-lg p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all border-dashed">
           <div className="absolute top-0 left-0 w-24 h-24 bg-amber-500/5 rounded-br-full -ml-8 -mt-8 transition-transform group-hover:scale-125"></div>
 
           <div className="space-y-6 relative z-10">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-100">
+              <div className="w-14 h-14 rounded-lg bg-amber-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-100">
                 <i className="fa-solid fa-bolt-lightning"></i>
               </div>
               <div>
@@ -331,7 +389,7 @@ const SubscriptionsView: React.FC = () => {
               مثالي للمتاجر الجديدة التي لا تريد الالتزام بميزانية ثابتة. ادفع فقط مقابل الطلبيات التي يتم تأكيدها بنجاح من خلال نظامنا.
             </p>
 
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-amber-100 flex items-center justify-between">
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg border border-amber-100 flex items-center justify-between">
               <div className="text-right">
                 <span className="block text-[10px] font-black text-slate-400 uppercase">تكلفة التأكيد الواحد</span>
                 <span className="text-3xl font-black text-amber-600 tracking-tighter">10 دج</span>
@@ -349,18 +407,18 @@ const SubscriptionsView: React.FC = () => {
             </div>
           </div>
 
-          <button className="w-full mt-8 bg-slate-900 text-white py-4 rounded-lg font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+          <button className="w-full mt-8 bg-slate-900 text-white py-4 rounded-md font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
             شحن الرصيد (Top-up)
           </button>
         </div>
 
         {/* Enhanced Enterprise / Self-Hosted Plan */}
-        <div className="bg-[#0F172A] text-white border border-slate-800 rounded-xl p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all">
+        <div className="bg-[#0F172A] text-white border border-slate-800 rounded-lg p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20"></div>
 
           <div className="space-y-6 relative z-10">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 text-white flex items-center justify-center text-2xl backdrop-blur-sm">
+              <div className="w-14 h-14 rounded-lg bg-white/10 border border-white/20 text-white flex items-center justify-center text-2xl backdrop-blur-sm">
                 <i className="fa-solid fa-server"></i>
               </div>
               <div>
@@ -380,7 +438,7 @@ const SubscriptionsView: React.FC = () => {
                 { label: 'دعم API مفتوح', icon: 'fa-code' },
                 { label: 'لوحة تحكم مخصصة', icon: 'fa-sliders' }
               ].map((item, i) => (
-                <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-lg flex items-center gap-3">
+                <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-md flex items-center gap-3">
                   <i className={`fa-solid ${item.icon} text-indigo-400 text-xs`}></i>
                   <span className="text-[10px] font-bold text-slate-300">{item.label}</span>
                 </div>
@@ -389,13 +447,13 @@ const SubscriptionsView: React.FC = () => {
 
             <div className="pt-6 border-t border-white/5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">التسعير بناءً على الحجم والمتطلبات</span>
-                <span className="text-sm font-black text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded border border-indigo-400/20">حسب الطلب</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">التسعير بناءً على الحجم والمتطلبات</span>
+                <span className="text-sm font-black text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded-sm border border-indigo-400/20">حسب الطلب</span>
               </div>
             </div>
           </div>
 
-          <button className="w-full mt-8 bg-white text-slate-900 py-4 rounded-lg font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl">
+          <button className="w-full mt-8 bg-white text-slate-900 py-4 rounded-md font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl">
             <i className="fa-solid fa-headset text-base"></i>
             تحدث مع فريق الخبراء
           </button>
@@ -407,7 +465,7 @@ const SubscriptionsView: React.FC = () => {
       <div className="space-y-4 pt-8 border-t border-slate-100 mt-12">
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600 border border-slate-100">
+            <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-indigo-600 border border-slate-100">
               <History className="w-5 h-5" />
             </div>
             <div>
@@ -415,12 +473,12 @@ const SubscriptionsView: React.FC = () => {
               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">إدارة الفواتير والعمليات السابقة</p>
             </div>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-50 transition-all">
+          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase hover:bg-slate-50 transition-all">
             <Filter className="w-3.5 h-3.5" /> تصفية السجل
           </button>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse">
               <thead>
@@ -445,19 +503,19 @@ const SubscriptionsView: React.FC = () => {
                     <td className="px-8 py-4 text-[11px] font-black text-slate-800">{inv.price} {inv.currency}</td>
                     <td className="px-8 py-4 text-[11px] font-bold text-slate-400">{inv.paymentMethod}</td>
                     <td className="px-8 py-4">
-                      <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${inv.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                      <span className={`px-3 py-1 rounded-md text-[9px] font-black border uppercase tracking-widest ${inv.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                         inv.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                           'bg-rose-50 text-rose-600 border-rose-100'
                         }`}>
-                        {inv.status === 'paid' ? 'ناجحة' : inv.status === 'pending' ? 'معلقة' : 'فاشلة'}
+                        {inv.status === 'confirmed' ? 'ناجحة' : inv.status === 'pending' ? 'معلقة' : 'فاشلة'}
                       </span>
                     </td>
                     <td className="px-8 py-4 text-center flex justify-center gap-2">
-                      <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="تحميل الفاتورة">
+                      <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="تحميل الفاتورة">
                         <Download className="w-4 h-4" />
                       </button>
                       {inv.status === 'pending' && (
-                        <button className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all" title="إكمال الدفع">
+                        <button className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all" title="إكمال الدفع">
                           <CreditCard className="w-4 h-4" />
                         </button>
                       )}
@@ -471,13 +529,13 @@ const SubscriptionsView: React.FC = () => {
       </div>
 
       {/* New Subscription Modal */}
-      {isModalOpen && selectedPlan && (
-        <div className="fixed inset-0 z-[100] grid place-items-center p-4">
+      {isModalOpen && selectedPlan && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={handleCloseModal}></div>
-          <div className="relative z-10 bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="relative z-10 bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
 
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div>
                 <h3 className="text-lg font-black text-slate-800">تفعيل الاشتراك</h3>
                 <p className="text-[10px] font-bold text-slate-400 mt-1">
@@ -489,7 +547,7 @@ const SubscriptionsView: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-8">
+            <div className="p-8 overflow-y-auto custom-scrollbar">
               {/* Stepper */}
               <div className="flex items-center justify-center mb-8">
                 {[1, 2, 3].map((s) => (
@@ -514,31 +572,31 @@ const SubscriptionsView: React.FC = () => {
                       <button
                         key={m}
                         onClick={() => setDuration(m)}
-                        className={`p-4 rounded-xl border-2 transition-all text-center space-y-2 ${duration === m
+                        className={`p-4 rounded-lg border-2 transition-all text-center space-y-2 ${duration === m
                           ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
                           : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                           }`}
                       >
                         <h5 className="text-xl font-black">{m}</h5>
                         <span className="text-[10px] font-bold uppercase">أشهر</span>
-                        {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
+                        {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
                       </button>
                     ))}
                   </div>
 
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-4">
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
                         placeholder="كود الخصم (اختياري)"
-                        className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
+                        className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-indigo-500"
                       />
                       <button
                         onClick={handleApplyCoupon}
                         disabled={couponLoading}
-                        className="px-6 py-3 bg-slate-900 text-white rounded-lg text-xs font-black hover:bg-slate-800 disabled:opacity-50"
+                        className="px-6 py-3 bg-slate-900 text-white rounded-md text-xs font-black hover:bg-slate-800 disabled:opacity-50"
                       >
                         {couponLoading ? '...' : 'تطبيق'}
                       </button>
@@ -554,7 +612,7 @@ const SubscriptionsView: React.FC = () => {
                     </div>
                   </div>
 
-                  <button onClick={() => setStep(2)} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+                  <button onClick={() => setStep(2)} className="w-full py-4 bg-indigo-600 text-white rounded-md font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
                     متابعة للدفع
                   </button>
                 </div>
@@ -574,12 +632,12 @@ const SubscriptionsView: React.FC = () => {
                       <button
                         key={method.id}
                         onClick={() => setPaymentMethod(method.id as any)}
-                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-right ${paymentMethod === method.id
+                        className={`flex items-center gap-4 p-4 rounded-md border-2 transition-all text-right ${paymentMethod === method.id
                           ? 'border-indigo-600 bg-indigo-50/50'
                           : 'border-slate-100 hover:bg-slate-50'
                           }`}
                       >
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl ${method.color}`}>
+                        <div className={`w-12 h-12 rounded-sm flex items-center justify-center text-xl ${method.color}`}>
                           <i className={`fa-brands ${method.icon.includes('paypal') ? '' : 'fa-solid'} ${method.icon}`}></i>
                         </div>
                         <div>
@@ -591,8 +649,8 @@ const SubscriptionsView: React.FC = () => {
                     ))}
                   </div>
                   <div className="flex gap-4">
-                    <button onClick={() => setStep(1)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl font-black text-xs hover:bg-slate-200">عودة</button>
-                    <button onClick={() => setStep(3)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">تأكيد الوسيلة</button>
+                    <button onClick={() => setStep(1)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">عودة</button>
+                    <button onClick={() => setStep(3)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-md font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">تأكيد الوسيلة</button>
                   </div>
                 </div>
               )}
@@ -600,17 +658,17 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 3: Confirmation & Proof */}
               {step === 3 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-center">
+                  <div className="bg-slate-50 p-5 rounded-md border border-slate-200 text-center">
                     <p className="text-xs font-bold text-slate-500 mb-2">يرجى إرسال المبلغ: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> إلى:</p>
-                    <div className="bg-white p-3 rounded-lg border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer" onClick={() => { navigator.clipboard.writeText('000000000099') }}>
+                    <div className="bg-white p-3 rounded-sm border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer" onClick={() => { navigator.clipboard.writeText('000000000099') }}>
                       0000 0000 0000 99 (LITE CRM)
                     </div>
                   </div>
 
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer relative">
+                  <div className="border-2 border-dashed border-slate-300 rounded-md p-8 flex flex-col items-center justify-center text-center hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer relative">
                     <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                     {proofPreview ? (
-                      <img src={proofPreview} alt="Proof" className="h-32 object-contain rounded-lg shadow-sm" />
+                      <img src={proofPreview} alt="Proof" className="h-32 object-contain rounded-sm shadow-sm" />
                     ) : (
                       <>
                         <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
@@ -623,9 +681,14 @@ const SubscriptionsView: React.FC = () => {
                   </div>
 
                   <div className="flex gap-4">
-                    <button onClick={() => setStep(2)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl font-black text-xs hover:bg-slate-200">عودة</button>
-                    <button onClick={() => handleSubmitSubscription(false)} className="flex-[2] py-4 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-600/20">
-                      إتمام وإرسال الطلب
+                    <button onClick={() => setStep(2)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">عودة</button>
+                    <button
+                      onClick={() => handleSubmitSubscription(false)}
+                      disabled={isSubmitting}
+                      className="flex-[2] py-4 bg-emerald-600 text-white rounded-md font-black text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {isSubmitting ? 'جاري الإرسال...' : 'إتمام وإرسال الطلب'}
                     </button>
                   </div>
                 </div>
@@ -633,7 +696,8 @@ const SubscriptionsView: React.FC = () => {
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

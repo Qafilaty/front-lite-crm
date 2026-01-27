@@ -145,7 +145,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
                 <div className="flex flex-col gap-4">
                     {/* Top Row: Search + Filter Toggle + Columns */}
                     <div className="flex items-center gap-3">
@@ -156,14 +156,14 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                 placeholder="بحث سريع... (الاسم، الهاتف، المبلغ)"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
+                                className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
                             />
                         </div>
 
                         {/* Filter Toggle */}
                         <button
                             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                            className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+                            className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
                         >
                             <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
                             <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
@@ -181,7 +181,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                     e.stopPropagation();
                                     setIsColumnsMenuOpen(!isColumnsMenuOpen);
                                 }}
-                                className={`p-3 rounded-2xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
+                                className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
                             >
                                 <LayoutList className="w-4 h-4" />
                                 <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
@@ -190,7 +190,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                             {isColumnsMenuOpen && (
                                 <div
                                     onClick={(e) => e.stopPropagation()}
-                                    className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
+                                    className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
                                 >
                                     <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
                                     <div className="space-y-1">
@@ -204,7 +204,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 status: 'الحالة'
                                             };
                                             return (
-                                                <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                                                <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
                                                     <input
                                                         type="checkbox"
                                                         checked={(visibleColumns as any)[key]}
@@ -268,7 +268,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {ordersLoading ? (
                     <div className="p-6">
                         <TableSkeleton columns={6} rows={8} />
@@ -353,7 +353,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                             {(visibleColumns as any).financials && <td className="px-6 py-5">
                                                 <div className="flex flex-col gap-1.5 items-start">
                                                     <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
-                                                    <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                    <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                                                         {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
                                                         <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
                                                     </div>
@@ -363,7 +363,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                             {/* Status */}
                                             {(visibleColumns as any).status && <td className="px-6 py-5">
                                                 <span
-                                                    className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                                                    className={`px-3 py-1 rounded-md text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                                                     style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
                                                 >
                                                     {statusLabel}
@@ -372,7 +372,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
                                             {/* Actions */}
                                             <td className="px-6 py-5 text-center">
-                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
+                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
                                                     مراجعة <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                             </td>

@@ -45,7 +45,7 @@ export const Modal: React.FC<ModalProps> = ({
       ></div>
 
       <div
-        className={`relative z-10 bg-white w-full ${sizeClasses[size]} rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 flex flex-col my-auto`}
+        className={`relative z-10 bg-white w-full ${sizeClasses[size]} rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 flex flex-col my-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -63,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-xl transition-all"
+              className="text-slate-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-lg transition-all"
             >
               <X className="w-6 h-6" />
             </button>

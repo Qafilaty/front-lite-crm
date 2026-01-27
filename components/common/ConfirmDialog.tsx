@@ -52,7 +52,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     >
       <div className="p-6 md:p-8 space-y-6">
         {/* Icon */}
-        <div className={`w-16 h-16 rounded-2xl ${variantBgColors[variant]} flex items-center justify-center mx-auto`}>
+        <div className={`w-16 h-16 rounded-xl ${variantBgColors[variant]} flex items-center justify-center mx-auto`}>
           <AlertTriangle className={`w-8 h-8 ${variantColors[variant]}`} />
         </div>
 

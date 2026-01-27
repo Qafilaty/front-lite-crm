@@ -1511,10 +1511,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               ) : (
                 <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
                   {deliveryCompanies.map(company => (
-                    <label key={company.id} className={`flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
+                    <label key={company.id} className={`flex items-center justify-between p-5 rounded-xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                          {company.logo ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-2" /> : <Truck className="w-6 h-6 text-slate-300" />}
+                          {company.availableDeliveryCompany?.logo ? <img src={`${import.meta.env.VITE_Images_Url}/${company.availableDeliveryCompany.logo}`} alt={company.name} className="w-full h-full object-contain p-2" /> : <Truck className="w-6 h-6 text-slate-300" />}
                         </div>
                         <span className="font-black text-sm text-slate-700">{company.name}</span>
                       </div>
@@ -1553,7 +1553,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-[300] grid place-items-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsSuccessModalOpen(false)}></div>
-          <div className="relative z-10 bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="relative z-10 bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="bg-emerald-500 py-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
               <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-5 ring-4 ring-white/10 shadow-lg">
@@ -1585,7 +1585,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {/* Error Modal */}
       {isErrorModalOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-rose-100 overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl border border-rose-100 overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 bg-rose-50/50 border-b border-rose-100 flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm shadow-rose-100">
                 <AlertCircle className="w-6 h-6" />
@@ -1608,7 +1608,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     </div>
                   )}
                   {fail.parsedErrors.map((err: any, i: number) => (
-                    <div key={i} className="flex gap-3 bg-red-50 p-4 rounded-2xl border border-red-100 items-start">
+                    <div key={i} className="flex gap-3 bg-red-50 p-4 rounded-xl border border-red-100 items-start">
                       <div className="mt-1 text-red-500">
                         <AlertCircle className="w-4 h-4" />
                       </div>

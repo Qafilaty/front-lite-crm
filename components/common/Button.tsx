@@ -33,7 +33,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center gap-2 font-black uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantClasses = {
     primary:

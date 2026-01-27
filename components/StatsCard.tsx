@@ -13,13 +13,13 @@ export interface StatCardProps {
 
 export const StatsCard: React.FC<StatCardProps> = ({ label, value, change, changeType, icon: Icon, iconBg, unit }) => {
     return (
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center text-xl`}>
+                <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center text-xl`}>
                     <Icon className="w-6 h-6" />
                 </div>
-                <div className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 ${changeType === 'positive' ? 'bg-emerald-50 text-emerald-600' :
-                        changeType === 'negative' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500'
+                <div className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 ${changeType === 'positive' ? 'bg-emerald-50 text-emerald-600' :
+                    changeType === 'negative' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500'
                     }`}>
                     <span>{change}</span>
                     {changeType === 'positive' && <ArrowUpRight className="w-3 h-3" />}

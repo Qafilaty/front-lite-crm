@@ -144,12 +144,12 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
     return createPortal(
         <div className="fixed inset-0 z-[100] grid place-items-center p-4">
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
-            <div className="relative z-10 bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="relative z-10 bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
 
                 {/* Header */}
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                        <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
                             <Truck className="w-6 h-6" />
                         </div>
                         <div>
@@ -183,7 +183,7 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
 
                             <div className="grid gap-3">
                                 {selectedOrders.map(order => (
-                                    <div key={order.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                                    <div key={order.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
                                         <div className="flex flex-col gap-0.5">
                                             <span className="text-xs font-black text-slate-800">{order.fullName || order.customer}</span>
                                             <span className="text-[10px] text-slate-400 font-bold">{order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'} - {order.phone}</span>
@@ -201,26 +201,55 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                     )}
 
                     {step === 'select_company' && (
-                        <div className="space-y-6 max-w-md mx-auto py-8">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 px-1">اختر شركة التوصيل</label>
-                                <ModernSelect
-                                    value={selectedCompanyId}
-                                    onChange={setSelectedCompanyId}
-                                    options={[{ value: '', label: 'اختر الشركة...' }, ...deliveryCompanies.map(c => ({ value: c.id, label: c.name }))]}
-                                    placeholder="اختر شركة التوصيل..."
-                                    className="w-full"
-                                />
+                        <div className="space-y-6">
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar p-1">
+                                {deliveryCompanies.length === 0 ? (
+                                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                                        <p className="text-xs font-bold text-slate-500">لا توجد شركات توصيل متاحة</p>
+                                    </div>
+                                ) : (
+                                    deliveryCompanies.map(company => (
+                                        <label key={company.id} className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                                                    {company.availableDeliveryCompany?.logo ? (
+                                                        <img src={`${import.meta.env.VITE_Images_Url}/${company.availableDeliveryCompany.logo}`} alt={company.name} className="w-full h-full object-contain p-2" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                                                            <Truck className="w-5 h-5" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-black text-xs text-slate-800">{company.name}</span>
+                                                    {company.description && <span className="text-[10px] text-slate-400 font-bold truncate max-w-[200px]">{company.description}</span>}
+                                                </div>
+                                            </div>
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-200 bg-white'}`}>
+                                                {selectedCompanyId === company.id && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                            </div>
+                                            <input
+                                                type="radio"
+                                                name="deliveryCompany"
+                                                value={company.id}
+                                                checked={selectedCompanyId === company.id}
+                                                onChange={() => setSelectedCompanyId(company.id)}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    ))
+                                )}
                             </div>
 
-                            <div className="flex gap-3 pt-4">
-                                <button onClick={() => setStep('review')} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all">
+                            <div className="flex gap-3 pt-2 border-t border-slate-50">
+                                <button onClick={() => setStep('review')} className="flex-1 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all">
                                     رجوع
                                 </button>
                                 <button
                                     onClick={handleConfirm}
                                     disabled={!selectedCompanyId || isSubmitting}
-                                    className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                                    className="flex-[2] py-3.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
                                     تأكيد وإرسال
@@ -254,9 +283,9 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                     <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.success.map((res, idx) => {
                                             return (
-                                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border border-emerald-100 bg-emerald-50/10 hover:bg-emerald-50/30 transition-colors gap-4">
+                                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-emerald-100 bg-emerald-50/10 hover:bg-emerald-50/30 transition-colors gap-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-200/50">
+                                                        <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-200/50">
                                                             <CheckCircle2 className="w-5 h-5" />
                                                         </div>
                                                         <div>
@@ -296,10 +325,10 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                                     <div className="grid gap-3 max-h-[250px] overflow-y-auto custom-scrollbar p-1">
                                         {results.failed.map((res, idx) => {
                                             return (
-                                                <div key={idx} className="p-4 rounded-2xl border border-rose-100 bg-rose-50/20 space-y-3">
+                                                <div key={idx} className="p-4 rounded-xl border border-rose-100 bg-rose-50/20 space-y-3">
                                                     {/* Header Info */}
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-sm border border-rose-200/50">
+                                                        <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-sm border border-rose-200/50">
                                                             <AlertCircle className="w-5 h-5" />
                                                         </div>
                                                         <div>
@@ -334,7 +363,7 @@ export const BulkDeliveryModal: React.FC<BulkDeliveryModalProps> = ({
                             )}
 
                             <div className="pt-6">
-                                <button onClick={onClose} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20">
+                                <button onClick={onClose} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20">
                                     إغلاق
                                 </button>
                             </div>

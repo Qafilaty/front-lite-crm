@@ -258,7 +258,7 @@ const ShippingCarriersView: React.FC = () => {
       {myCarriersLoading ? (
         <CardGridSkeleton />
       ) : myCarriers.length === 0 ? (
-        <div className="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
+        <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
           <Truck className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-slate-500 font-bold text-sm">لم تقم بربط أي شركة توصيل بعد</h3>
           <button onClick={openAddModal} className="mt-4 text-indigo-600 font-black text-xs hover:underline">إضافة شركة وتفعيل الشحن</button>
@@ -266,7 +266,7 @@ const ShippingCarriersView: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {myCarriers.map((carrier) => (
-            <div key={carrier.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between relative overflow-hidden h-full min-h-[220px]">
+            <div key={carrier.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between relative overflow-hidden h-full min-h-[220px]">
 
               {/* Status Badge (Absolute Top Left) */}
               <div className="absolute top-4 left-4 z-10">
@@ -276,7 +276,7 @@ const ShippingCarriersView: React.FC = () => {
               </div>
 
               <div className="flex flex-col items-center text-center mt-2">
-                <div className="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 p-4 mb-4 overflow-hidden shadow-sm">
+                <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 p-4 mb-4 overflow-hidden shadow-sm">
                   {carrier.logo || carrier.availableDeliveryCompany?.logo ? (
                     <img
                       src={getImageUrl(carrier.logo || carrier.availableDeliveryCompany?.logo) || ''}
@@ -295,7 +295,7 @@ const ShippingCarriersView: React.FC = () => {
               <div className="mt-6 pt-0 flex items-center gap-3 w-full">
                 <button
                   onClick={() => openEditModal(carrier)}
-                  className="flex-grow flex items-center justify-center gap-2 text-[10px] font-black px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all"
+                  className="flex-grow flex items-center justify-center gap-2 text-[10px] font-black px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
                 >
                   <Settings className="w-3.5 h-3.5" /> إعدادات الربط
                 </button>
@@ -323,11 +323,11 @@ const ShippingCarriersView: React.FC = () => {
           {typeof document !== 'undefined' && ReactDOM.createPortal(
             <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto py-10 px-4">
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={closeModal}></div>
-              <div className="relative z-10 bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto border border-slate-100 max-h-[90vh]">
+              <div className="relative z-10 bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto border border-slate-100 max-h-[90vh]">
 
                 <div className="p-6 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center backdrop-blur-sm sticky top-0 z-20">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${editModeCarrier ? 'bg-indigo-600 shadow-indigo-600/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-lg ${editModeCarrier ? 'bg-indigo-600 shadow-indigo-600/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}>
                       {editModeCarrier ? <Settings className="w-5 h-5" /> : <Link2 className="w-5 h-5" />}
                     </div>
                     <div>
@@ -349,8 +349,8 @@ const ShippingCarriersView: React.FC = () => {
                       <div className="space-y-2">
                         {availableCarriersLoading ? (
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>
-                            <div className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>
+                            <div className="h-24 bg-slate-50 rounded-lg animate-pulse"></div>
+                            <div className="h-24 bg-slate-50 rounded-lg animate-pulse"></div>
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-3">
@@ -358,9 +358,9 @@ const ShippingCarriersView: React.FC = () => {
                               <button
                                 key={carrier.id}
                                 onClick={() => handleSelectCarrier(carrier)}
-                                className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:shadow-md transition-all group text-center"
+                                className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:shadow-md transition-all group text-center"
                               >
-                                <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center p-2 group-hover:scale-110 transition-transform">
+                                <div className="w-12 h-12 rounded-lg bg-white border border-slate-100 flex items-center justify-center p-2 group-hover:scale-110 transition-transform">
                                   {carrier.logo ? (
                                     <img
                                       src={getImageUrl(carrier.logo) || ''}
@@ -386,9 +386,9 @@ const ShippingCarriersView: React.FC = () => {
 
                       {/* Selected Carrier Header for Add Mode */}
                       {!editModeCarrier && selectedCarrier && (
-                        <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
+                        <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-1 border border-indigo-100">
+                            <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center p-1 border border-indigo-100">
                               {selectedCarrier.logo ? (
                                 <img src={getImageUrl(selectedCarrier.logo) || ''} className="w-full h-full object-contain" />
                               ) : <Truck className="w-5 h-5 text-indigo-400" />}
@@ -400,7 +400,7 @@ const ShippingCarriersView: React.FC = () => {
                           </div>
                           <button
                             onClick={handleBackToSelect}
-                            className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors"
+                            className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-md border border-indigo-100 hover:bg-indigo-50 transition-colors"
                           >
                             تغيير <ArrowRight className="w-3 h-3" />
                           </button>
@@ -409,8 +409,8 @@ const ShippingCarriersView: React.FC = () => {
 
                       {/* Edit Mode Header */}
                       {editModeCarrier && (
-                        <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-1 border border-indigo-100">
+                        <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center p-1 border border-indigo-100">
                             {editModeCarrier.logo || editModeCarrier.availableDeliveryCompany?.logo ? (
                               <img src={getImageUrl(editModeCarrier.logo || editModeCarrier.availableDeliveryCompany?.logo) || ''} className="w-full h-full object-contain" />
                             ) : <Truck className="w-5 h-5 text-indigo-400" />}
@@ -446,7 +446,7 @@ const ShippingCarriersView: React.FC = () => {
                                   }}
                                   onBlur={(e) => handleBlur(name, e.target.value)}
                                   placeholder={`أدخل ${name}...`}
-                                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs font-bold transition-all dir-ltr ${errors[name] ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                                  className={`w-full px-4 py-3 bg-slate-50 border rounded-lg text-xs font-bold transition-all dir-ltr ${errors[name] ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
                                 />
                                 {errors[name] && <p className="text-red-500 text-[9px] font-bold px-1">{errors[name]}</p>}
                               </div>
@@ -466,11 +466,11 @@ const ShippingCarriersView: React.FC = () => {
                 {/* Footer Actions (Only show if not in select step, or if editing) */}
                 {(editModeCarrier || step === 'configure') && (
                   <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4 sticky bottom-0 z-20">
-                    <button onClick={closeModal} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[11px] uppercase hover:bg-slate-100 transition-all">إلغاء</button>
+                    <button onClick={closeModal} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-[11px] uppercase hover:bg-slate-100 transition-all">إلغاء</button>
                     <button
                       onClick={handleSubmit}
                       disabled={(editModeCarrier ? isSubmitDisabled : !selectedCarrier) || isSubmitting}
-                      className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 py-4 bg-indigo-600 text-white rounded-lg font-black text-[11px] uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

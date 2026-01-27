@@ -126,7 +126,7 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
         <div className="relative w-48" ref={containerRef}>
             <div
                 onClick={() => { setIsOpen(!isOpen); }}
-                className={`w-full rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between py-2.5 pl-3 pr-3 ${value
+                className={`w-full rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-between py-2.5 pl-3 pr-3 ${value
                     ? `bg-white shadow-sm ring-1 ring-inset ${activeRingClass}`
                     : 'bg-slate-50 hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-inset hover:ring-slate-200'
                     }`}
@@ -147,12 +147,12 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
                 <div
                     id={`dropdown-portal-${portalId}`}
                     style={dropdownStyle}
-                    className={`bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 overflow-y-auto custom-scrollbar flex flex-col max-h-[250px] ${placement === 'top' ? 'origin-bottom' : 'origin-top'}`}
+                    className={`bg-white rounded-lg shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 overflow-y-auto custom-scrollbar flex flex-col max-h-[250px] ${placement === 'top' ? 'origin-bottom' : 'origin-top'}`}
                 >
                     <div className="p-1 space-y-0.5" onMouseDown={(e) => e.stopPropagation()}>
                         <div
                             onClick={() => { onChange(''); setIsOpen(false); }}
-                            className="px-3 py-2 rounded-lg text-[10px] font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 cursor-pointer transition-colors flex items-center justify-between"
+                            className="px-3 py-2 rounded-md text-[10px] font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 cursor-pointer transition-colors flex items-center justify-between"
                         >
                             <span>(إلغاء التحديد)</span>
                         </div>
@@ -160,7 +160,7 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
                             <div
                                 key={option.value}
                                 onClick={() => { onChange(option.value); setIsOpen(false); }}
-                                className={`px-3 py-2 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center justify-between ${option.value === value ? `${activeBgClass} ${activeTextClass}` : `text-slate-600 ${hoverBgClass}`}`}
+                                className={`px-3 py-2 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center justify-between ${option.value === value ? `${activeBgClass} ${activeTextClass}` : `text-slate-600 ${hoverBgClass}`}`}
                             >
                                 <span className="font-bold">{option.label}</span>
                                 {option.value === value && <Check className="w-3 h-3" />}
@@ -818,7 +818,7 @@ export const IntegrationSettings: React.FC = () => {
                             <select
                                 value={configs[type].name}
                                 onChange={(e) => updateConfig(type, 'name', e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-3.5 pl-8 text-xs font-bold focus:border-indigo-500/50 outline-none transition-all shadow-none appearance-none cursor-pointer"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pr-3.5 pl-8 text-xs font-bold focus:border-indigo-500/50 outline-none transition-all shadow-none appearance-none cursor-pointer"
                             >
                                 <option value="">اختر الورقة...</option>
                                 {sheetValidation[type].sheets.map(sheet => (
@@ -833,7 +833,7 @@ export const IntegrationSettings: React.FC = () => {
                             value={configs[type].name}
                             onChange={(e) => updateConfig(type, 'name', e.target.value)}
                             placeholder="Sheet1"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-xs font-bold focus:border-indigo-500/50 outline-none transition-all shadow-none disabled:opacity-60"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3.5 text-xs font-bold focus:border-indigo-500/50 outline-none transition-all shadow-none disabled:opacity-60"
                             disabled={sheetValidation[type].status === 'loading'}
                         />
                     )}
@@ -845,13 +845,13 @@ export const IntegrationSettings: React.FC = () => {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 pb-12 max-w-5xl mx-auto">
             {/* Header & Progress Steps */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="text-right">
                     <h2 className="text-xl font-black text-slate-900 tracking-tight">إعدادات الربط</h2>
                     <p className="text-[10px] text-slate-400 font-bold">إدارة ربط Google Sheets</p>
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
                     {[
                         { n: 1, l: 'الحساب', Icon: UserCog },
                         { n: 2, l: 'الإعدادات', Icon: Sliders },
@@ -866,7 +866,7 @@ export const IntegrationSettings: React.FC = () => {
                                 <button
                                     disabled={isDisabled}
                                     onClick={() => setCurrentStep(s.n)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black transition-all ${currentStep === s.n ? 'bg-indigo-600 text-white shadow-sm' : (!isDisabled) ? 'hover:bg-indigo-50 text-slate-500 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${currentStep === s.n ? 'bg-indigo-600 text-white shadow-sm' : (!isDisabled) ? 'hover:bg-indigo-50 text-slate-500 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`}
                                 >
                                     {currentStep > s.n ? <Check className="w-3 h-3" /> : <s.Icon className="w-3 h-3" />}
                                     <span className="hidden sm:inline">{s.l}</span>
@@ -879,7 +879,7 @@ export const IntegrationSettings: React.FC = () => {
             </div>
 
             {lastActionMessage && (
-                <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-in slide-in-from-top-4 duration-500 shadow-md ${lastActionMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                <div className={`p-4 rounded-xl border flex items-center gap-3 animate-in slide-in-from-top-4 duration-500 shadow-md ${lastActionMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
                     lastActionMessage.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
                         'bg-indigo-50 border-indigo-200 text-indigo-800'
                     }`}>
@@ -906,7 +906,7 @@ export const IntegrationSettings: React.FC = () => {
                             {isConnected ? (
                                 // Connected View
                                 <div className="space-y-6 animate-in zoom-in-95 duration-500">
-                                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-indigo-100/50 border border-indigo-50 relative overflow-hidden">
+                                    <div className="bg-white rounded-2xl p-8 shadow-xl shadow-indigo-100/50 border border-indigo-50 relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
                                         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
@@ -929,14 +929,14 @@ export const IntegrationSettings: React.FC = () => {
                                                     Google Sheets متصل
                                                 </div>
                                                 <h3 className="text-2xl font-black text-slate-900">{googleAccount.name || 'مستخدم Google'}</h3>
-                                                <p className="text-sm font-bold text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-lg inline-block ltr">{googleAccount.email}</p>
+                                                <p className="text-sm font-bold text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-md inline-block ltr">{googleAccount.email}</p>
                                             </div>
 
                                             <div className="flex gap-3">
-                                                <button onClick={() => setShowDisconnectModal(true)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:scale-105 transition-all flex items-center justify-center border border-rose-100">
+                                                <button onClick={() => setShowDisconnectModal(true)} className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 hover:scale-105 transition-all flex items-center justify-center border border-rose-100">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
-                                                <button onClick={() => refetchSheets()} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:scale-105 transition-all flex items-center justify-center border border-slate-100">
+                                                <button onClick={() => refetchSheets()} className="w-10 h-10 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 hover:scale-105 transition-all flex items-center justify-center border border-slate-100">
                                                     <RefreshCw className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -954,12 +954,12 @@ export const IntegrationSettings: React.FC = () => {
 
                                         {googleAccount.sheets && googleAccount.sheets.length > 0 ? (
                                             googleAccount.sheets.map((sheet: any, idx: number) => (
-                                                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 hover:border-emerald-100 hover:shadow-md transition-all group">
+                                                <div key={idx} className="bg-white p-4 rounded-xl border border-slate-100 hover:border-emerald-100 hover:shadow-md transition-all group">
                                                     <div className="flex items-start justify-between mb-2">
-                                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                                                             <Table className="w-4 h-4" />
                                                         </div>
-                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black ${sheet.typeOrder === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                        <span className={`px-2 py-1 rounded-md text-[9px] font-black ${sheet.typeOrder === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
                                                             {sheet.typeOrder === 'new' ? 'طلبات جديدة' : 'طلبات متروكة'}
                                                         </span>
                                                     </div>
@@ -984,7 +984,7 @@ export const IntegrationSettings: React.FC = () => {
                                     <div className="pt-4 flex justify-center">
                                         <button
                                             onClick={() => setCurrentStep(2)}
-                                            className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-3 group"
+                                            className="bg-slate-900 text-white px-12 py-4 rounded-xl font-black hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-3 group"
                                         >
                                             <span>متابعة الإعدادات</span>
                                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -993,10 +993,10 @@ export const IntegrationSettings: React.FC = () => {
                                 </div>
                             ) : (
                                 // Connect View (Default)
-                                <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-100 text-center space-y-6 group relative overflow-hidden max-w-lg mx-auto">
+                                <div className="bg-white rounded-2xl p-8 shadow-xl shadow-slate-200/40 border border-slate-100 text-center space-y-6 group relative overflow-hidden max-w-lg mx-auto">
                                     <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50/30 rounded-full -mr-20 -mt-20 blur-3xl"></div>
                                     <div className="relative inline-block">
-                                        <div className="w-20 h-20 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl shadow-inner mx-auto group-hover:scale-105 transition-transform duration-500 border border-slate-100/50">
+                                        <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center text-3xl shadow-inner mx-auto group-hover:scale-105 transition-transform duration-500 border border-slate-100/50">
                                             {/* Google Icon SVG */}
                                             <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -1025,7 +1025,7 @@ export const IntegrationSettings: React.FC = () => {
                         <div className="space-y-5 animate-in fade-in zoom-in-95 duration-500">
                             {/* Active Account Info Small */}
                             {isConnected && (
-                                <div className="bg-white rounded-2xl p-3 px-4 shadow-sm border border-slate-100 flex items-center justify-between">
+                                <div className="bg-white rounded-xl p-3 px-4 shadow-sm border border-slate-100 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <img
                                             src={googleAccount.avatar || "https://ui-avatars.com/api/?name=Google+User&background=random"}
@@ -1047,10 +1047,10 @@ export const IntegrationSettings: React.FC = () => {
 
 
                             {/* Tab Navigation */}
-                            <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
+                            <div className="flex bg-slate-100/50 p-1.5 rounded-xl border border-slate-200">
                                 <button
                                     onClick={() => setActiveMappingTab('new')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${activeMappingTab === 'new'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black transition-all ${activeMappingTab === 'new'
                                         ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100'
                                         : 'text-slate-400 hover:text-slate-600'
                                         }`}
@@ -1061,7 +1061,7 @@ export const IntegrationSettings: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={() => setActiveMappingTab('abandoned')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${activeMappingTab === 'abandoned'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black transition-all ${activeMappingTab === 'abandoned'
                                         ? 'bg-white text-amber-600 shadow-sm ring-1 ring-slate-100'
                                         : 'text-slate-400 hover:text-slate-600'
                                         }`}
@@ -1075,10 +1075,10 @@ export const IntegrationSettings: React.FC = () => {
                             {/* Active Tab Content */}
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 {/* Sheet Configuration */}
-                                <div className={`bg-white rounded-2xl p-6 border transition-all ${activeMappingTab === 'new' ? 'border-indigo-100' : 'border-amber-100'}`}>
+                                <div className={`bg-white rounded-xl p-6 border transition-all ${activeMappingTab === 'new' ? 'border-indigo-100' : 'border-amber-100'}`}>
                                     <div className="flex items-center justify-between mb-6">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeMappingTab === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activeMappingTab === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
                                                 {activeMappingTab === 'new' ? <ShoppingCart className="w-5 h-5" /> : <Hourglass className="w-5 h-5" />}
                                             </div>
                                             <div>
@@ -1103,7 +1103,7 @@ export const IntegrationSettings: React.FC = () => {
                                 </div>
 
                                 {/* Column Mapping */}
-                                <div className="bg-white rounded-3xl p-6 border border-slate-100 relative overflow-hidden">
+                                <div className="bg-white rounded-2xl p-6 border border-slate-100 relative overflow-hidden">
                                     <div className={`absolute top-0 right-0 w-full h-1 bg-gradient-to-l transition-colors duration-500 ${activeMappingTab === 'new' ? 'from-indigo-500 to-transparent' : 'from-amber-500 to-transparent'}`}></div>
 
                                     <div className="flex items-center justify-between mb-5 border-b border-slate-50 pb-3">
@@ -1165,11 +1165,11 @@ export const IntegrationSettings: React.FC = () => {
                             </div>
 
                             <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
-                                <button onClick={() => setCurrentStep(1)} className="px-6 py-2.5 rounded-xl text-slate-400 font-black hover:text-slate-600 text-xs transition-all flex items-center gap-2">
+                                <button onClick={() => setCurrentStep(1)} className="px-6 py-2.5 rounded-lg text-slate-400 font-black hover:text-slate-600 text-xs transition-all flex items-center gap-2">
                                     <ArrowRight className="w-4 h-4" />
                                     رجوع
                                 </button>
-                                <button onClick={handleSaveConfigs} disabled={isConnecting} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100">
+                                <button onClick={handleSaveConfigs} disabled={isConnecting} className="bg-slate-900 text-white px-8 py-3 rounded-lg font-black hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100">
                                     {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     <span className="text-sm">حفظ الإعدادات</span>
                                 </button>
@@ -1179,10 +1179,10 @@ export const IntegrationSettings: React.FC = () => {
 
                     {currentStep === 3 && (
                         <div className="space-y-5 animate-in fade-in zoom-in-95 duration-500">
-                            <div className="bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-1.5">
+                            <div className="bg-white p-1.5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-1.5">
                                 <button
                                     onClick={() => setActiveView('new')}
-                                    className={`flex-1 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'new' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
+                                    className={`flex-1 py-3 rounded-lg font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'new' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
                                 >
                                     <ShoppingCart className="w-4 h-4" />
                                     الطلبات الجديدة
@@ -1190,7 +1190,7 @@ export const IntegrationSettings: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={() => setActiveView('abandoned')}
-                                    className={`flex-1 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'abandoned' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
+                                    className={`flex-1 py-3 rounded-lg font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'abandoned' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
                                 >
                                     <Hourglass className="w-4 h-4" />
                                     الطلبات المتروكة
@@ -1200,7 +1200,7 @@ export const IntegrationSettings: React.FC = () => {
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                                 <div className="lg:col-span-1 space-y-5">
-                                    <div className="bg-white rounded-[2rem] p-5 border border-slate-100 space-y-6">
+                                    <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-6">
                                         <div className="text-right flex items-center justify-between">
                                             <div>
                                                 <h4 className="text-base font-black text-slate-900">المزامنة</h4>
@@ -1212,7 +1212,7 @@ export const IntegrationSettings: React.FC = () => {
                                         </div>
 
                                         <div className="space-y-5">
-                                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center space-y-2.5">
+                                            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 text-center space-y-2.5">
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">السطر الحالي</p>
                                                 <div className="text-5xl font-black text-indigo-600 tracking-tighter leading-none">{configs[activeView].startRow}</div>
                                                 <div className="flex items-center justify-center gap-2.5 mt-3">
@@ -1266,7 +1266,7 @@ export const IntegrationSettings: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className={`rounded-2xl p-5 text-center relative overflow-hidden group shadow-lg transition-all duration-300 ${isAutoSyncActive[activeView] ? 'bg-slate-900 text-white' : 'bg-white border border-slate-100'}`}>
+                                    <div className={`rounded-xl p-5 text-center relative overflow-hidden group shadow-lg transition-all duration-300 ${isAutoSyncActive[activeView] ? 'bg-slate-900 text-white' : 'bg-white border border-slate-100'}`}>
                                         {isAutoSyncActive[activeView] && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-indigo-500"></div>}
                                         <div className="space-y-3 relative z-10 flex flex-col items-center justify-center h-full">
                                             <div className="flex items-center justify-center gap-2">
@@ -1291,7 +1291,7 @@ export const IntegrationSettings: React.FC = () => {
 
                                             <button
                                                 onClick={() => handleToggleAutoSync(activeView)}
-                                                className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${isAutoSyncActive[activeView]
+                                                className={`px-5 py-2 rounded-lg text-[10px] font-black transition-all flex items-center gap-2 ${isAutoSyncActive[activeView]
                                                     ? 'bg-white/10 text-white hover:bg-white/20'
                                                     : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5'}`}
                                             >
@@ -1312,7 +1312,7 @@ export const IntegrationSettings: React.FC = () => {
                                 </div>
 
                                 <div className="lg:col-span-2 space-y-5">
-                                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 min-h-[450px] flex flex-col relative overflow-hidden">
+                                    <div className="bg-white rounded-2xl p-6 border border-slate-100 min-h-[450px] flex flex-col relative overflow-hidden">
                                         <div className="flex items-center justify-between mb-6">
                                             <div>
                                                 <h3 className="text-lg font-black text-slate-900 tracking-tight">
@@ -1336,7 +1336,7 @@ export const IntegrationSettings: React.FC = () => {
                                                     <tbody>
                                                         {stagedData[activeView].slice(1).map((row: any[], i) => (
                                                             <tr key={i} className="hover:bg-slate-50 transition-all group bg-slate-50/30">
-                                                                <td className="py-3 px-3 rounded-r-xl">
+                                                                <td className="py-3 px-3 rounded-r-lg">
                                                                     <span className="text-[10px] font-black text-slate-300">#{configs[activeView].startRow + i}</span>
                                                                 </td>
                                                                 {row.map((cell: any, j: number) => (
@@ -1355,7 +1355,7 @@ export const IntegrationSettings: React.FC = () => {
                                         ) : (
                                             <div className="flex-1 flex flex-col items-center justify-center space-y-5 py-12 text-center group">
                                                 <div className="relative">
-                                                    <div className={`w-24 h-24 rounded-[2rem] border-2 border-dashed flex items-center justify-center text-4xl transition-all duration-1000 ${isSyncing ? 'border-indigo-400 bg-indigo-50 text-indigo-500 rotate-12 scale-105' : 'border-slate-200 text-slate-200 shadow-none'}`}>
+                                                    <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center text-4xl transition-all duration-1000 ${isSyncing ? 'border-indigo-400 bg-indigo-50 text-indigo-500 rotate-12 scale-105' : 'border-slate-200 text-slate-200 shadow-none'}`}>
                                                         {isSyncing ? <CloudDownload className="w-8 h-8" /> :
                                                             (isAutoSyncActive[activeView] ? <Bot className="w-8 h-8 animate-bounce text-emerald-400" /> : <FolderOpen className="w-8 h-8" />)}
                                                     </div>
@@ -1371,7 +1371,7 @@ export const IntegrationSettings: React.FC = () => {
 
                                         {isAddingToDb && (
                                             <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center z-40">
-                                                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 text-center space-y-5 animate-in zoom-in duration-300 shadow-2xl">
+                                                <div className="bg-white p-10 rounded-2xl border border-slate-100 text-center space-y-5 animate-in zoom-in duration-300 shadow-2xl">
                                                     <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-emerald-500 animate-spin mx-auto flex items-center justify-center">
                                                         <Database className="w-6 h-6 text-emerald-500" />
                                                     </div>
@@ -1393,7 +1393,7 @@ export const IntegrationSettings: React.FC = () => {
             {/* Disconnect Modal */}
             {showDisconnectModal && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300">
+                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300">
                         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
                             <AlertTriangle className="w-8 h-8 text-rose-500" />
                         </div>
@@ -1408,14 +1408,14 @@ export const IntegrationSettings: React.FC = () => {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowDisconnectModal(false)}
-                                className="flex-1 py-3 rounded-xl bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
+                                className="flex-1 py-3 rounded-lg bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
                             >
                                 إلغاء
                             </button>
                             <button
                                 onClick={confirmDisconnect}
                                 disabled={isDisconnecting}
-                                className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 py-3 rounded-lg bg-rose-500 text-white font-black hover:bg-rose-600 transition-colors flex items-center justify-center gap-2"
                             >
                                 {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                 <span>تأكيد الفصل</span>
@@ -1428,9 +1428,9 @@ export const IntegrationSettings: React.FC = () => {
             {/* Create File Modal */}
             {isCreateModalOpen && typeof document !== 'undefined' && createPortal(
                 <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
                         <div className="text-center space-y-2 mb-6">
-                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
                                 <FileSpreadsheet className="w-6 h-6" />
                             </div>
                             <h3 className="text-xl font-black text-slate-900">إنشاء ملف جديد</h3>
@@ -1447,7 +1447,7 @@ export const IntegrationSettings: React.FC = () => {
                                     value={newFileName}
                                     onChange={(e) => setNewFileName(e.target.value)}
                                     placeholder="مثال: LiteCRM Orders"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold focus:border-indigo-500/50 outline-none transition-all"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:border-indigo-500/50 outline-none transition-all"
                                     autoFocus
                                 />
                             </div>
@@ -1455,14 +1455,14 @@ export const IntegrationSettings: React.FC = () => {
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="flex-1 py-3 rounded-xl bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
+                                    className="flex-1 py-3 rounded-lg bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
                                 >
                                     إلغاء
                                 </button>
                                 <button
                                     onClick={handleConfirmCreate}
                                     disabled={isCreatingFile || !newFileName.trim()}
-                                    className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isCreatingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                     <span>إنشاء</span>

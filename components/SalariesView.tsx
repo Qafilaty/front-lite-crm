@@ -322,11 +322,11 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
           <p className="text-slate-400 text-xs font-bold uppercase mt-1 tracking-widest">إدارة العمولات بناءً على الطلبات الموصلة</p>
         </div>
 
-        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
-          <button onClick={() => { setActiveTab('due'); setCurrentPage(1); }} className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'due' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+        <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+          <button onClick={() => { setActiveTab('due'); setCurrentPage(1); }} className={`px-8 py-3 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'due' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
             <Wallet className="w-4 h-4" /> المستحقات الحالية
           </button>
-          <button onClick={() => { setActiveTab('history'); setCurrentPage(1); }} className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+          <button onClick={() => { setActiveTab('history'); setCurrentPage(1); }} className={`px-8 py-3 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
             <History className="w-4 h-4" /> سجل المدفوعات
           </button>
         </div>
@@ -334,8 +334,8 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
       {/* Quick Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-5">
+          <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
             <DollarSign className="w-7 h-7" />
           </div>
           <div>
@@ -344,8 +344,8 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
             <p className="text-[9px] font-bold text-emerald-600 mt-1 uppercase tracking-tighter">مدفوعات مؤرشفة</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm shrink-0">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-5">
+          <div className="w-14 h-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm shrink-0">
             <AlertCircle className="w-7 h-7" />
           </div>
           <div>
@@ -354,8 +354,8 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
             <p className="text-[9px] font-bold text-amber-600 mt-1 uppercase tracking-tighter">بانتظار الصرف</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-5">
+          <div className="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm shrink-0">
             <Trophy className="w-7 h-7" />
           </div>
           <div>
@@ -373,11 +373,11 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       </div>
 
       {/* Main Table Content */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/30">
           <div className="relative w-full max-w-sm">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="بحث باسم الموظف..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-5 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm" />
+            <input type="text" placeholder="بحث باسم الموظف..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-5 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm" />
           </div>
         </div>
 
@@ -405,7 +405,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                     <td className="px-8 py-5">
                       {activeTab === 'due' ? (
                         <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg">{data.user.name.charAt(0)}</div>
+                          <div className="w-11 h-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg">{data.user.name.charAt(0)}</div>
                           <div>
                             <p className="text-sm font-black text-slate-800 leading-none">{data.user.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase italic">{data.user.email}</p>
@@ -413,7 +413,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                         </div>
                       ) : (
                         <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm shadow-sm"><FileText className="w-5 h-5" /></div>
+                          <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm shadow-sm"><FileText className="w-5 h-5" /></div>
                           <div>
                             <span className="font-mono text-xs font-black text-indigo-600 tracking-widest">#{data.id.substring(data.id.length - 6)}</span>
                             <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase">{data.user?.name}</p>
@@ -430,9 +430,9 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                     <td className="px-6 py-5 text-center font-black text-indigo-600 font-mono">{(activeTab === 'due' ? data.unpaidAmount : (data.total || data.amount)).toLocaleString()} دج</td>
                     <td className="px-6 py-5 text-center">
                       {activeTab === 'due' ? (
-                        <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">بانتظار الصرف</span>
+                        <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">بانتظار الصرف</span>
                       ) : (
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">مدفوعة</span>
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">مدفوعة</span>
                       )}
                     </td>
                     {activeTab === 'history' && (
@@ -441,7 +441,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                     <td className="px-8 py-5 text-center">
                       {activeTab === 'due' ? (
                         <div className="flex gap-2 justify-center">
-                          <button onClick={() => handleShowOrders(data.user, true)} className="px-6 py-3 bg-indigo-600 text-white border border-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+                          <button onClick={() => handleShowOrders(data.user, true)} className="px-6 py-3 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2">
                             <DollarSign className="w-3 h-3" /> صرف العمولات
                           </button>
                         </div>
@@ -449,7 +449,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleDeleteClick(data.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            className="w-8 h-8 flex items-center justify-center rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                             title="حذف السجل"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -472,13 +472,13 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
         {
           totalPages > 1 && (
             <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center items-center gap-4">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
               <div className="flex items-center gap-2">
                 {[...Array(totalPages)].map((_, i) => (
-                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl text-[11px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
+                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-lg text-[11px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
                 ))}
               </div>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
             </div>
           )
         }
@@ -487,16 +487,16 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
       {selectedUserForOrders && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col h-[85vh] border border-slate-200">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col h-[85vh] border border-slate-200">
             <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><LayoutList className="w-6 h-6" /></div>
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><LayoutList className="w-6 h-6" /></div>
                 <div>
                   <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">{isPayoutMode ? 'اختيار الطلبات للصرف' : 'سجل الطلبات المؤكدة'}</h4>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{selectedUserForOrders.name} - الصفحة {ordersPage}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedUserForOrders(null)} className="text-slate-400 hover:text-rose-500 p-3 rounded-2xl hover:bg-rose-50"><X className="w-6 h-6" /></button>
+              <button onClick={() => setSelectedUserForOrders(null)} className="text-slate-400 hover:text-rose-500 p-3 rounded-xl hover:bg-rose-50"><X className="w-6 h-6" /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-50/30 relative">
@@ -522,7 +522,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                                   setSelectedOrderIds(prev => [...prev.filter(id => !allIds.includes(id)), ...allIds]);
                                 }
                               }}
-                              className="w-5 h-5 rounded-lg border-2 border-slate-300 flex items-center justify-center text-indigo-600 hover:border-indigo-600 transition-colors"
+                              className="w-5 h-5 rounded-md border-2 border-slate-300 flex items-center justify-center text-indigo-600 hover:border-indigo-600 transition-colors"
                             >
                               {/* Check if all visible are selected */
                                 userOrders.every(o => selectedOrderIds.includes(o.id)) && <CheckSquare className="w-4 h-4" />
@@ -553,7 +553,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                           >
                             {isPayoutMode && (
                               <td className="px-6 py-4">
-                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
+                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
                                   {isSelected && <Check className="w-3 h-3" />}
                                 </div>
                               </td>
@@ -567,7 +567,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className="px-2.5 py-1 rounded-lg text-[10px] font-black"
+                                className="px-2.5 py-1 rounded-md text-[10px] font-black"
                                 style={{
                                   backgroundColor: (order.status?.color || '#cbd5e1') + '20',
                                   color: order.status?.color || '#64748b'
@@ -626,7 +626,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                           <button
                             onClick={handleProcessPayment}
                             disabled={selectedOrderIds.length === 0 || isProcessing}
-                            className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
+                            className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
                             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
                             تأكيد وصرف ({selectedOrderIds.length})
                           </button>

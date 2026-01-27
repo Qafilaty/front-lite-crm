@@ -52,12 +52,13 @@ export const ConfirmerStatsView: React.FC = () => {
     const confirmedCountVal = stats.confirmationBreakdown?.confirmed || 0;
 
     // Derive Total Orders for "Out of Total" calculation
-    // If confirmationRate > 0, Total = Confirmed / (Rate/100)
-    // Else, fallback to sum of parts (though less accurate if parts missing)
+    // We try to reverse engineer from rate, or sum up if rate invalid
     let totalOrdersEstimate = 0;
-    if (stats.confirmationRate > 0) {
+    if (stats.confirmationRate > 0 && confirmedCountVal > 0) {
         totalOrdersEstimate = Math.round(confirmedCountVal / (stats.confirmationRate / 100));
     } else {
+        // Fallback: Sum of available parts + maybe a buffer? 
+        // Better to just sum known parts if rate is missing
         totalOrdersEstimate = (stats.confirmationBreakdown?.confirmed || 0) +
             (stats.confirmationBreakdown?.cancelled || 0) +
             (stats.confirmationBreakdown?.postponed || 0);
@@ -68,17 +69,67 @@ export const ConfirmerStatsView: React.FC = () => {
         return parseFloat(((val / total) * 100).toFixed(1));
     };
 
-    const confirmationStats = stats.confirmationBreakdown ? [
-        { name: 'مؤكدة', value: calcPct(stats.confirmationBreakdown.confirmed || 0, totalOrdersEstimate), color: '#4F46E5' },
-        { name: 'ملغاة', value: calcPct(stats.confirmationBreakdown.cancelled || 0, totalOrdersEstimate), color: '#E11D48' },
-        { name: 'مؤجلة', value: calcPct(stats.confirmationBreakdown.postponed || 0, totalOrdersEstimate), color: '#D97706' },
+    // 1) Confirmation Charts (Base: Total Orders)
+    // We use counts for the Pie to show relative distribution of these 3 statuses
+    // But we display the % of TOTAL in the label
+    // 1) Confirmation Charts (Base: Total Orders)
+    const confirmationStatsRaw = stats.confirmationBreakdown ? [
+        {
+            name: 'مؤكدة',
+            count: stats.confirmationBreakdown.confirmed || 0,
+            value: calcPct(stats.confirmationBreakdown.confirmed || 0, totalOrdersEstimate),
+            color: '#4F46E5'
+        },
+        {
+            name: 'ملغاة',
+            count: stats.confirmationBreakdown.cancelled || 0,
+            value: calcPct(stats.confirmationBreakdown.cancelled || 0, totalOrdersEstimate),
+            color: '#E11D48'
+        },
+        {
+            name: 'مؤجلة',
+            count: stats.confirmationBreakdown.postponed || 0,
+            value: calcPct(stats.confirmationBreakdown.postponed || 0, totalOrdersEstimate),
+            color: '#D97706'
+        },
     ] : CONFIRMATION_STATS_MOCK;
 
-    // For Delivery Breakdown: Base is Confirmed Count (Strict Subset)
-    const deliveryStats = stats.deliveryBreakdown ? [
-        { name: 'تم التسليم', value: calcPct(stats.deliveryBreakdown.delivered || 0, confirmedCountVal), color: '#059669' },
-        { name: 'قيد التوصيل', value: calcPct(stats.deliveryBreakdown.delivering || 0, confirmedCountVal), color: '#4F46E5' },
-        { name: 'مرتجع', value: calcPct(stats.deliveryBreakdown.returned || 0, confirmedCountVal), color: '#E11D48' },
+    // Calculate 'Other' for Pie Chart visual accuracy (so 50% looks like 50%)
+    const confirmationTotalPct = (confirmationStatsRaw as any[]).reduce((acc, curr) => acc + (curr.value || 0), 0);
+    // Only add 'Other' if we are using real data (not mock)
+    const confirmationChartData = stats.confirmationBreakdown ? [
+        ...confirmationStatsRaw,
+        { name: 'أخرى', value: Math.max(0, 100 - confirmationTotalPct), color: '#F1F5F9', hidden: true }
+    ] : CONFIRMATION_STATS_MOCK;
+
+
+    // 2) Delivery Charts (Base: Confirmed Orders)
+    const deliveryStatsRaw = stats.deliveryBreakdown ? [
+        {
+            name: 'تم التسليم',
+            count: stats.deliveryBreakdown.delivered || 0,
+            value: calcPct(stats.deliveryBreakdown.delivered || 0, confirmedCountVal),
+            color: '#059669'
+        },
+        {
+            name: 'قيد التوصيل',
+            count: stats.deliveryBreakdown.delivering || 0,
+            value: calcPct(stats.deliveryBreakdown.delivering || 0, confirmedCountVal),
+            color: '#4F46E5'
+        },
+        {
+            name: 'مرتجع',
+            count: stats.deliveryBreakdown.returned || 0,
+            value: calcPct(stats.deliveryBreakdown.returned || 0, confirmedCountVal),
+            color: '#E11D48'
+        },
+    ] : DELIVERY_STATS_MOCK;
+
+    // Calculate 'Other' for Pie Chart visual accuracy
+    const deliveryTotalPct = (deliveryStatsRaw as any[]).reduce((acc, curr) => acc + (curr.value || 0), 0);
+    const deliveryChartData = stats.deliveryBreakdown ? [
+        ...deliveryStatsRaw,
+        { name: 'أخرى', value: Math.max(0, 100 - deliveryTotalPct), color: '#F1F5F9', hidden: true }
     ] : DELIVERY_STATS_MOCK;
 
     // 6. Invoices
@@ -191,7 +242,7 @@ export const ConfirmerStatsView: React.FC = () => {
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                         <div className="flex-1 space-y-2 w-full">
-                            {confirmationStats.map(s => (
+                            {confirmationStatsRaw.map(s => (
                                 <div key={s.name} className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
                                     <div className="flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
@@ -204,8 +255,8 @@ export const ConfirmerStatsView: React.FC = () => {
                         <div className="w-36 h-36 shrink-0 relative">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={confirmationStats} innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value">
-                                        {confirmationStats.map((entry, index) => (
+                                    <Pie data={confirmationChartData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value">
+                                        {confirmationChartData.map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                                         ))}
                                     </Pie>
@@ -226,7 +277,7 @@ export const ConfirmerStatsView: React.FC = () => {
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                         <div className="flex-1 space-y-2 w-full">
-                            {deliveryStats.map(s => (
+                            {deliveryStatsRaw.map(s => (
                                 <div key={s.name} className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
                                     <div className="flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
@@ -239,8 +290,8 @@ export const ConfirmerStatsView: React.FC = () => {
                         <div className="w-36 h-36 shrink-0 relative">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={deliveryStats} innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value">
-                                        {deliveryStats.map((entry, index) => (
+                                    <Pie data={deliveryChartData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value">
+                                        {deliveryChartData.map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                                         ))}
                                     </Pie>

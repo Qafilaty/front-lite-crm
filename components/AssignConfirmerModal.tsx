@@ -57,7 +57,7 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-slate-100">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-indigo-600" />
@@ -80,8 +80,8 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
                                         key={user.id}
                                         onClick={() => setSelectedUserId(user.id)}
                                         className={`nav-item flex items-center justify-between p-3 rounded-xl border transition-all ${selectedUserId === user.id
-                                                ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-500'
-                                                : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                                            ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-500'
+                                            : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-slate-50 bg-slate-50/50 rounded-b-3xl flex gap-3">
+                <div className="p-6 border-t border-slate-50 bg-slate-50/50 rounded-b-2xl flex gap-3">
                     <button
                         onClick={onClose}
                         className="flex-1 py-3 px-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"

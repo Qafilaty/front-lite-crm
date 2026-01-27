@@ -144,7 +144,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">نظرة عامة</h1>
           <button
-            className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
+            className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
           >
             <HelpCircle className="w-5 h-5" />
             كيف يعمل؟
@@ -153,7 +153,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       </section>
 
       {/* Performance & Sales Section */}
-      <section id="performance-section" className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-slate-100">
+      <section id="performance-section" className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <div className="flex flex-col lg:flex-row gap-8 items-center">
 
           {/* Left Side: Performance Stats & Recommendations */}
@@ -185,8 +185,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
             </div>
 
             {/* Smart Recommendations Box */}
-            <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0">
+            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div className="text-right">
@@ -200,16 +200,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
 
           {/* Right Side: Sales Card */}
           <div className="w-full lg:w-[380px] order-1 lg:order-2">
-            <div className="relative overflow-hidden rounded-[2.2rem] bg-[#5850EC] p-7 text-white shadow-xl shadow-indigo-100 group transition-transform hover:scale-[1.01]">
+            <div className="relative overflow-hidden rounded-2xl bg-[#5850EC] p-7 text-white shadow-xl shadow-indigo-100 group transition-transform hover:scale-[1.01]">
               {/* Decorative Elements */}
-              <div className="absolute top-0 left-0 w-24 h-24 bg-white/10 rounded-br-[3rem] -ml-4 -mt-4"></div>
+              <div className="absolute top-0 left-0 w-24 h-24 bg-white/10 rounded-br-[1.5rem] -ml-4 -mt-4"></div>
 
               <div className="relative z-10 space-y-10">
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md">
+                  <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
                     <LineChart className="w-4 h-4" />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md shadow-lg">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md shadow-lg">
                     <Wallet className="w-6 h-6" />
                   </div>
                 </div>
@@ -231,7 +231,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                       <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-emerald-500/90 text-white px-3 py-1.5 rounded-xl text-[10px] font-black">
+                  <div className="flex items-center gap-2 bg-emerald-500/90 text-white px-3 py-1.5 rounded-lg text-[10px] font-black">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                     LIVE UPDATES
                   </div>
@@ -285,7 +285,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
 
       {/* Charts Row */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
+        <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
               <h3 className="text-xl font-black text-slate-900">نمو الطلبيات</h3>
@@ -322,14 +322,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
+        <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
               <h3 className="text-xl font-black text-slate-900">حالات التوصيل</h3>
               <p className="text-xs text-slate-400 font-bold">توزيع الطلبات حسب الحالة</p>
             </div>
             <div className="flex gap-2">
-              <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
+              <button className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
                 <Download className="w-4 h-4" />
               </button>
             </div>

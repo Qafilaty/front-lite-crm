@@ -35,7 +35,7 @@ const SUPPORTED_STORES = [
   {
     key: 'ayor',
     name: 'Ayor',
-    logo: '/assets/ayor-logo.webp',
+    logo: '../assets/ayor-logo.webp',
     color: '#7269f8',
     description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
   }

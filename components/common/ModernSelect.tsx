@@ -75,7 +75,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
                 }}
                 disabled={disabled}
                 className={twMerge(
-                    "w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-left transition-all",
+                    "w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-left transition-all",
                     "hover:bg-slate-100 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none",
                     disabled && "opacity-60 cursor-not-allowed",
                     isOpen && "border-indigo-400 ring-2 ring-indigo-100 bg-white",
@@ -92,7 +92,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
 
                     {/* Search Input */}
                     {showSearch && (
@@ -105,7 +105,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
                                     placeholder="بحث..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2 pl-9 pr-3 text-xs font-bold outline-none focus:bg-white focus:border-indigo-500 transition-all text-right"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-md py-2 pl-9 pr-3 text-xs font-bold outline-none focus:bg-white focus:border-indigo-500 transition-all text-right"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </div>
@@ -120,7 +120,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
                                     type="button"
                                     onClick={() => handleSelect(option.value)}
                                     className={twMerge(
-                                        "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold transition-colors text-right",
+                                        "w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-bold transition-colors text-right",
                                         value === option.value
                                             ? "bg-indigo-50 text-indigo-700"
                                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
