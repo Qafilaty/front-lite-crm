@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useQuery } from '@apollo/client';
 import { GET_CONFIRMER_STATS } from '../graphql/queries/statsQueries';
 import { ConfirmerStatsSkeleton } from './ConfirmerStatsSkeleton';
+import { PaginationControl } from './common';
+import { Printer } from 'lucide-react';
+import logoBlack from '../assets/logo-black.png';
+import { useAuth } from '../contexts/AuthContext';
 
 const CONFIRMATION_STATS_MOCK = [
     { name: 'مؤكدة', value: 78, color: '#4F46E5' },
@@ -17,6 +21,9 @@ const DELIVERY_STATS_MOCK = [
 ];
 
 export const ConfirmerStatsView: React.FC = () => {
+    const { user } = useAuth();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
     // ...
     const { data: statsData, loading } = useQuery(GET_CONFIRMER_STATS, {
         fetchPolicy: 'network-only' // Ensure fresh data
@@ -129,6 +136,238 @@ export const ConfirmerStatsView: React.FC = () => {
 
     // 6. Invoices
     const invoices = stats.invoices || [];
+
+    // Pagination Logic
+    const totalPages = Math.ceil(invoices.length / itemsPerPage);
+    const paginatedInvoices = invoices.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const handlePrint = (invoice: any) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            const date = new Date(invoice.date).toLocaleDateString('ar-DZ');
+            const time = new Date(invoice.date).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+
+            const html = `
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <title>وصل دفع - ${invoice.id}</title>
+          <meta charset="utf-8">
+          <style>
+            @page { margin: 0; }
+            body { 
+                font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: #fff;
+                margin: 0;
+                padding: 40px;
+                color: #1e293b;
+                -webkit-print-color-adjust: exact;
+            }
+            .invoice-container {
+                max-width: 800px;
+                margin: 0 auto;
+                border: 1px solid #e2e8f0;
+                border-radius: 24px;
+                padding: 48px;
+                position: relative;
+                overflow: hidden;
+            }
+            .watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-45deg);
+                font-size: 120px;
+                color: #f1f5f9;
+                font-weight: 900;
+                z-index: -1;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 60px;
+                border-bottom: 2px solid #f1f5f9;
+                padding-bottom: 32px;
+            }
+            .logo-section h1 {
+                font-size: 32px;
+                font-weight: 900;
+                color: #4f46e5;
+                margin: 0;
+                letter-spacing: -1px;
+            }
+            .logo-section p {
+                font-size: 14px;
+                color: #64748b;
+                margin-top: 8px;
+                font-weight: 500;
+            }
+            .invoice-details {
+                text-align: left;
+            }
+            .status-badge {
+                background: #ecfdf5;
+                color: #059669;
+                padding: 8px 16px;
+                border-radius: 99px;
+                font-size: 12px;
+                font-weight: 800;
+                display: inline-block;
+                margin-bottom: 12px;
+            }
+            .invoice-id {
+                font-size: 16px;
+                font-weight: 700;
+                color: #334155;
+                font-family: monospace;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 40px;
+                margin-bottom: 48px;
+            }
+            .info-group h3 {
+                font-size: 12px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin: 0 0 12px 0;
+                font-weight: 700;
+            }
+            .info-group .value {
+                font-size: 18px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+            .info-group .sub-value {
+                font-size: 14px;
+                color: #64748b;
+                margin-top: 4px;
+            }
+
+            .summary-card {
+                background: #f8fafc;
+                border-radius: 20px;
+                padding: 32px;
+                border: 1px solid #e2e8f0;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 16px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .summary-row:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            .summary-row.total {
+                border-top: 2px solid #e2e8f0;
+                border-bottom: none;
+                padding-top: 24px;
+                margin-top: 8px;
+            }
+            .summary-label {
+                font-size: 14px;
+                color: #64748b;
+                font-weight: 600;
+            }
+            .summary-value {
+                font-size: 16px;
+                font-weight: 700;
+                color: #334155;
+            }
+            .total .summary-label {
+                font-size: 18px;
+                color: #0f172a;
+                font-weight: 800;
+            }
+            .total .summary-value {
+                font-size: 32px;
+                color: #4f46e5;
+                font-weight: 900;
+            }
+
+            .footer {
+                margin-top: 80px;
+                text-align: center;
+                color: #94a3b8;
+                font-size: 12px;
+                border-top: 1px solid #f1f5f9;
+                padding-top: 32px;
+            }
+            
+            @media print {
+                body { padding: 0; }
+                .invoice-container { border: none; }
+            }
+          </style>
+          <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div class="watermark">مدفــوع</div>
+            
+            <div class="header">
+              <div class="logo-section">
+                <img src="${logoBlack}" alt="Lite CRM" style="height: 50px; margin-bottom: 8px;" />
+                <p>نظام إدارة المبيعات والعمولات</p>
+              </div>
+              <div class="invoice-details">
+                <div class="status-badge">تم الدفع بنجاح</div>
+                <div class="invoice-id">#${invoice.id.substring(invoice.id.length - 8).toUpperCase()}</div>
+              </div>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-group">
+                <h3>معلومات المستفيد</h3>
+                <div class="value">${user?.name || '-'}</div>
+                <div class="sub-value">${user?.email || ''}</div>
+              </div>
+              <div class="info-group">
+                <h3>تاريخ ووقت المعاملة</h3>
+                <div class="value">${date}</div>
+                <div class="sub-value">${time}</div>
+              </div>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-row">
+                 <span class="summary-label">ملاحظات</span>
+                 <span class="summary-value" style="font-size: 12px;">${invoice.note || '-'}</span>
+              </div>
+              <div class="summary-row total">
+                <span class="summary-label">صافي المبلغ المدفوع</span>
+                <span class="summary-value">${(invoice.total || 0).toLocaleString()} دج</span>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>هذا المستند تم إنشاؤه إلكترونياً وهو يثبت استلام الموظف للمبلغ المذكور أعلاه.</p>
+              <p>تاريخ الطباعة: ${new Date().toLocaleString('ar-DZ')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+            printWindow.document.write(html);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        }
+    };
 
 
     return (
@@ -318,10 +557,11 @@ export const ConfirmerStatsView: React.FC = () => {
                                 <th className="py-3 px-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">المبلغ</th>
                                 <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">ملاحظة</th>
                                 <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">الحالة</th>
+                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">طباعة</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {invoices.length > 0 ? invoices.map((inv: any) => (
+                            {paginatedInvoices.length > 0 ? paginatedInvoices.map((inv: any) => (
                                 <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="py-3.5 px-6">
                                         <span className="text-[11px] font-black text-indigo-600 tracking-tight">#{inv.id.substring(inv.id.length - 6).toUpperCase()}</span>
@@ -344,6 +584,15 @@ export const ConfirmerStatsView: React.FC = () => {
                                             مدفوعة
                                         </span>
                                     </td>
+                                    <td className="py-3.5 px-6 text-center">
+                                        <button
+                                            onClick={() => handlePrint(inv)}
+                                            className="w-8 h-8 flex items-center justify-center rounded-md text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all mx-auto"
+                                            title="طباعة وصل"
+                                        >
+                                            <Printer className="w-4 h-4" />
+                                        </button>
+                                    </td>
                                 </tr>
                             )) : (
                                 <tr>
@@ -353,6 +602,20 @@ export const ConfirmerStatsView: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {invoices.length > 0 && (
+                    <div className="p-4 border-t border-slate-100 bg-slate-50">
+                        <PaginationControl
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            limit={itemsPerPage}
+                            onLimitChange={(limit) => { setItemsPerPage(limit); setCurrentPage(1); }}
+                            totalItems={invoices.length}
+                            isLoading={loading}
+                        />
+                    </div>
+                )}
             </div>
 
         </div>
