@@ -328,43 +328,76 @@ const SubscriptionsView: React.FC = () => {
 
       {/* 2. Monthly Subscriptions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {MAIN_PLANS.map((plan) => (
-          <div key={plan.id} className={`relative flex flex-col p-8 rounded-lg border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
-            {plan.popular && (
-              <span className="absolute -top-4 right-1/2 translate-x-1/2 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
-                الأكثر طلباً
-              </span>
-            )}
+        {MAIN_PLANS.map((plan, index) => {
+          // Determine logic based on current plan
+          const PLAN_ORDER = ['starter', 'pro', 'ultimate'];
+          const currentPlanId = planData?.name ? planData.name.toLowerCase() : '';
+          const currentIndex = PLAN_ORDER.indexOf(currentPlanId);
+          const planIndex = PLAN_ORDER.indexOf(plan.id);
 
-            <div className="mb-6">
-              <h3 className="text-xl font-black text-slate-900">{plan.name}</h3>
-              <p className="text-xs text-slate-400 font-bold mt-2 leading-relaxed">{plan.description}</p>
+          let buttonText = 'ابدأ الآن';
+          let buttonStyle = 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200';
+          let showBadge = false;
+
+          if (currentPlanId && currentPlanId === plan.id) {
+            // Current Plan
+            buttonText = 'تجديد الاشتراك';
+            buttonStyle = 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100';
+          } else if (currentIndex !== -1 && planIndex > currentIndex) {
+            // Upgrade Plan
+            buttonText = 'ترقية الآن';
+            buttonStyle = 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 animate-pulse-slow ring-offset-2 focus:ring-2 ring-indigo-500';
+            showBadge = true;
+          } else if (currentIndex !== -1 && planIndex < currentIndex) {
+            // Downgrade / Lower Plan
+            buttonText = 'ابدأ الآن'; // Or "تغيير للخطة"
+            buttonStyle = 'bg-white text-slate-700 border-2 border-slate-100 hover:border-slate-300 hover:bg-slate-50';
+          } else {
+            // No active monthly plan (or PAYG)
+            buttonText = plan.buttonText; // Default fallback
+            if (plan.popular) {
+              buttonStyle = 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100';
+            } else {
+              buttonStyle = 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200';
+            }
+          }
+
+          return (
+            <div key={plan.id} className={`relative flex flex-col p-8 rounded-lg border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
+              {(plan.popular || showBadge) && (
+                <span className={`absolute -top-4 right-1/2 translate-x-1/2 px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl ${showBadge ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
+                  {showBadge ? 'ينصح بالترقية' : 'الأكثر طلباً'}
+                </span>
+              )}
+
+              <div className="mb-6">
+                <h3 className="text-xl font-black text-slate-900">{plan.name}</h3>
+                <p className="text-xs text-slate-400 font-bold mt-2 leading-relaxed">{plan.description}</p>
+              </div>
+
+              <div className="mb-8 flex items-baseline gap-2">
+                <span className="text-4xl font-black text-slate-900 tracking-tighter">{plan.price}</span>
+                <span className="text-sm font-bold text-slate-400">دج / شهرياً</span>
+              </div>
+
+              <ul className="flex-1 space-y-4 mb-10 border-t border-slate-50 pt-8">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-600">
+                    <i className="fa-solid fa-circle-check text-indigo-500 text-xs shrink-0"></i>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => handleOpenModal(plan)}
+                className={`w-full py-4 rounded-md font-black text-sm transition-all flex items-center justify-center gap-2 ${buttonStyle}`}>
+                {buttonText}
+                {planIndex > currentIndex && currentIndex !== -1 && <i className="fa-solid fa-arrow-up text-xs animate-bounce"></i>}
+              </button>
             </div>
-
-            <div className="mb-8 flex items-baseline gap-2">
-              <span className="text-4xl font-black text-slate-900 tracking-tighter">{plan.price}</span>
-              <span className="text-sm font-bold text-slate-400">دج / شهرياً</span>
-            </div>
-
-            <ul className="flex-1 space-y-4 mb-10 border-t border-slate-50 pt-8">
-              {plan.features.map((feature, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-600">
-                  <i className="fa-solid fa-circle-check text-indigo-500 text-xs shrink-0"></i>
-                  {feature}
-                </li>
-              ))}
-            </ul>
-
-            <button
-              onClick={() => handleOpenModal(plan)}
-              className={`w-full py-4 rounded-md font-black text-sm transition-all ${plan.popular
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'
-                : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'
-                }`}>
-              {plan.buttonText}
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* 3. Special Solutions (Pay-as-you-go & Enterprise) */}
