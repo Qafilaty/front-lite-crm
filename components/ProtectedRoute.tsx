@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useGlobalError } from '../contexts/GlobalErrorContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,6 +9,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { error } = useGlobalError();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,7 +23,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
+  // If there is a global network error, allow rendering (to show the error screen inside Layout)
+  // even if not authenticated
+  if (!isAuthenticated && !error) {
     // حفظ الموقع الحالي لإعادة التوجيه بعد تسجيل الدخول
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

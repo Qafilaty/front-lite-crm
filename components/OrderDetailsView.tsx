@@ -263,7 +263,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       });
 
       toast.success('تم حفظ التغييرات بنجاح');
-      onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar-SA') });
+      onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar') });
     } catch (error: any) {
       console.error(error);
       toast.error('حدث خطأ أثناء الحفظ');

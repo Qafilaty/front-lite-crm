@@ -436,7 +436,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                       )}
                     </td>
                     {activeTab === 'history' && (
-                      <td className="px-6 py-5 text-center text-[10px] font-black text-slate-500">{new Date(data.date).toLocaleDateString('ar-SA')}</td>
+                      <td className="px-6 py-5 text-center text-[10px] font-black text-slate-500">{new Date(data.date).toLocaleDateString('ar')}</td>
                     )}
                     <td className="px-8 py-5 text-center">
                       {activeTab === 'due' ? (
@@ -577,7 +577,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-[10px] font-bold text-slate-400">
-                              {new Date(order.createdAt).toLocaleDateString('ar-SA')}
+                              {new Date(order.createdAt).toLocaleDateString('ar')}
                             </td>
                           </tr>
                         )

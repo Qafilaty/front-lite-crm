@@ -205,6 +205,8 @@ export interface Product {
   description?: string;
   note?: string;
   status?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Stats {

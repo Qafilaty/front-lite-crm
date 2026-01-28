@@ -19,6 +19,10 @@ export const GET_BASIC_STATISTICS = gql`
         name
         orders
       }
+      revenueGrowth
+      ordersGrowth
+      deliveryRateGrowth
+      confirmationRateGrowth
     }
   }
 `;

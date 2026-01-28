@@ -81,16 +81,21 @@ const AppRoutes: React.FC = () => {
   );
 };
 
+import { GlobalErrorProvider, useGlobalError } from './contexts/GlobalErrorContext';
+import NetworkErrorScreen from './components/common/NetworkErrorScreen';
+
 const App: React.FC = () => {
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        <OrderNotificationProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </OrderNotificationProvider>
-      </AuthProvider>
+      <GlobalErrorProvider>
+        <AuthProvider>
+          <OrderNotificationProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </OrderNotificationProvider>
+        </AuthProvider>
+      </GlobalErrorProvider>
     </ApolloProvider>
   );
 };

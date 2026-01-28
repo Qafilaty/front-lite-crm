@@ -21,7 +21,7 @@ const UsersPage: React.FC = () => {
           email: u.email || '',
           phone: u.phone,
           role: u.role === 'admin' || u.role === 'owner' || u.role === 'superAdmin' ? 'admin' : 'confirmed',
-          joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar-SA') : new Date().toLocaleDateString('ar-SA'),
+          joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar') : new Date().toLocaleDateString('ar'),
           ordersLocked: u.role === 'confirmed' ? false : undefined,
           activation: u.activation,
           numberDeliveredOrder: u.numberDeliveredOrder || 0,

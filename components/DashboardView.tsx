@@ -40,7 +40,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         confRate: backendStats.confirmationRate?.toFixed(1) || '0.0',
         delivRate: backendStats.deliveryRate?.toFixed(1) || '0.0',
         confirmedCount: backendStats.confirmedCount || 0,
-        deliveredCount: backendStats.deliveredCount || 0
+        deliveredCount: backendStats.deliveredCount || 0,
+        revenueGrowth: backendStats.revenueGrowth || 0,
+        ordersGrowth: backendStats.ordersGrowth || 0,
+        deliveryRateGrowth: backendStats.deliveryRateGrowth || 0,
+        confirmationRateGrowth: backendStats.confirmationRateGrowth || 0
       };
     }
 
@@ -53,7 +57,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       confRate: ((confirmed / total) * 100).toFixed(1),
       delivRate: ((delivered / total) * 100).toFixed(1),
       confirmedCount: confirmed,
-      deliveredCount: delivered
+      deliveredCount: delivered,
+      revenueGrowth: 0,
+      ordersGrowth: 0,
+      deliveryRateGrowth: 0,
+      confirmationRateGrowth: 0
     };
   }, [orders, backendStats]);
 
@@ -251,8 +259,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         <StatsCard
           label="المبيعات الإجمالية"
           value={stats.revenue.toLocaleString()}
-          change="+8%"
-          changeType="positive"
+          change={`${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth}%`}
+          changeType={metrics.revenueGrowth >= 0 ? "positive" : "negative"}
           icon={Banknote}
           iconBg="bg-amber-50 text-amber-500"
           unit="دج"
@@ -260,31 +268,31 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         <StatsCard
           label="معدل التوصيل"
           value={`${metrics.delivRate}%`}
-          change="-1.5%"
-          changeType="negative"
+          change={`${metrics.deliveryRateGrowth > 0 ? '+' : ''}${metrics.deliveryRateGrowth}%`}
+          changeType={metrics.deliveryRateGrowth >= 0 ? "positive" : "negative"}
           icon={Truck}
           iconBg="bg-blue-50 text-blue-500"
         />
         <StatsCard
           label="معدل التأكيد"
           value={`${metrics.confRate}%`}
-          change="جيد"
-          changeType="positive"
+          change={`${metrics.confirmationRateGrowth > 0 ? '+' : ''}${metrics.confirmationRateGrowth}%`}
+          changeType={metrics.confirmationRateGrowth >= 0 ? "positive" : "negative"}
           icon={CheckCircle2}
           iconBg="bg-emerald-50 text-emerald-500"
         />
         <StatsCard
           label="إجمالي الطلبيات"
-          value={orders.length}
-          change="+12%"
-          changeType="positive"
+          value={orders.length > 0 ? orders.length : (backendStats?.totalOrders || 0)} // Use backend totalOrders if available
+          change={`${metrics.ordersGrowth > 0 ? '+' : ''}${metrics.ordersGrowth}%`}
+          changeType={metrics.ordersGrowth >= 0 ? "positive" : "negative"}
           icon={Package}
           iconBg="bg-indigo-50 text-indigo-500"
         />
       </section>
 
       {/* Charts Row */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-1 gap-8">
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
@@ -321,7 +329,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
             </ResponsiveContainer>
           </div>
         </div>
-
+        {/* 
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
@@ -348,7 +356,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div> */}
       </section>
     </div>
   );

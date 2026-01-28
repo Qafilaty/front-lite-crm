@@ -224,6 +224,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                 <tr>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المنتج والقسم</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">SKU</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">تاريخ الإضافة</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المخزون</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التكلفة</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">السعر</th>
@@ -287,6 +288,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             {product.sku || '---'}
                             <Copy size={10} className="opacity-0 group-hover/sku:opacity-100" />
                           </button>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-bold text-slate-500">
+                            {product.createdAt ? new Date(product.createdAt).toLocaleDateString('ar') : '-'}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1">

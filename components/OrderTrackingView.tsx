@@ -425,6 +425,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
                   {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
                   {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
                 </tr>
               </thead>
@@ -510,6 +511,17 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                           {statusName}
                         </span>
                       </td>}
+
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-bold text-slate-700">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar') : '-'}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      </td>
 
                       {/* Actions */}
                       <td className="px-6 py-5 text-center">

@@ -6,13 +6,26 @@ import Header from './Header';
 import { View } from '../types';
 import ToastNotifications from './common/ToastNotifications';
 import PostponedOrdersAlert from './common/PostponedOrdersAlert';
+import { useGlobalError } from '../contexts/GlobalErrorContext';
+import NetworkErrorScreen from './common/NetworkErrorScreen';
 
 const Layout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user: authUser, logout } = useAuth();
+  const { error, clearError } = useGlobalError();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Fallback user for network error state to prevent crashes
+  const user = authUser || {
+    id: 'offline',
+    name: 'غير متصل',
+    email: 'offline@wilo.site',
+    role: 'user',
+    joinedDate: '-',
+    permissions: []
+  };
 
   // تحديد الـ view الحالي من الـ pathname
   const getCurrentView = (): View => {
@@ -98,7 +111,17 @@ const Layout: React.FC = () => {
           onLogout={handleLogout}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-[1600px] mx-auto custom-scrollbar">
-          <Outlet />
+          {error ? (
+            <NetworkErrorScreen
+              error={error}
+              onRetry={() => {
+                clearError();
+                window.location.reload();
+              }}
+            />
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

@@ -76,6 +76,8 @@ const InventoryPage: React.FC = () => {
             cost: v.cost,
             isDefault: v.isDefault
           })) || [],
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
         }));
         setInventory(transformedProducts);
         setTotalItems(result.total || 0);

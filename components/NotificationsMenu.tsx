@@ -97,7 +97,7 @@ const NotificationsMenu: React.FC = () => {
         if (diffInSeconds < 60) return 'الآن';
         if (diffInSeconds < 3600) return `منذ ${Math.floor(diffInSeconds / 60)} دقيقة`;
         if (diffInSeconds < 86400) return `منذ ${Math.floor(diffInSeconds / 3600)} ساعة`;
-        return date.toLocaleDateString('ar-SA');
+        return date.toLocaleDateString('ar');
     };
 
     return (

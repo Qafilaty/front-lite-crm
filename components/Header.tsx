@@ -65,17 +65,22 @@ const Header: React.FC<HeaderProps> = ({
       case View.USERS: return 'المستخدمين';
       case View.ORDER_CONFIRMATION: return 'تأكيد الطلبيات';
       case View.ORDER_TRACKING: return 'تتبع الطلبيات';
+      case View.ORDER_ABANDONED: return 'الطلبات المتروكة';
+      case View.SALARIES: return 'الرواتب والعمولات';
+      case View.FINANCES: return 'العمليات المالية';
+      case View.FINANCIAL_STATS: return 'احصائيات الطلبيات';
+      case View.INTEGRATION_SETTINGS: return 'Google Sheets';
       case View.INVENTORY: return 'المخزون';
       case View.SHIPPING_CARRIERS: return 'شركات التوصيل';
       case View.SHIPPING_PRICING: return 'تسعير التوصيل';
       case View.STORE_LINKING: return 'ربط المتاجر';
       case View.API_DOCS: return 'وثائق الـ API';
       case View.SUBSCRIPTIONS: return 'الاشتراكات والفوترة';
-      default: return 'داش آي';
+      default: return 'Wilo';
     }
   };
 
-  const today = new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long' });
+  const today = new Date().toLocaleDateString('ar', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const handleSaveProfile = () => {
     onUpdateUser(editingUser);

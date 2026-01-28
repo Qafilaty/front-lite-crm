@@ -498,7 +498,7 @@ const SubscriptionsView: React.FC = () => {
                 ) : invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/50 transition-all">
                     <td className="px-8 py-4 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{inv.id}</td>
-                    <td className="px-8 py-4 text-[11px] font-bold text-slate-500">{new Date(inv.createdAt).toLocaleDateString('ar-SA')}</td>
+                    <td className="px-8 py-4 text-[11px] font-bold text-slate-500">{new Date(inv.createdAt).toLocaleDateString('ar')}</td>
                     <td className="px-8 py-4 text-[11px] font-black text-slate-700">{inv.plan}</td>
                     <td className="px-8 py-4 text-[11px] font-black text-slate-800">{inv.price} {inv.currency}</td>
                     <td className="px-8 py-4 text-[11px] font-bold text-slate-400">{inv.paymentMethod}</td>

@@ -52,11 +52,20 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
   if (networkError) {
     console.error(`[Network error]: ${networkError}`);
 
-    // Handle network errors
+    // Handle authentication errors (401) separately
     if ('statusCode' in networkError && networkError.statusCode === 401) {
       localStorage.removeItem('authToken');
       window.location.href = '/login';
+      return;
     }
+
+    // Dispatch global network error event for other errors (CORS, 404, Offline)
+    window.dispatchEvent(new CustomEvent('feature:network-error', {
+      detail: {
+        message: networkError.message,
+        originalError: networkError
+      }
+    }));
   }
 });
 

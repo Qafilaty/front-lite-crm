@@ -39,12 +39,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (result.success && result.user) {
             setUser(result.user as any);
           } else {
-            // Token غير صالح، احذفه
+            // Check if it's a network error (don't logout)
+            if (result.error && (
+              result.error.includes('Failed to fetch') ||
+              result.error.includes('Network request failed') ||
+              result.error.includes('Network error')
+            )) {
+              console.warn('Network error during session load, keeping token');
+              // Do NOT clear token, do NOT set user (remains null but token stays)
+              // The GlobalErrorContext will handle showing the error screen
+            } else {
+              // Invalid token or other error -> logout
+              localStorage.removeItem('authToken');
+            }
+          }
+        } catch (error: any) {
+          console.error('Error loading session:', error);
+          // Similar check for caught errors just in case
+          const errorMsg = error.message || '';
+          if (errorMsg.includes('Failed to fetch') || errorMsg.includes('Network request failed')) {
+            console.warn('Network error catch during session load, keeping token');
+          } else {
             localStorage.removeItem('authToken');
           }
-        } catch (error) {
-          console.error('Error loading session:', error);
-          localStorage.removeItem('authToken');
         }
       }
       setIsLoading(false);

@@ -78,8 +78,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.SHIPPING_PRICING, label: 'تسعير التوصيل', icon: Map },
         { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
-        { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
         { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },
+        { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
       ]
     }
   ];
@@ -121,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
 
       <nav className="flex-1 px-3 mt-4 space-y-6 overflow-y-auto custom-scrollbar">
         {sections.map((section, sIdx) => (
-          <div key={sIdx} className="space-y-1">
+          <div key={sIdx} className={`space-y-1 ${sections.length - 1 === sIdx ? '!mb-6' : ''}`}>
             {!isCollapsed && (
               <div className="px-4 mb-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
                 {section.title}

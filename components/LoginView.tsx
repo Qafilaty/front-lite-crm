@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
+import logoIcon from '../assets/logo-icon-black.png';
+
 interface LoginViewProps {
   onRegisterRedirect: () => void;
   onLoginSuccess?: () => void;
@@ -34,7 +36,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       const result = await login(email, password);
       if (!result.success) {
@@ -52,8 +54,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
       <div className="w-full max-w-md bg-white rounded-lg border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
         <div className="p-8 text-center border-b border-slate-50 bg-slate-50/50">
-          <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-600/20">
-            <Zap className="w-6 h-6 text-white fill-current" />
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src={logoIcon} alt="Wilo Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">تسجيل الدخول</h2>
           <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">مرحباً بك مجدداً في داش آي</p>
@@ -65,17 +67,17 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
               {error}
             </div>
           )}
-          
+
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البريد الإلكتروني</label>
             <div className="relative">
               <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input 
-                required 
-                type="email" 
+              <input
+                required
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@mail.com" 
+                placeholder="example@mail.com"
                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
               />
             </div>
@@ -88,15 +90,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
             </div>
             <div className="relative">
               <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input 
-                required 
-                type={showPassword ? "text" : "password"} 
+              <input
+                required
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" 
+                placeholder="••••••••"
                 className="w-full pr-11 pl-12 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
               />
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors"
@@ -106,9 +108,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
             </div>
           </div>
 
-          <button 
+          <button
             disabled={loading}
-            type="submit" 
+            type="submit"
             className="w-full py-3.5 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'دخول'}
@@ -117,7 +119,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
 
         <div className="p-6 bg-slate-50/50 border-t border-slate-100 text-center">
           <p className="text-[11px] font-bold text-slate-500">
-            ليس لديك حساب؟ 
+            ليس لديك حساب؟
             <button onClick={onRegisterRedirect} className="text-indigo-600 font-black mr-1 hover:underline">أنشئ حسابك الآن</button>
           </p>
         </div>
