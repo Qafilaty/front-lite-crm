@@ -5,7 +5,7 @@ import { Order, OrderStatus } from '../types';
 import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
-  PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2
+  PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2, AlertTriangle
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
@@ -505,11 +505,19 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
                       {/* Status */}
                       {(visibleColumns as any).status && <td className="px-6 py-5">
-                        <span className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest`}
-                          style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                        >
-                          {statusName}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          {order.isAbandoned && (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              متروك
+                            </span>
+                          )}
+                          <span className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest`}
+                            style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                          >
+                            {statusName}
+                          </span>
+                        </div>
                       </td>}
 
                       <td className="px-6 py-5">

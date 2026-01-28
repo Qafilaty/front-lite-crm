@@ -225,6 +225,7 @@ export const GET_ALL_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        isAbandoned
         confirmed {
           id
           name
@@ -375,6 +376,7 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        isAbandoned
         confirmed {
           id
           name

@@ -116,6 +116,7 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   lastStatusDate: string;
+  isAbandoned?: boolean;
   history?: OrderLog[];
   confirmationTimeLine?: OrderLog[];
   deliveryTimeLine?: OrderLog[];

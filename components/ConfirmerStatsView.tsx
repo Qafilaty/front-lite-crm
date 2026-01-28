@@ -2,7 +2,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useQuery } from '@apollo/client';
 import { GET_CONFIRMER_STATS } from '../graphql/queries/statsQueries';
-import LoadingSpinner from './common/LoadingSpinner';
+import { ConfirmerStatsSkeleton } from './ConfirmerStatsSkeleton';
 
 const CONFIRMATION_STATS_MOCK = [
     { name: 'مؤكدة', value: 78, color: '#4F46E5' },
@@ -16,18 +16,13 @@ const DELIVERY_STATS_MOCK = [
     { name: 'مرتجع', value: 15, color: '#E11D48' },
 ];
 
-
-
 export const ConfirmerStatsView: React.FC = () => {
-    // Determine if we should use real data or mock
-    // For now, I'll structure it to use useQuery, but fallback to mock if loading or empty for the UI demo.
-    // In real implementation, replace MOCK with data.
-
+    // ...
     const { data: statsData, loading } = useQuery(GET_CONFIRMER_STATS, {
         fetchPolicy: 'network-only' // Ensure fresh data
     });
 
-    if (loading) return <LoadingSpinner />;
+    if (loading) return <ConfirmerStatsSkeleton />;
 
     const stats = statsData?.confirmerStats || {};
 
@@ -46,7 +41,7 @@ export const ConfirmerStatsView: React.FC = () => {
     const deliveryRate = stats.deliveryRate || 0;
 
     // 4. Financials
-    const totalEarnings = stats.totalEarnings || (deliveredCount * commissionPrice);
+    const totalEarnings = stats.totalEarnings ?? 0;
 
     // 5. Pie Charts Data & Logic
     const confirmedCountVal = stats.confirmationBreakdown?.confirmed || 0;

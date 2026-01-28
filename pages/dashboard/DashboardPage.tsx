@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { generalService } from '../../services/apiService';
 import DashboardView from '../../components/DashboardView';
 import { SubscriptionTier, type Order, type Product } from '../../types';
+import FinancialStatsPage from './FinancialStatsPage';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.company?.id) return;
+      if (!user?.company?.id || user?.role === 'confirmed') return;
 
       try {
         setLoading(true);
@@ -46,6 +47,10 @@ const DashboardPage: React.FC = () => {
     revenue: backendStats?.totalRevenue || 0,
     lowStockItems: backendStats?.lowStockItems || 0,
   };
+
+  if (user?.role === 'confirmed') {
+    return <FinancialStatsPage />;
+  }
 
   return (
     <DashboardView

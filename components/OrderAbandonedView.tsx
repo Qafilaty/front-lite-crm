@@ -12,6 +12,7 @@ import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { ModernSelect, PaginationControl } from './common';
 import { statusLabels, statusColors } from '../constants/statusConstants';
+import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 
 interface OrderAbandonedViewProps {
     orders?: Order[];
@@ -21,8 +22,50 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<Order[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all'); // Add Status Filter
+
+    // Scroll refs
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        setStartX(e.pageX - (scrollContainerRef.current?.offsetLeft || 0));
+        setScrollLeft(scrollContainerRef.current?.scrollLeft || 0);
+    };
+
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
+        const walk = (x - startX) * 2;
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+        }
+    };
+
+    const scrollCheck = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            const scrollAmount = 200;
+            scrollContainerRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     // --- Dynamic Columns State ---
+    // ... (keep existing column state)
     const [visibleColumns, setVisibleColumns] = useState(() => {
         try {
             const saved = localStorage.getItem('abandonedTableColumns_v1');
@@ -54,7 +97,6 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     };
 
     // Filters
-    const [storeFilter, setStoreFilter] = useState('all');
     const [productFilter, setProductFilter] = useState('all');
     const [stateFilter, setStateFilter] = useState('all');
 
@@ -62,20 +104,44 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
-    // 1. Fetch Stores & Wilayas (Lazy Load)
-    const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
+    // 1. Fetch Company Statuses
+    const { data: statusData } = useQuery(GET_ALL_STATUS_COMPANY);
+
+    const confirmationStatuses = useMemo(() => {
+        if (!statusData?.allStatusCompany) return [];
+        const group = statusData.allStatusCompany.find((g: any) =>
+            g.group === 'Confirmation Group' ||
+            g.group?.toLowerCase().trim() === 'confirmation group' ||
+            g.group?.toLowerCase().includes('confirmation')
+        );
+        return group?.listStatus || [];
+    }, [statusData]);
+
+    const getStatusStyle = (s: any) => {
+        if (typeof s === 'object' && s !== null && s.color) {
+            return {
+                backgroundColor: `${s.color}15`,
+                color: s.color,
+                borderColor: `${s.color}30`
+            };
+        }
+        return null; // Let logic in render handle default
+    };
+
+
+    // 2. Fetch Stores & Wilayas (Lazy Load)
     const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
     const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
         variables: { pagination: { limit: 100, page: 1 } }
     });
 
-    // 2. Construct Advanced Filter
+    // 3. Construct Advanced Filter
     const advancedFilter = useMemo(() => {
         const filter: any = {};
 
-        // Store Filter
-        if (storeFilter !== 'all') {
-            filter["store.idStore"] = storeFilter;
+        // Status Filter
+        if (statusFilter !== 'all') {
+            filter.status = statusFilter;
         }
 
         // Product Filter
@@ -99,9 +165,9 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
         }
 
         return filter;
-    }, [storeFilter, productFilter, stateFilter, searchTerm]);
+    }, [statusFilter, productFilter, stateFilter, searchTerm]);
 
-    // 3. Fetch Orders (Using Abandoned Query)
+    // 4. Fetch Orders (Using Abandoned Query)
     const { data: ordersData, loading: ordersLoading } = useQuery(GET_ALL_ABANDONED_ORDERS, {
         variables: {
             pagination: { page: currentPage, limit: itemsPerPage },
@@ -123,17 +189,6 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const getStatusLabel = (s: any): string => {
         if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'غير محدد';
         return statusLabels[s] || s || 'غير محدد';
-    };
-
-    const getStatusStyle = (s: any) => {
-        if (typeof s === 'object' && s !== null && s.color) {
-            return {
-                backgroundColor: `${s.color}15`,
-                color: s.color,
-                borderColor: `${s.color}30`
-            };
-        }
-        return null;
     };
 
     return (
@@ -167,9 +222,9 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                         >
                             <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
                             <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
-                            {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all') && (
+                            {(stateFilter !== 'all' || productFilter !== 'all') && (
                                 <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
-                                    {[storeFilter, stateFilter, productFilter].filter(f => f !== 'all').length}
+                                    {[stateFilter, productFilter].filter(f => f !== 'all').length}
                                 </span>
                             )}
                         </button>
@@ -225,19 +280,6 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                     {isFiltersOpen && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
                             <div className="space-y-1">
-                                <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
-                                <ModernSelect
-                                    value={storeFilter}
-                                    onChange={setStoreFilter}
-                                    options={[
-                                        { value: 'all', label: 'جميع المتاجر' },
-                                        ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
-                                    ]}
-                                    className="w-full"
-                                    onOpen={() => getStores()}
-                                />
-                            </div>
-                            <div className="space-y-1">
                                 <span className="text-[9px] font-black text-slate-400 px-2">المنتج</span>
                                 <ModernSelect
                                     value={productFilter}
@@ -265,6 +307,71 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Status Tabs - Scrollable Area (Added) */}
+                    <div className="pt-2 border-t border-slate-50 relative group/scroll">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full bg-gradient-to-r from-white to-transparent pointer-events-none" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none" />
+
+                        <button
+                            onClick={() => scrollCheck('right')}
+                            className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => scrollCheck('left')}
+                            className="absolute -left-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        <div
+                            ref={scrollContainerRef}
+                            onMouseDown={handleMouseDown}
+                            onMouseLeave={handleMouseLeave}
+                            onMouseUp={handleMouseUp}
+                            onMouseMove={handleMouseMove}
+                            className="overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing select-none"
+                        >
+                            <div className="flex gap-2 min-w-max px-1">
+                                <button
+                                    onClick={() => setStatusFilter('all')}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all border uppercase tracking-widest flex items-center gap-2 flex-shrink-0
+                                         ${statusFilter === 'all'
+                                            ? `bg-slate-800 text-white border-transparent shadow-lg scale-105`
+                                            : `bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100 shadow-sm`}`}
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'all' ? 'bg-white' : 'bg-slate-400'}`} />
+                                    الكل
+                                </button>
+                                {confirmationStatuses.map((s: any) => {
+                                    const isActive = statusFilter === s.id;
+                                    const style = getStatusStyle(s);
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setStatusFilter(s.id)}
+                                            className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all border uppercase tracking-widest flex items-center gap-2 flex-shrink-0
+                                            ${isActive ? 'brightness-110 shadow-md scale-105 ring-2 ring-offset-2 ring-indigo-50/50' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50'}`}
+                                            style={!isActive && style ? {
+                                                backgroundColor: style.backgroundColor,
+                                                color: style.color,
+                                                borderColor: style.borderColor
+                                            } : (isActive && style ? {
+                                                backgroundColor: style.color, // Solid color for active
+                                                color: '#fff',
+                                                borderColor: style.color
+                                            } : {})}
+                                        >
+                                            {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />}
+                                            {s.nameAR || s.nameEN}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -362,12 +469,20 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
                                             {/* Status */}
                                             {(visibleColumns as any).status && <td className="px-6 py-5">
-                                                <span
-                                                    className={`px-3 py-1 rounded-md text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
-                                                    style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                                                >
-                                                    {statusLabel}
-                                                </span>
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    {order.isAbandoned && (
+                                                        <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1">
+                                                            <AlertTriangle className="w-2.5 h-2.5" />
+                                                            متروك
+                                                        </span>
+                                                    )}
+                                                    <span
+                                                        className={`px-3 py-1 rounded-md text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                                                        style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                                                    >
+                                                        {statusLabel}
+                                                    </span>
+                                                </div>
                                             </td>}
 
                                             {/* Actions */}

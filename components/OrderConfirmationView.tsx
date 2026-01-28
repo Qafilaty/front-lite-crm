@@ -216,6 +216,9 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
       ];
     }
 
+    // Exclude abandoned orders
+    filter.isAbandoned = { $ne: true };
+
     return filter;
   }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, confirmationStatuses]);
 

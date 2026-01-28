@@ -193,13 +193,15 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-2 md:gap-3">
         <NotificationsMenu />
-        <button
-          onClick={() => onViewChange(View.SUBSCRIPTIONS)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currentView === View.SUBSCRIPTIONS ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
-        >
-          <CreditCard className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">الاشتراك</span>
-        </button>
+        {currentUser.role !== 'confirmed' && (
+          <button
+            onClick={() => onViewChange(View.SUBSCRIPTIONS)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currentView === View.SUBSCRIPTIONS ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">الاشتراك</span>
+          </button>
+        )}
 
         <div className="h-6 w-px bg-slate-200/60 mx-1"></div>
 

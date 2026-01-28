@@ -8,17 +8,24 @@ import { CREATE_DELIVERY_COMPANY, UPDATE_DELIVERY_COMPANY, DELETE_DELIVERY_COMPA
 import { DeliveryCompany, AvailableDeliveryCompany } from '../types';
 import LoadingSpinner from './common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { authService } from '../services/apiService';
-import { CardGridSkeleton } from './common';
+import { authService, wilayasService } from '../services/apiService';
+import { CardGridSkeleton, ModernSelect } from './common';
 
 const ShippingCarriersView: React.FC = () => {
   const [user, setUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const userData = await authService.getCurrentUser();
-      if (userData.user && userData.user.company && userData.user.company.id) {
-        setUser(userData.user);
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData.user && userData.user.company && userData.user.company.id) {
+          setUser(userData.user);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user", error);
+      } finally {
+        setIsAuthLoading(false);
       }
     };
     fetchUser();
@@ -46,6 +53,17 @@ const ShippingCarriersView: React.FC = () => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
+  const [wilayas, setWilayas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchWilayas = async () => {
+      const result = await wilayasService.getAllWilayas();
+      if (result.success) {
+        setWilayas(result.wilayas);
+      }
+    };
+    fetchWilayas();
+  }, []);
 
   // Helper to get full image URL
   const getImageUrl = (logoPath?: string) => {
@@ -176,6 +194,31 @@ const ShippingCarriersView: React.FC = () => {
     setIsSubmitting(true);
     // const toastId = toast.loading('جاري الحفظ...'); 
 
+    // Prepare content for submission
+    const contentToSubmit = { ...formData };
+
+    // Ensure fromWilaya is an object { name, code }
+    if (contentToSubmit['fromWilaya']) {
+      const val = contentToSubmit['fromWilaya'];
+      if (typeof val === 'string') {
+        // Try to find in wilayas
+        // We assume the string is the CODE if possible, or name
+        const found = wilayas.find(w => w.code === val || w.name === val);
+        if (found) {
+          contentToSubmit['fromWilaya'] = { name: found.name.split('-')[1]?.trim() || found.name, code: found.code };
+        } else {
+          // Even if not found, if backend strictly needs object, we might default or try to construct one?
+          // Or we leave it as string and risk error if backend validation is strict.
+          // Better to try to construct at least valid structure if possible, but finding is best.
+          // If value looks like a code (digits), assume code.
+          contentToSubmit['fromWilaya'] = { name: val, code: val }; // Fallback to avoid schema mismatch
+        }
+      } else if (typeof val === 'object' && val.name && val.name.includes('-')) {
+        // clean up name if needed
+        contentToSubmit['fromWilaya'] = { ...val, name: val.name.split('-')[1]?.trim() || val.name };
+      }
+    }
+
     try {
       if (editModeCarrier) {
         // Update
@@ -184,7 +227,7 @@ const ShippingCarriersView: React.FC = () => {
             id: editModeCarrier.id,
             content: {
               idAvailableDeliveryCompany: editModeCarrier.availableDeliveryCompany?.id,
-              ...formData,
+              ...contentToSubmit,
             }
           }
         });
@@ -200,7 +243,7 @@ const ShippingCarriersView: React.FC = () => {
               originalName: selectedCarrier.name,
               active: true,
               idAvailableDeliveryCompany: selectedCarrier.id,
-              ...formData
+              ...contentToSubmit
             }
           }
         });
@@ -255,7 +298,7 @@ const ShippingCarriersView: React.FC = () => {
         </button>
       </div>
 
-      {myCarriersLoading ? (
+      {myCarriersLoading || isAuthLoading ? (
         <CardGridSkeleton />
       ) : myCarriers.length === 0 ? (
         <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
@@ -432,6 +475,33 @@ const ShippingCarriersView: React.FC = () => {
 
                           {selectedCarrier.fields.map((fieldName) => {
                             const name = fieldName;
+
+                            if (name === 'fromWilaya') {
+                              return (
+                                <div key={name} className="space-y-1.5">
+                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
+                                    الولاية (من) <span className="text-rose-500">*</span>
+                                  </label>
+                                  <ModernSelect
+                                    value={formData[name]?.code || formData[name] || ''}
+                                    onChange={(val) => {
+                                      const selectedCode = val;
+                                      const selectedWilaya = wilayas.find(w => w.code === selectedCode);
+                                      if (selectedWilaya) {
+                                        handleInputChange(name, { name: selectedWilaya.name.split('-')[1] || selectedWilaya.name, code: selectedWilaya.code });
+                                      } else {
+                                        handleInputChange(name, selectedCode);
+                                      }
+                                      if (errors[name]) setErrors({ ...errors, [name]: '' });
+                                    }}
+                                    options={wilayas.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` }))}
+                                    placeholder="اختر الولاية..."
+                                  />
+                                  {errors[name] && <p className="text-red-500 text-[9px] font-bold px-1">{errors[name]}</p>}
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={name} className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">

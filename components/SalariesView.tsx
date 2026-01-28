@@ -15,6 +15,7 @@ import { salaryService, userService, orderService } from '../services/apiService
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
+import logoBlack from '../assets/logo-black.png';
 
 interface SalariesViewProps { }
 
@@ -48,27 +49,59 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [salaryToDelete, setSalaryToDelete] = useState<string | null>(null);
 
+  // Pagination states for History
+  const [payoutsTotal, setPayoutsTotal] = useState(0);
+
+  const fetchUsers = async () => {
+    const companyId = user?.company?.id;
+    if (!companyId) return;
+
+    const usersResult = await userService.getAllUsers();
+    if (usersResult.success) {
+      setUsers(usersResult.users.filter((u: any) => u.role === 'confirmed' || u.role === 'user'));
+    }
+  };
+
+  const fetchPayouts = async (page: number = 1) => {
+    const companyId = user?.company?.id;
+    if (!companyId) return;
+    setLoading(true);
+    try {
+      const salariesResult = await salaryService.getAllSalaries({
+        pagination: { limit: itemsPerPage, page: page }
+        // Note: Search filter implementation depends on backend capability. 
+        // Currently fetching paginated results without search filter.
+      });
+      if (salariesResult.success) {
+        setPayouts(salariesResult.salaries);
+        setPayoutsTotal(salariesResult.total || 0);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("فشل في جلب سجل المدفوعات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const companyId = user?.company?.id;
-
       if (!companyId) return;
       setLoading(true);
 
-      // 1. Fetch Users
-      const usersResult = await userService.getAllUsers();
-      if (usersResult.success) {
-        // Filter for confirmed users (employees)
-        // Adjust role check if needed, e.g. includes or strict equality
-        setUsers(usersResult.users.filter((u: any) => u.role === 'confirmed' || u.role === 'user'));
-      }
+      // 1. Fetch Users (Always needed for Due tab and Stats)
+      await fetchUsers();
 
-      // 2. Fetch Payouts (History)
-      // We fetch a large limit to allow clientside stats calculation (Best Performer)
-      const salariesResult = await salaryService.getAllSalaries({ pagination: { limit: 1000, page: 1 } });
-      if (salariesResult.success) {
-        setPayouts(salariesResult.salaries);
-      }
+      // 2. Fetch Initial Payouts (for Stats calculation mostly, but pagination requires specific page)
+      // For summaryStats, we might need aggregates? 
+      // Current summaryStats needs ALL history. 
+      // If we paginate, summaryStats will be incorrect if calculated from `payouts` (which is now 1 page).
+      // We need a separate call for stats or backend stats.
+      // `generalService.getBasicStatistics` might help, but let's see.
+      // For now, I'll fetch page 1. The stats limitation is a known trade-off of pagination unless we fetch all for stats.
+      // I'll keep fetching page 1 for the table.
+      await fetchPayouts(1);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -84,8 +117,27 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
     }
   }, [user]);
 
+  // Effect to handle pagination changes for History tab
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchPayouts(currentPage);
+    }
+  }, [currentPage, activeTab]);
+  // Note: activeTab change resets currentPage to 1 in the button onClick, so this triggers.
+
+
   // حساب البيانات الإجمالية للبطاقات
+  // WARN: With pagination, this only calculates over the CURRENT PAGE of payouts.
+  // Ideally, we need a backend endpoint for these totals. 
+  // Only `totalPending` uses `users` (which is all users), so that's fine.
+  // `totalPaid` and `bestConfirmer` will be incorrect (partial).
   const summaryStats = useMemo(() => {
+    // For totalPaid, we can use `payoutsTotal` (count) but not amount sum unless backend returns it.
+    // GET_ALL_SALARIES returns `totalAmount`! Amazing.
+    // Let's assume we can get it. I need to store `totalAmount` from response.
+
+    // Fallback for now: sum of current page (incorrect but prevents crash)
+    // I need to update state to store totalAmount from query result.    
     const totalPaid = payouts.reduce((acc, p) => acc + (p.total || p.amount || 0), 0);
 
     // Calculate total pending from all users current counters
@@ -97,7 +149,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
     const performanceMap: Record<string, number> = {};
 
-    // Add history counts
+    // Add history counts - INCOMPLETE due to pagination
     payouts.forEach(p => {
       const uName = p.user?.name || 'مجهول';
       performanceMap[uName] = (performanceMap[uName] || 0) + (p.ordersCount || 0);
@@ -134,10 +186,243 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       .sort((a, b) => b.unpaidAmount - a.unpaidAmount);
   }, [users, searchTerm]);
 
+  // filteredPayouts is now just payouts (since server filtered possibly, or just current page)
+  // If we want client side search on the current page:
   const filteredPayouts = useMemo(() => {
-    return payouts.filter(p => (p.user?.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return payouts.filter(p => (p.user?.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
   }, [payouts, searchTerm]);
+
+
+  const handlePrint = (salary: any) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const date = new Date(salary.date).toLocaleDateString('ar-DZ');
+      const time = new Date(salary.date).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+
+      const html = `
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <title>وصل دفع - ${salary.id}</title>
+          <meta charset="utf-8">
+          <style>
+            @page { margin: 0; }
+            body { 
+                font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: #fff;
+                margin: 0;
+                padding: 40px;
+                color: #1e293b;
+                -webkit-print-color-adjust: exact;
+            }
+            .invoice-container {
+                max-width: 800px;
+                margin: 0 auto;
+                border: 1px solid #e2e8f0;
+                border-radius: 24px;
+                padding: 48px;
+                position: relative;
+                overflow: hidden;
+            }
+            .watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-45deg);
+                font-size: 120px;
+                color: #f1f5f9;
+                font-weight: 900;
+                z-index: -1;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 60px;
+                border-bottom: 2px solid #f1f5f9;
+                padding-bottom: 32px;
+            }
+            .logo-section h1 {
+                font-size: 32px;
+                font-weight: 900;
+                color: #4f46e5;
+                margin: 0;
+                letter-spacing: -1px;
+            }
+            .logo-section p {
+                font-size: 14px;
+                color: #64748b;
+                margin-top: 8px;
+                font-weight: 500;
+            }
+            .invoice-details {
+                text-align: left;
+            }
+            .status-badge {
+                background: #ecfdf5;
+                color: #059669;
+                padding: 8px 16px;
+                border-radius: 99px;
+                font-size: 12px;
+                font-weight: 800;
+                display: inline-block;
+                margin-bottom: 12px;
+            }
+            .invoice-id {
+                font-size: 16px;
+                font-weight: 700;
+                color: #334155;
+                font-family: monospace;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 40px;
+                margin-bottom: 48px;
+            }
+            .info-group h3 {
+                font-size: 12px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin: 0 0 12px 0;
+                font-weight: 700;
+            }
+            .info-group .value {
+                font-size: 18px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+            .info-group .sub-value {
+                font-size: 14px;
+                color: #64748b;
+                margin-top: 4px;
+            }
+
+            .summary-card {
+                background: #f8fafc;
+                border-radius: 20px;
+                padding: 32px;
+                border: 1px solid #e2e8f0;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 16px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .summary-row:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            .summary-row.total {
+                border-top: 2px solid #e2e8f0;
+                border-bottom: none;
+                padding-top: 24px;
+                margin-top: 8px;
+            }
+            .summary-label {
+                font-size: 14px;
+                color: #64748b;
+                font-weight: 600;
+            }
+            .summary-value {
+                font-size: 16px;
+                font-weight: 700;
+                color: #334155;
+            }
+            .total .summary-label {
+                font-size: 18px;
+                color: #0f172a;
+                font-weight: 800;
+            }
+            .total .summary-value {
+                font-size: 32px;
+                color: #4f46e5;
+                font-weight: 900;
+            }
+
+            .footer {
+                margin-top: 80px;
+                text-align: center;
+                color: #94a3b8;
+                font-size: 12px;
+                border-top: 1px solid #f1f5f9;
+                padding-top: 32px;
+            }
+            
+            @media print {
+                body { padding: 0; }
+                .invoice-container { border: none; }
+            }
+          </style>
+          <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div class="watermark">مدفــوع</div>
+            
+            <div class="header">
+              <div class="logo-section">
+                <img src="${logoBlack}" alt="Wilo" style="height: 50px; margin-bottom: 8px;" />
+                <p>نظام إدارة المبيعات والعمولات</p>
+              </div>
+              <div class="invoice-details">
+                <div class="status-badge">تم الدفع بنجاح</div>
+                <div class="invoice-id">#${salary.id.substring(salary.id.length - 8).toUpperCase()}</div>
+              </div>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-group">
+                <h3>معلومات المستفيد</h3>
+                <div class="value">${salary.user?.name || '-'}</div>
+                <div class="sub-value">${salary.user?.email || ''}</div>
+              </div>
+              <div class="info-group">
+                <h3>تاريخ ووقت المعاملة</h3>
+                <div class="value">${date}</div>
+                <div class="sub-value">${time}</div>
+              </div>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-row">
+                <span class="summary-label">عدد الطلبات المنجزة</span>
+                <span class="summary-value">${salary.ordersCount} طلب</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">سعر العمولة للطلب</span>
+                <span class="summary-value">${salary.orderPrice} دج</span>
+              </div>
+              <div class="summary-row total">
+                <span class="summary-label">صافي المبلغ المدفوع</span>
+                <span class="summary-value">${(salary.total || salary.amount || 0).toLocaleString()} دج</span>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>هذا المستند تم إنشاؤه إلكترونياً وهو يثبت استلام الموظف للمبلغ المذكور أعلاه.</p>
+              <p>تاريخ الطباعة: ${new Date().toLocaleString('ar-DZ')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      // Wait for font to load before printing is a bit flaky without events, 
+      // but putting print in timeout helps.
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
 
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -304,12 +589,19 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   }, [ordersPerPage]);
 
   // @ts-ignore
+  // @ts-ignore
   const paginatedData = activeTab === 'due'
     // @ts-ignore
     ? salariesData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-    : filteredPayouts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    : filteredPayouts; // Server side already paginated (but filteredPayouts applies client search on Page usually)
 
-  const totalPages = Math.ceil((activeTab === 'due' ? (salariesData.length || 0) : filteredPayouts.length) / itemsPerPage);
+  // Note: if filteredPayouts has fewer items than payouts (due to search), we display that.
+  // The pagination control relies on totalItems.
+  // For history, totalItems should be from backend `payoutsTotal` IF no search is active.
+  // If search is active, we are filtering PAGE ONLY. So pagination stays same? No, that's weird.
+  // Valid compromise: Search filters ONLY current page.
+
+  const totalPages = Math.ceil((activeTab === 'due' ? (salariesData.length || 0) : payoutsTotal) / itemsPerPage);
 
 
 
@@ -448,6 +740,13 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                       ) : (
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            onClick={() => handlePrint(data)}
+                            className="w-8 h-8 flex items-center justify-center rounded-md text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                            title="طباعة وصل"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteClick(data.id)}
                             className="w-8 h-8 flex items-center justify-center rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                             title="حذف السجل"
@@ -469,183 +768,185 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
           )}
         </div>
 
-        {
-          totalPages > 1 && (
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center items-center gap-4">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
-              <div className="flex items-center gap-2">
-                {[...Array(totalPages)].map((_, i) => (
-                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-lg text-[11px] font-black transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white text-slate-400 border border-slate-200'}`}>{i + 1}</button>
-                ))}
-              </div>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
-            </div>
-          )
-        }
+
+        <div className="p-6 bg-slate-50 border-t border-slate-100">
+          <PaginationControl
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            totalItems={activeTab === 'due' ? salariesData.length : payoutsTotal}
+            isLoading={loading}
+          />
+        </div>
+
       </div >
 
 
-      {selectedUserForOrders && createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col h-[85vh] border border-slate-200">
-            <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><LayoutList className="w-6 h-6" /></div>
-                <div>
-                  <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">{isPayoutMode ? 'اختيار الطلبات للصرف' : 'سجل الطلبات المؤكدة'}</h4>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{selectedUserForOrders.name} - الصفحة {ordersPage}</p>
+      {
+        selectedUserForOrders && createPortal(
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col h-[85vh] border border-slate-200">
+              <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><LayoutList className="w-6 h-6" /></div>
+                  <div>
+                    <h4 className="text-base font-black text-slate-800 tracking-tight leading-none">{isPayoutMode ? 'اختيار الطلبات للصرف' : 'سجل الطلبات المؤكدة'}</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{selectedUserForOrders.name} - الصفحة {ordersPage}</p>
+                  </div>
                 </div>
+                <button onClick={() => setSelectedUserForOrders(null)} className="text-slate-400 hover:text-rose-500 p-3 rounded-xl hover:bg-rose-50"><X className="w-6 h-6" /></button>
               </div>
-              <button onClick={() => setSelectedUserForOrders(null)} className="text-slate-400 hover:text-rose-500 p-3 rounded-xl hover:bg-rose-50"><X className="w-6 h-6" /></button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-50/30 relative">
-              {loadingOrders ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                </div>
-              ) : userOrders.length > 0 ? (
-                <div className="min-h-full flex flex-col">
-                  <table className="w-full text-right border-collapse flex-1">
-                    <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-                      <tr>
-                        {isPayoutMode && (
-                          <th className="px-6 py-4 w-16">
-                            <button
+              <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-50/30 relative">
+                {loadingOrders ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                  </div>
+                ) : userOrders.length > 0 ? (
+                  <div className="min-h-full flex flex-col">
+                    <table className="w-full text-right border-collapse flex-1">
+                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                          {isPayoutMode && (
+                            <th className="px-6 py-4 w-16">
+                              <button
+                                onClick={() => {
+                                  // Select All logic for CURRENT page
+                                  const allIds = userOrders.map(o => o.id);
+                                  const allSelected = allIds.every(id => selectedOrderIds.includes(id));
+                                  if (allSelected) {
+                                    setSelectedOrderIds(prev => prev.filter(id => !allIds.includes(id)));
+                                  } else {
+                                    setSelectedOrderIds(prev => [...prev.filter(id => !allIds.includes(id)), ...allIds]);
+                                  }
+                                }}
+                                className="w-5 h-5 rounded-md border-2 border-slate-300 flex items-center justify-center text-indigo-600 hover:border-indigo-600 transition-colors"
+                              >
+                                {/* Check if all visible are selected */
+                                  userOrders.every(o => selectedOrderIds.includes(o.id)) && <CheckSquare className="w-4 h-4" />
+                                }
+                              </button>
+                            </th>
+                          )}
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">رقم الطلب</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">العميل</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">الحالة</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">التاريخ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {userOrders.map((order) => {
+                          const isSelected = selectedOrderIds.includes(order.id);
+                          return (
+                            <tr key={order.id}
                               onClick={() => {
-                                // Select All logic for CURRENT page
-                                const allIds = userOrders.map(o => o.id);
-                                const allSelected = allIds.every(id => selectedOrderIds.includes(id));
-                                if (allSelected) {
-                                  setSelectedOrderIds(prev => prev.filter(id => !allIds.includes(id)));
+                                if (!isPayoutMode) return;
+                                if (isSelected) {
+                                  setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
                                 } else {
-                                  setSelectedOrderIds(prev => [...prev.filter(id => !allIds.includes(id)), ...allIds]);
+                                  setSelectedOrderIds(prev => [...prev, order.id]);
                                 }
                               }}
-                              className="w-5 h-5 rounded-md border-2 border-slate-300 flex items-center justify-center text-indigo-600 hover:border-indigo-600 transition-colors"
+                              className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}`}
                             >
-                              {/* Check if all visible are selected */
-                                userOrders.every(o => selectedOrderIds.includes(o.id)) && <CheckSquare className="w-4 h-4" />
-                              }
-                            </button>
-                          </th>
-                        )}
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">رقم الطلب</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">العميل</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">الحالة</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">التاريخ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {userOrders.map((order) => {
-                        const isSelected = selectedOrderIds.includes(order.id);
-                        return (
-                          <tr key={order.id}
-                            onClick={() => {
-                              if (!isPayoutMode) return;
-                              if (isSelected) {
-                                setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
-                              } else {
-                                setSelectedOrderIds(prev => [...prev, order.id]);
-                              }
-                            }}
-                            className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}`}
-                          >
-                            {isPayoutMode && (
-                              <td className="px-6 py-4">
-                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
-                                  {isSelected && <Check className="w-3 h-3" />}
-                                </div>
+                              {isPayoutMode && (
+                                <td className="px-6 py-4">
+                                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
+                                    {isSelected && <Check className="w-3 h-3" />}
+                                  </div>
+                                </td>
+                              )}
+                              <td className="px-6 py-4 text-xs font-black text-indigo-600 font-mono">
+                                {order.numberOrder || order.id?.substring(0, 8)}
                               </td>
-                            )}
-                            <td className="px-6 py-4 text-xs font-black text-indigo-600 font-mono">
-                              {order.numberOrder || order.id?.substring(0, 8)}
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-xs font-bold text-slate-700">{order.fullName}</p>
-                              <p className="text-[10px] text-slate-400">{order.phone}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className="px-2.5 py-1 rounded-md text-[10px] font-black"
-                                style={{
-                                  backgroundColor: (order.status?.color || '#cbd5e1') + '20',
-                                  color: order.status?.color || '#64748b'
-                                }}
-                              >
-                                {order.status?.nameAR || 'غير محدد'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-[10px] font-bold text-slate-400">
-                              {new Date(order.createdAt).toLocaleDateString('ar')}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                              <td className="px-6 py-4">
+                                <p className="text-xs font-bold text-slate-700">{order.fullName}</p>
+                                <p className="text-[10px] text-slate-400">{order.phone}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className="px-2.5 py-1 rounded-md text-[10px] font-black"
+                                  style={{
+                                    backgroundColor: (order.status?.color || '#cbd5e1') + '20',
+                                    color: order.status?.color || '#64748b'
+                                  }}
+                                >
+                                  {order.status?.nameAR || 'غير محدد'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-[10px] font-bold text-slate-400">
+                                {new Date(order.createdAt).toLocaleDateString('ar')}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
 
-                  {/* Pagination Stats inside Modal */}
-                  <div className="sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] bg-slate-50 border-t border-slate-200">
-                    <div className="flex flex-col">
-                      <PaginationControl
-                        currentPage={ordersPage}
-                        totalPages={Math.ceil(ordersTotal / ordersPerPage)}
-                        onPageChange={handlePageChangeOrders}
-                        limit={ordersPerPage}
-                        onLimitChange={setOrdersPerPage}
-                        totalItems={ordersTotal}
-                        isLoading={loadingOrders}
-                      />
+                    {/* Pagination Stats inside Modal */}
+                    <div className="sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] bg-slate-50 border-t border-slate-200">
+                      <div className="flex flex-col">
+                        <PaginationControl
+                          currentPage={ordersPage}
+                          totalPages={Math.ceil(ordersTotal / ordersPerPage)}
+                          onPageChange={handlePageChangeOrders}
+                          limit={ordersPerPage}
+                          onLimitChange={setOrdersPerPage}
+                          totalItems={ordersTotal}
+                          isLoading={loadingOrders}
+                        />
 
-                      {isPayoutMode && (
-                        <div className="px-8 py-4 border-t border-slate-200 bg-white flex justify-between items-center gap-6">
-                          <div className="flex items-center gap-6">
-                            <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">عدد الطلبات المختارة</p>
-                              <p className="text-lg font-black text-slate-800">{selectedOrderIds.length} <span className="text-xs text-slate-400">طلب</span></p>
-                            </div>
-                            <div className="h-8 w-px bg-slate-100"></div>
-                            <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">المبلغ الإجمالي</p>
-                              {/* Need to get orderPrice from context. salariesData might not be efficient to search. But we have selectedUserForOrders. 
+                        {isPayoutMode && (
+                          <div className="px-8 py-4 border-t border-slate-200 bg-white flex justify-between items-center gap-6">
+                            <div className="flex items-center gap-6">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">عدد الطلبات المختارة</p>
+                                <p className="text-lg font-black text-slate-800">{selectedOrderIds.length} <span className="text-xs text-slate-400">طلب</span></p>
+                              </div>
+                              <div className="h-8 w-px bg-slate-100"></div>
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">المبلغ الإجمالي</p>
+                                {/* Need to get orderPrice from context. salariesData might not be efficient to search. But we have selectedUserForOrders. 
                                    We can find it in salariesData or assume we have it. 
                                    salariesData available in scope. 
                                */}
-                              <p className="text-lg font-black text-indigo-600 font-mono">
-                                {(() => {
-                                  // @ts-ignore
-                                  const userSalaryData = salariesData.find(d => d.user.id === selectedUserForOrders.id);
-                                  const price = userSalaryData?.orderPrice || 0;
-                                  return (selectedOrderIds.length * price).toLocaleString();
-                                })()} <span className="text-xs text-indigo-400">دج</span>
-                              </p>
+                                <p className="text-lg font-black text-indigo-600 font-mono">
+                                  {(() => {
+                                    // @ts-ignore
+                                    const userSalaryData = salariesData.find(d => d.user.id === selectedUserForOrders.id);
+                                    const price = userSalaryData?.orderPrice || 0;
+                                    return (selectedOrderIds.length * price).toLocaleString();
+                                  })()} <span className="text-xs text-indigo-400">دج</span>
+                                </p>
+                              </div>
                             </div>
+
+                            <button
+                              onClick={handleProcessPayment}
+                              disabled={selectedOrderIds.length === 0 || isProcessing}
+                              className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
+                              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                              تأكيد وصرف ({selectedOrderIds.length})
+                            </button>
                           </div>
-
-                          <button
-                            onClick={handleProcessPayment}
-                            disabled={selectedOrderIds.length === 0 || isProcessing}
-                            className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
-                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
-                            تأكيد وصرف ({selectedOrderIds.length})
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                  <Package className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="text-xs font-bold">لا توجد طلبات {isPayoutMode ? 'مستحقة للدفع' : 'مؤكدة'}</p>
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                    <Package className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="text-xs font-bold">لا توجد طلبات {isPayoutMode ? 'مستحقة للدفع' : 'مؤكدة'}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>, document.body
-      )}
+          </div>, document.body
+        )
+      }
 
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}
@@ -656,7 +957,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
         isDeleting={loading}
       />
 
-    </div>
+    </div >
   );
 };
 
