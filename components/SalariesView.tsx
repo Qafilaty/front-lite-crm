@@ -722,7 +722,11 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                     <td className="px-6 py-5 text-center font-black text-indigo-600 font-mono">{(activeTab === 'due' ? data.unpaidAmount : (data.total || data.amount)).toLocaleString()} دج</td>
                     <td className="px-6 py-5 text-center">
                       {activeTab === 'due' ? (
-                        <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">بانتظار الصرف</span>
+                        data.unpaidAmount > 0 ? (
+                          <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">بانتظار الصرف</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">لا توجد مستحقات</span>
+                        )
                       ) : (
                         <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">مدفوعة</span>
                       )}
@@ -733,7 +737,14 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                     <td className="px-8 py-5 text-center">
                       {activeTab === 'due' ? (
                         <div className="flex gap-2 justify-center">
-                          <button onClick={() => handleShowOrders(data.user, true)} className="px-6 py-3 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+                          <button
+                            onClick={() => handleShowOrders(data.user, true)}
+                            disabled={data.unpaidAmount === 0}
+                            className={`px-6 py-3 border rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${data.unpaidAmount === 0
+                              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                              : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
+                              }`}
+                          >
                             <DollarSign className="w-3 h-3" /> صرف العمولات
                           </button>
                         </div>

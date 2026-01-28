@@ -193,15 +193,50 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-2 md:gap-3">
         <NotificationsMenu />
-        {currentUser.role !== 'confirmed' && (
-          <button
-            onClick={() => onViewChange(View.SUBSCRIPTIONS)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currentView === View.SUBSCRIPTIONS ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">الاشتراك</span>
-          </button>
-        )}
+        {currentUser.role !== 'confirmed' && (() => {
+          // Subscription Button Logic
+          const plans = currentUser.company?.plans;
+          let btnText = 'الاشتراك';
+          let btnIcon = <CreditCard className="w-3.5 h-3.5" />;
+          let btnStyle = 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100';
+
+          if (plans?.name) {
+            const nameLower = plans.name.toLowerCase();
+            const isPayg = nameLower === 'payg' || nameLower === 'pay_as_you_go';
+
+            if (isPayg) {
+              btnText = 'شحن الرصيد';
+              btnStyle = 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100';
+            } else {
+              // Calculate days left
+              let daysLeft = 0;
+              if (plans.dateExpiry) {
+                const expiry = new Date(plans.dateExpiry);
+                const today = new Date();
+                const diffTime = Math.max(0, expiry.getTime() - today.getTime());
+                daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              }
+
+              if (daysLeft <= 7) {
+                btnText = 'تجديد الاشتراك';
+                btnStyle = 'bg-amber-50 text-amber-600 hover:bg-amber-100 animate-pulse-slow';
+              } else {
+                btnText = 'ترقية الباقة';
+                btnStyle = 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100';
+              }
+            }
+          }
+
+          return (
+            <button
+              onClick={() => onViewChange(View.SUBSCRIPTIONS)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currentView === View.SUBSCRIPTIONS ? 'bg-indigo-600 text-white shadow-md' : btnStyle}`}
+            >
+              {btnIcon}
+              <span className="hidden sm:inline">{currentView === View.SUBSCRIPTIONS ? 'الاشتراك' : btnText}</span>
+            </button>
+          );
+        })()}
 
         <div className="h-6 w-px bg-slate-200/60 mx-1"></div>
 

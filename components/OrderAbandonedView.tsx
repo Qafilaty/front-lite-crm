@@ -69,16 +69,17 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const [visibleColumns, setVisibleColumns] = useState(() => {
         try {
             const saved = localStorage.getItem('abandonedTableColumns_v1');
-            return saved ? JSON.parse(saved) : {
+            return {
                 customerInfo: true,
                 locationInfo: true,
                 dateInfo: true,
+                confirmerInfo: true,
                 financials: true,
                 status: true,
                 actions: true
             };
         } catch {
-            return { customerInfo: true, locationInfo: true, dateInfo: true, financials: true, status: true, actions: true };
+            return { customerInfo: true, locationInfo: true, dateInfo: true, confirmerInfo: true, financials: true, status: true, actions: true };
         }
     });
     const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
@@ -255,6 +256,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 customerInfo: 'العميل',
                                                 locationInfo: 'الموقع',
                                                 dateInfo: 'التاريخ',
+                                                confirmerInfo: 'مؤكد الطلب',
                                                 financials: 'المالية',
                                                 status: 'الحالة'
                                             };
@@ -378,7 +380,9 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {ordersLoading ? (
                     <div className="p-6">
-                        <TableSkeleton columns={6} rows={8} />
+                        <div className="p-6">
+                            <TableSkeleton columns={7} rows={8} />
+                        </div>
                     </div>
                 ) : (
                     <div className="overflow-x-auto custom-scrollbar">
@@ -388,6 +392,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                     {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
                                     {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
                                     {(visibleColumns as any).dateInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>}
+                                    {(visibleColumns as any).confirmerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
                                     {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
                                     {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
@@ -454,6 +459,20 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 <div className="text-[9px] font-bold text-slate-400">
                                                     {new Date(order.createdAt).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
+                                            </td>}
+
+                                            {/* Confirmer Info */}
+                                            {(visibleColumns as any).confirmerInfo && <td className="px-6 py-5">
+                                                {order.confirmed ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[9px] font-black">
+                                                            {order.confirmed.name.charAt(0)}
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-slate-700">{order.confirmed.name}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-slate-300">-</span>
+                                                )}
                                             </td>}
 
                                             {/* Financials */}

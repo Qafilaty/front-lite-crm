@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { User } from '../types';
-import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, UserCog, Search, ChevronRight, ChevronLeft, Coins, ShoppingBag, AlertTriangle } from 'lucide-react';
+import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, UserCog, Search, ChevronRight, ChevronLeft, Coins, ShoppingBag, AlertTriangle, CheckCircle2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TableSkeleton from './common/TableSkeleton';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
@@ -240,12 +240,27 @@ const UsersView: React.FC<UsersViewProps> = ({
     }
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText('https://app.wilo.site/login');
+    toast.success('تم نسخ الرابط بنجاح');
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-lg font-black text-slate-800 tracking-tight">إدارة المستخدمين</h2>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">التحكم في أعضاء الفريق والصلاحيات</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">التحكم في أعضاء الفريق والصلاحيات</p>
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-md text-[10px] font-bold transition-colors border border-slate-200 hover:border-indigo-100"
+              title="نسخ رابط الدخول"
+            >
+              <Copy className="w-3 h-3" />
+              <span className="font-mono">app.wilo.site/login</span>
+            </button>
+          </div>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-60">
@@ -271,7 +286,7 @@ const UsersView: React.FC<UsersViewProps> = ({
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         {isLoading ? (
           <div className="p-6">
-            <TableSkeleton columns={7} rows={8} />
+            <TableSkeleton columns={8} rows={8} />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -281,7 +296,8 @@ const UsersView: React.FC<UsersViewProps> = ({
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">العضو</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الصلاحية</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">عمولة التأكيد</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الطلبات المؤكدة</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الطلبات لم تدفع</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">كل الطلبات الموكدة</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">حالة العمل</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">التاريخ</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
@@ -320,7 +336,17 @@ const UsersView: React.FC<UsersViewProps> = ({
                     <td className="px-6 py-3.5">
                       {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
-                          <ShoppingBag className="w-3.5 h-3.5 text-indigo-500" />
+                          <ShoppingBag className="w-3.5 h-3.5 text-amber-500" />
+                          <span>{user.numberDeliveredOrderNotPaid || 0}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-[10px]">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      {user.role === 'confirmed' ? (
+                        <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
                           <span>{user.numberDeliveredOrder || 0}</span>
                         </div>
                       ) : (

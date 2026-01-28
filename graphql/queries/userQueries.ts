@@ -64,6 +64,7 @@ export const GET_ALL_USERS = gql`
       activation
       createdAt
       numberDeliveredOrder
+      numberDeliveredOrderNotPaid
       orderPrice
     }
   }

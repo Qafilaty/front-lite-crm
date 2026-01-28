@@ -141,6 +141,7 @@ export interface User {
   ordersLocked?: boolean;
   activation?: boolean;
   numberDeliveredOrder?: number;
+  numberDeliveredOrderNotPaid?: number;
   orderPrice?: number;
   company?: {
     id: string;

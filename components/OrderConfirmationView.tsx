@@ -12,7 +12,7 @@ import CreateOrderModal from './CreateOrderModal';
 import { useQuery, useLazyQuery, useSubscription, useMutation, gql } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
-import { GET_CURRENT_USER } from '../graphql/queries';
+import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import toast from 'react-hot-toast';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
@@ -88,6 +88,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [storeFilter, setStoreFilter] = useState('all'); // Store ID
   const [productFilter, setProductFilter] = useState('all'); // Product ID
   const [stateFilter, setStateFilter] = useState('all'); // State Code
+  const [confirmerFilter, setConfirmerFilter] = useState('all'); // User ID
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -175,6 +176,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
     variables: { pagination: { limit: 100, page: 1 } }
   });
+  const [getUsers, { data: usersData }] = useLazyQuery(GET_ALL_USERS);
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -205,6 +207,11 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
       filter["state.code"] = stateFilter;
     }
 
+    // Searching Filter
+    if (confirmerFilter !== 'all') {
+      filter["idConfirmed"] = confirmerFilter;
+    }
+
     // Search Term (Server-side Regex)
     if (searchTerm) {
       const regex = { $regex: searchTerm, $options: 'i' };
@@ -220,7 +227,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     filter.isAbandoned = { $ne: true };
 
     return filter;
-  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, confirmationStatuses]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, confirmerFilter, searchTerm, confirmationStatuses]);
 
   // 4. Fetch Orders with Advanced Filter
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
@@ -336,7 +343,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
 
   useEffect(() => {
     setSelectedOrderIds([]); // Clear selection when filter changes
-  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, confirmerFilter, searchTerm]);
 
   return (
     <>
@@ -405,9 +412,9 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
               >
                 <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
                 <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
-                {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all') && (
+                {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all' || confirmerFilter !== 'all') && (
                   <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
-                    {[storeFilter, stateFilter, productFilter].filter(f => f !== 'all').length}
+                    {[storeFilter, stateFilter, productFilter, confirmerFilter].filter(f => f !== 'all').length}
                   </span>
                 )}
               </button>
@@ -474,7 +481,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
 
             {/* Collapsible Filters Area */}
             {isFiltersOpen && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
                 <div className="space-y-1">
                   <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
                   <ModernSelect
@@ -501,6 +508,23 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     onOpen={() => getProducts()}
                   />
                 </div>
+                {(user?.role === 'admin' || user?.role === 'owner') && (
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-slate-400 px-2">المؤكد</span>
+                    <ModernSelect
+                      value={confirmerFilter}
+                      onChange={setConfirmerFilter}
+                      options={[
+                        { value: 'all', label: 'جميع المؤكدين' },
+                        ...(usersData?.allUser
+                          ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin')
+                          ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
+                      ]}
+                      className="w-full"
+                      onOpen={() => getUsers()}
+                    />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <span className="text-[9px] font-black text-slate-400 px-2">الولاية</span>
                   <ModernSelect

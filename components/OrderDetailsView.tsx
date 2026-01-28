@@ -1510,27 +1510,42 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                  {deliveryCompanies.map(company => (
-                    <label key={company.id} className={`flex items-center justify-between p-5 rounded-xl border-2 cursor-pointer transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                          {company.availableDeliveryCompany?.logo ? <img src={`${import.meta.env.VITE_Images_Url}/${company.availableDeliveryCompany.logo}`} alt={company.name} className="w-full h-full object-contain p-2" /> : <Truck className="w-6 h-6 text-slate-300" />}
+                  {deliveryCompanies.map(company => {
+                    // Check if *this* order has a delivery company assigned in the backend data (not just local edit)
+                    const isCompanyLocked = !!order.deliveryCompany?.deliveryCompany?.id;
+                    const isDisabled = isCompanyLocked && selectedCompanyId !== company.id;
+
+                    return (
+                      <label
+                        key={company.id}
+                        className={`flex items-center justify-between p-5 rounded-xl border-2 transition-all 
+                          ${selectedCompanyId === company.id
+                            ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-500/10'
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}
+                          ${isDisabled ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}
+                        `}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+                            {company.availableDeliveryCompany?.logo ? <img src={`${import.meta.env.VITE_Images_Url}/${company.availableDeliveryCompany.logo}`} alt={company.name} className="w-full h-full object-contain p-2" /> : <Truck className="w-6 h-6 text-slate-300" />}
+                          </div>
+                          <span className="font-black text-sm text-slate-700">{company.name}</span>
                         </div>
-                        <span className="font-black text-sm text-slate-700">{company.name}</span>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 bg-white'}`}>
-                        {selectedCompanyId === company.id && <Check className="w-4 h-4 text-white" />}
-                      </div>
-                      <input
-                        type="radio"
-                        name="deliveryCompany"
-                        value={company.id}
-                        checked={selectedCompanyId === company.id}
-                        onChange={() => setSelectedCompanyId(company.id)}
-                        className="hidden"
-                      />
-                    </label>
-                  ))}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedCompanyId === company.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 bg-white'}`}>
+                          {selectedCompanyId === company.id && <Check className="w-4 h-4 text-white" />}
+                        </div>
+                        <input
+                          type="radio"
+                          name="deliveryCompany"
+                          value={company.id}
+                          checked={selectedCompanyId === company.id}
+                          onChange={() => !isCompanyLocked && setSelectedCompanyId(company.id)}
+                          disabled={isCompanyLocked}
+                          className="hidden"
+                        />
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>
