@@ -11,3 +11,5 @@ export { default as PaginationControl } from './PaginationControl';
 export { default as StatsSkeleton } from './StatsSkeleton';
 export { default as TableSkeleton } from './TableSkeleton';
 export { default as ToastNotifications } from './ToastNotifications';
+export { default as OrderStatsSkeleton } from './OrderStatsSkeleton';
+export { default as OrderDetailsSkeleton } from './OrderDetailsSkeleton';

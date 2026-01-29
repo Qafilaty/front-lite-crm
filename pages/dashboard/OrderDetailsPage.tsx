@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@apollo/client';
 import { GET_ORDER } from '../../graphql/queries/orderQueries';
 import { UPDATE_ORDER, DELETE_ORDER } from '../../graphql/mutations/orderMutations';
 import OrderDetailsView from '../../components/OrderDetailsView';
+import { OrderDetailsSkeleton } from '../../components/common';
 import { Order, OrderLog } from '../../types';
 import { Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -75,11 +76,8 @@ const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ trackingMode = fals
     // Show loader if loading OR if we have data but haven't mapped it to state yet
     if (loading || (data?.order && !order)) {
         return (
-            <div className="flex h-[80vh] items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-                    <p className="text-sm font-bold text-slate-400">جاري تحميل تفاصيل الطلب...</p>
-                </div>
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
+                <OrderDetailsSkeleton />
             </div>
         );
     }

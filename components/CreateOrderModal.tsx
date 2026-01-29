@@ -280,9 +280,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             quantity: item.quantity
                         })),
 
-                        // Basic defaults required by schema
-                        isAbandoned: false,
-                        replaced: false
+
                     }
                 }
             });

@@ -101,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
 
   return (
     <aside className={`
-      fixed inset-y-0 right-0 z-50 bg-[#0F172A] text-slate-400 shadow-2xl transition-all duration-300 ease-in-out md:static md:flex md:flex-col
+      fixed inset-y-0 right-0 z-50 bg-[#0F172A] text-slate-400 shadow-2xl transition-all duration-300 ease-in-out flex flex-col w-64 md:static
       ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       md:translate-x-0

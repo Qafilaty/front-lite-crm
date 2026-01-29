@@ -1246,10 +1246,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <div className="p-5 space-y-4">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الإنشاء</p>
-                  <p className="text-xs font-bold text-slate-700" dir="ltr">{new Date(editedOrder.createdAt).toLocaleString('ar-DZ')}</p>
+                  <p className="text-xs font-bold text-slate-700 font-mono" dir="ltr">
+                    {new Date(editedOrder.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
                 </div>
 
-                {editedOrder.duplicatePhone && (
+                {editedOrder.duplicatePhone > 1 && (
                   <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-600">
                     <AlertCircle className="w-4 h-4" />
                     <span className="text-[10px] font-black">رقم هاتف مكرر</span>

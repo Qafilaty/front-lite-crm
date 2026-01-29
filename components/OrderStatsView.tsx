@@ -13,7 +13,7 @@ import {
 import { GET_ORDER_STATS } from '../graphql/queries/statsQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useQuery, useLazyQuery } from '@apollo/client';
-import { ModernSelect, StatsSkeleton } from './common';
+import { ModernSelect, StatsSkeleton, OrderStatsSkeleton } from './common';
 import { GET_ALL_USERS } from '../graphql/queries';
 import { ConfirmerStatsView } from './ConfirmerStatsView';
 
@@ -72,8 +72,9 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     const confirmersList = allUsers.filter((u: any) => ['confirmed_orders', 'admin', 'confirmed'].includes(u.role));
     const productsList = productsData?.allProduct?.data || [];
 
+
     if (loading && !data) {
-        return <StatsSkeleton />;
+        return <OrderStatsSkeleton />;
     }
 
     if (error) {
