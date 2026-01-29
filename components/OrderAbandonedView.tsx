@@ -146,6 +146,10 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
         // Status Filter
         if (statusFilter !== 'all') {
             filter.status = statusFilter;
+        } else if (confirmationStatuses.length > 0) {
+            // When 'all' is selected, we want to fetch orders with ANY of the statuses in the group
+            // This overrides the backend default which might only return strict 'abandoned'
+            filter.status = { $in: confirmationStatuses.map((s: any) => s.id) };
         }
 
         // Product Filter
