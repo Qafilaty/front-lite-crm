@@ -341,7 +341,7 @@ export const IntegrationSettings: React.FC = () => {
                     newConfigs[type] = {
                         id: sheet.idFile,
                         name: sheet.nameSheet,
-                        startRow: sheet.lastRowSynced ? sheet.lastRowSynced + 1 : 2,
+                        startRow: sheet.lastRowSynced ? sheet.lastRowSynced : 2,
                         dbId: sheet.id
                     };
                     newAutoSync[type] = sheet.autoSync || false;
