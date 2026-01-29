@@ -305,6 +305,7 @@ export interface Invoice {
   paymentMethod: string;
   proof?: string;
   coupon?: Coupon;
+  pointes?: number;
 }
 
 export interface Payout {

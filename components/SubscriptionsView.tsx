@@ -82,6 +82,13 @@ const MAIN_PLANS = [
   }
 ];
 
+const POINT_BUNDLES = [
+  { points: 100, price: 1000, label: '100 طلب', discount: 0 },
+  { points: 500, price: 4500, label: '500 طلب', discount: 5 },
+  { points: 1000, price: 8000, label: '1000 طلب', discount: 10 },
+  { points: 5000, price: 35000, label: '5000 طلب', discount: 15 }
+];
+
 const SubscriptionsView: React.FC = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -92,6 +99,7 @@ const SubscriptionsView: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [step, setStep] = useState(1);
   const [duration, setDuration] = useState(1); // 1, 3, 6, 12
+  const [selectedPoints, setSelectedPoints] = useState<number | null>(null); // For PAYG
   const [paymentMethod, setPaymentMethod] = useState<'ccp' | 'baridimob' | 'redotpay' | 'paypal'>('ccp');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
@@ -167,7 +175,15 @@ const SubscriptionsView: React.FC = () => {
   const handleOpenModal = (plan: any) => {
     setSelectedPlan(plan);
     setStep(1);
-    setDuration(1);
+
+    if (plan.id === 'payg') {
+      setDuration(0);
+      setSelectedPoints(100); // Default
+    } else {
+      setDuration(1);
+      setSelectedPoints(null);
+    }
+
     setPaymentMethod('ccp');
     setProofFile(null);
     setProofPreview(null);
@@ -186,23 +202,34 @@ const SubscriptionsView: React.FC = () => {
   // Derived State logic
   useEffect(() => {
     if (selectedPlan) {
-      // Parse price logic (removing commas if string)
-      const basePrice = parseInt(selectedPlan.price.replace(/,/g, ''));
-      let price = basePrice * duration;
+      if (selectedPlan.id === 'payg' && selectedPoints) {
+        const bundle = POINT_BUNDLES.find(b => b.points === selectedPoints);
+        let price = bundle ? bundle.price : 0;
 
-      // Apply Duration Discounts
-      if (duration === 3) price = price * 0.95; // 5% off
-      if (duration === 6) price = price * 0.90; // 10% off
-      if (duration === 12) price = price * 0.85; // 15% off
+        // Apply Coupon logic if needed (usually coupons might apply to points too)
+        if (appliedCoupon) {
+          price = price * (1 - appliedCoupon.discount / 100);
+        }
+        setTotalPrice(Math.floor(price));
+      } else {
+        // Parse price logic (removing commas if string)
+        const basePrice = parseInt(selectedPlan.price.replace(/,/g, ''));
+        let price = basePrice * duration;
 
-      // Apply Coupon Discount
-      if (appliedCoupon) {
-        price = price * (1 - appliedCoupon.discount / 100);
+        // Apply Duration Discounts
+        if (duration === 3) price = price * 0.95; // 5% off
+        if (duration === 6) price = price * 0.90; // 10% off
+        if (duration === 12) price = price * 0.85; // 15% off
+
+        // Apply Coupon Discount
+        if (appliedCoupon) {
+          price = price * (1 - appliedCoupon.discount / 100);
+        }
+
+        setTotalPrice(Math.floor(price));
       }
-
-      setTotalPrice(Math.floor(price));
     }
-  }, [selectedPlan, duration, appliedCoupon]);
+  }, [selectedPlan, duration, selectedPoints, appliedCoupon]);
 
   useEffect(() => {
     if (paymentMethod === 'redotpay' || paymentMethod === 'paypal') {
@@ -283,6 +310,7 @@ const SubscriptionsView: React.FC = () => {
         proof: proofFilename,
         paymentMethod: paymentMethod,
         currency: currency,
+        pointes: selectedPoints || 0,
         idCoupon: appliedCoupon ? appliedCoupon.id : null // Assuming coupon object has id if from DB, or just null for now
       };
 
@@ -461,7 +489,9 @@ const SubscriptionsView: React.FC = () => {
             </div>
           </div>
 
-          <button className="w-full mt-8 bg-slate-900 text-white py-4 rounded-md font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+          <button
+            onClick={() => handleOpenModal({ id: 'payg', name: 'الدفع حسب الاستخدام', price: '0' })}
+            className="w-full mt-8 bg-slate-900 text-white py-4 rounded-md font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
             شحن الرصيد (Top-up)
           </button>
         </div>
@@ -507,10 +537,15 @@ const SubscriptionsView: React.FC = () => {
             </div>
           </div>
 
-          <button className="w-full mt-8 bg-white text-slate-900 py-4 rounded-md font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl">
+          <a
+            href="https://wa.me/213779717696"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full mt-8 bg-white text-slate-900 py-4 rounded-md font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl"
+          >
             <i className="fa-solid fa-headset text-base"></i>
             تحدث مع فريق الخبراء
-          </button>
+          </a>
         </div>
 
       </div>
@@ -620,22 +655,42 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 1: Duration */}
               {step === 1 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <h4 className="font-black text-slate-800 text-sm">اختر مدة الاشتراك</h4>
+                  <h4 className="font-black text-slate-800 text-sm">
+                    {selectedPlan.id === 'payg' ? 'اختر حزمة النقاط' : 'اختر مدة الاشتراك'}
+                  </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 3, 6, 12].map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setDuration(m)}
-                        className={`p-4 rounded-lg border-2 transition-all text-center space-y-2 ${duration === m
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
-                          : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
-                          }`}
-                      >
-                        <h5 className="text-xl font-black">{m}</h5>
-                        <span className="text-[10px] font-bold uppercase">أشهر</span>
-                        {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
-                      </button>
-                    ))}
+                    {selectedPlan.id === 'payg' ? (
+                      POINT_BUNDLES.map((bundle) => (
+                        <button
+                          key={bundle.points}
+                          onClick={() => setSelectedPoints(bundle.points)}
+                          className={`p-4 rounded-lg border-2 transition-all text-center space-y-2 ${selectedPoints === bundle.points
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                            }`}
+                        >
+                          <h5 className="text-xl font-black">{bundle.points}</h5>
+                          <span className="text-[10px] font-bold uppercase">نقطة</span>
+                          <span className="block text-xs font-bold text-slate-900 mt-1">{bundle.price.toLocaleString()} دج</span>
+                          {bundle.discount > 0 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {bundle.discount}%</span>}
+                        </button>
+                      ))
+                    ) : (
+                      [1, 3, 6, 12].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setDuration(m)}
+                          className={`p-4 rounded-lg border-2 transition-all text-center space-y-2 ${duration === m
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                            }`}
+                        >
+                          <h5 className="text-xl font-black">{m}</h5>
+                          <span className="text-[10px] font-bold uppercase">أشهر</span>
+                          {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
+                        </button>
+                      ))
+                    )}
                   </div>
 
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-4">

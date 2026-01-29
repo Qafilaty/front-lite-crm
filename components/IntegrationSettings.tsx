@@ -475,13 +475,13 @@ export const IntegrationSettings: React.FC = () => {
     };
 
     const fields = [
-        { id: 'fullName', label: 'اسم الزبون', Icon: User, required: true },
+        { id: 'fullName', label: 'اسم الزبون', Icon: User, required: false },
         { id: 'phone', label: 'رقم الهاتف', Icon: Phone, required: true },
         { id: 'address', label: 'العنوان الكامل', Icon: MapPin, required: false },
         { id: 'state', label: 'الولاية', Icon: Map, required: false },
         { id: 'city', label: 'البلدية', Icon: Map, required: false },
-        { id: 'products.name', label: 'اسم المنتج', Icon: Box, required: true },
-        { id: 'products.sku', label: 'كود المنتج (SKU)', Icon: Box, required: true },
+        { id: 'products.name', label: 'اسم المنتج', Icon: Box, required: false },
+        { id: 'products.sku', label: 'كود المنتج (SKU)', Icon: Box, required: false },
         { id: 'products.quantity', label: 'الكمية', Icon: Box, required: false },
         { id: 'products.price', label: 'السعر', Icon: Box, required: false },
         { id: 'totalPrice', label: 'السعر الإجمالي', Icon: Box, required: false },
