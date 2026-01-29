@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Search } from 'lucide-react';
+import { ChevronDown, Check, Search, Loader2 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
 export interface Option {
@@ -16,10 +16,11 @@ interface ModernSelectProps {
     className?: string; // Additional classes for the container
     label?: string; // Optional label text
     disabled?: boolean;
+    isLoading?: boolean; // New prop for loading state
     onOpen?: () => void;
 }
 
-export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, options, placeholder = 'Select...', className, label, disabled = false, onOpen }) => {
+export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, options, placeholder = 'Select...', className, label, disabled = false, isLoading = false, onOpen }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -95,7 +96,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
                 <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
 
                     {/* Search Input */}
-                    {showSearch && (
+                    {showSearch && !isLoading && (
                         <div className="sticky top-0 bg-white p-2 border-b border-slate-50 z-10">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -113,7 +114,11 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
                     )}
 
                     <div className="p-1 space-y-0.5">
-                        {filteredOptions.length > 0 ? (
+                        {isLoading ? (
+                            <div className="px-4 py-6 flex justify-center items-center text-indigo-500">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            </div>
+                        ) : filteredOptions.length > 0 ? (
                             filteredOptions.map((option) => (
                                 <button
                                     key={option.value}

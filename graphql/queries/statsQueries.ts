@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_ORDER_STATS = gql`
-  query OrderStats($period: String, $idEmployee: ID, $idProduct: ID) {
-    orderStats(period: $period, idEmployee: $idEmployee, idProduct: $idProduct) {
+  query OrderStats($period: String, $idEmployee: ID, $idProduct: ID, $type: String) {
+    orderStats(period: $period, idEmployee: $idEmployee, idProduct: $idProduct, type: $type) {
       kpis {
         total
         confirmedCount

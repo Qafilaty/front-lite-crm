@@ -171,12 +171,12 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   }, [statusData]);
 
   // 2. Fetch Stores & Wilayas (Lazy Load)
-  const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
-  const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
-  const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
+  const [getStores, { data: storesData, loading: storesLoading }] = useLazyQuery(GET_ALL_STORES);
+  const [getWilayas, { data: wilayasData, loading: wilayasLoading }] = useLazyQuery(GET_ALL_WILAYAS);
+  const [getProducts, { data: productsData, loading: productsLoading }] = useLazyQuery(GET_ALL_PRODUCTS, {
     variables: { pagination: { limit: 100, page: 1 } }
   });
-  const [getUsers, { data: usersData }] = useLazyQuery(GET_ALL_USERS);
+  const [getUsers, { data: usersData, loading: usersLoading }] = useLazyQuery(GET_ALL_USERS);
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -493,6 +493,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     ]}
                     className="w-full"
                     onOpen={() => getStores()}
+                    isLoading={storesLoading}
                   />
                 </div>
                 <div className="space-y-1">
@@ -506,6 +507,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     ]}
                     className="w-full"
                     onOpen={() => getProducts()}
+                    isLoading={productsLoading}
                   />
                 </div>
                 {(user?.role === 'admin' || user?.role === 'owner') && (
@@ -522,6 +524,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       ]}
                       className="w-full"
                       onOpen={() => getUsers()}
+                      isLoading={usersLoading}
                     />
                   </div>
                 )}
@@ -536,6 +539,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     ]}
                     className="w-full"
                     onOpen={() => getWilayas()}
+                    isLoading={wilayasLoading}
                   />
                 </div>
               </div>

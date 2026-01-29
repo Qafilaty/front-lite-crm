@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { useSubscription, useQuery, gql } from '@apollo/client';
 import { useAuth } from './AuthContext';
 import { GET_POSTPONED_COUNT } from '../graphql/queries/orderQueries';
+import cashierSound from '../assets/cashier-quotka.mp3';
 
 const SYNC_ORDERS_SUBSCRIPTION = gql`
   subscription OnSyncOrders($idCompany: ID!) {
@@ -32,8 +33,8 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
     // useQuery(GET_POSTPONED_COUNT, ...);
 
     useEffect(() => {
-        // Initialize audio
-        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        // Initialize audio (Cashier Sound)
+        audioRef.current = new Audio(cashierSound);
 
         // Browser Autoplay Policy: AudioContext must be resumed (or audio played) after user interaction
         const unlockAudio = () => {

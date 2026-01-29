@@ -29,7 +29,8 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
         return <ConfirmerStatsView />;
     }
 
-    const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('week');
+    const [period, setPeriod] = useState<'all' | 'month' | 'year' | 'week'>('all');
+    const [type, setType] = useState<'orders' | 'abandoned'>('orders');
 
     // Auth logic for initial states
     const isRestricted = !['owner', 'admin'].includes(currentUser.role);
@@ -43,13 +44,14 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
         variables: {
             period,
             idEmployee: idEmployee || null,
-            idProduct: idProduct || null
+            idProduct: idProduct || null,
+            type
         },
         fetchPolicy: 'cache-and-network'
     });
 
     // Fetch Products for Filter (Lazy)
-    const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
+    const [getProducts, { data: productsData, loading: productsLoading }] = useLazyQuery(GET_ALL_PRODUCTS, {
         variables: {
             pagination: { page: 1, limit: 100 } // Limit to 100 for dropdown efficiency
         },
@@ -64,7 +66,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     };
 
     // Lazy load users for filter
-    const [getUsers, { data: usersData }] = useLazyQuery(GET_ALL_USERS);
+    const [getUsers, { data: usersData, loading: usersLoading }] = useLazyQuery(GET_ALL_USERS);
     const allUsers = usersData?.allUser || [];
 
     const confirmersList = allUsers.filter((u: any) => ['confirmed_orders', 'admin', 'confirmed'].includes(u.role));
@@ -101,13 +103,29 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
 
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
 
+                    {/* Type Buttons */}
+                    <div className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex order-2 xl:order-1 flex-1 xl:flex-none">
+                        {[
+                            { id: 'orders', label: 'الطلبات' },
+                            { id: 'abandoned', label: 'المتروكة' }
+                        ].map((t) => (
+                            <button
+                                key={t.id}
+                                onClick={() => setType(t.id as any)}
+                                className={`flex-1 xl:flex-none px-4 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${type === t.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'}`}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Period Buttons */}
                     <div className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex order-2 xl:order-1 flex-1 xl:flex-none">
                         {[
+                            { id: 'all', label: 'الكل' },
                             { id: 'week', label: 'الأسبوع' },
                             { id: 'month', label: 'الشهر' },
                             { id: 'year', label: 'السنة' },
-                            { id: 'all', label: 'الكل' }
                         ].map((p) => (
                             <button
                                 key={p.id}
@@ -133,6 +151,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                                     ]}
                                     placeholder="كل الفريق"
                                     onOpen={() => getUsers()}
+                                    isLoading={usersLoading}
                                 />
                             </div>
                         )}
@@ -148,6 +167,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                                 ]}
                                 placeholder="كل المنتجات"
                                 onOpen={() => getProducts()}
+                                isLoading={productsLoading}
                             />
                         </div>
                     </div>

@@ -13,7 +13,7 @@ import TableSkeleton from './common/TableSkeleton';
 import { useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
-import { GET_CURRENT_USER } from '../graphql/queries';
+import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
@@ -72,6 +72,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const [storeFilter, setStoreFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
+  const [confirmerFilter, setConfirmerFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // New state for collapsible filters
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -131,11 +132,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   }, [statusData]);
 
   // 2. Fetch Stores & Wilayas (Lazy)
-  const [getStores, { data: storesData }] = useLazyQuery(GET_ALL_STORES);
-  const [getWilayas, { data: wilayasData }] = useLazyQuery(GET_ALL_WILAYAS);
-  const [getProducts, { data: productsData }] = useLazyQuery(GET_ALL_PRODUCTS, {
+  const [getStores, { data: storesData, loading: storesLoading }] = useLazyQuery(GET_ALL_STORES);
+  const [getWilayas, { data: wilayasData, loading: wilayasLoading }] = useLazyQuery(GET_ALL_WILAYAS);
+  const [getProducts, { data: productsData, loading: productsLoading }] = useLazyQuery(GET_ALL_PRODUCTS, {
     variables: { pagination: { limit: 100, page: 1 } }
   });
+  const [getUsers, { data: usersData, loading: usersLoading }] = useLazyQuery(GET_ALL_USERS);
 
   // 3. Construct Advanced Filter
   const advancedFilter = useMemo(() => {
@@ -166,6 +168,11 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     // State Filter
     if (stateFilter !== 'all') {
       filter["state.code"] = stateFilter;
+    }
+
+    // Confirmer Filter
+    if (confirmerFilter !== 'all') {
+      filter.idConfirmed = confirmerFilter;
     }
 
     // Search Term
@@ -299,7 +306,23 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
           {/* Collapsible Filters Area */}
           {isFiltersOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-slate-400 px-2">المؤكد</span>
+                <ModernSelect
+                  value={confirmerFilter}
+                  onChange={setConfirmerFilter}
+                  options={[
+                    { value: 'all', label: 'جميع المؤكدين' },
+                    ...(usersData?.allUser
+                      ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation')
+                      ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
+                  ]}
+                  className="w-full"
+                  onOpen={() => getUsers()}
+                  isLoading={usersLoading}
+                />
+              </div>
               <div className="space-y-1">
                 <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
                 <ModernSelect
@@ -311,6 +334,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   ]}
                   className="w-full"
                   onOpen={() => getStores()}
+                  isLoading={storesLoading}
                 />
               </div>
               <div className="space-y-1">
@@ -324,6 +348,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   ]}
                   className="w-full"
                   onOpen={() => getProducts()}
+                  isLoading={productsLoading}
                 />
               </div>
               <div className="space-y-1">
@@ -337,6 +362,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   ]}
                   className="w-full"
                   onOpen={() => getWilayas()}
+                  isLoading={wilayasLoading}
                 />
               </div>
             </div>

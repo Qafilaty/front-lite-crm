@@ -42,6 +42,7 @@ const NotificationsMenu: React.FC = () => {
         onData: ({ data: { data } }) => {
             if (data?.newNotifications) {
                 const notif = data.newNotifications;
+                // playNotificationSound(); // Removed as per user request
                 toast.custom((t) => (
                     <div
                         className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
@@ -66,8 +67,28 @@ const NotificationsMenu: React.FC = () => {
     });
 
     const notifications: Notification[] = data?.allNotifications || [];
-    // For now, simpler logic for "unread" - just show dot if there are notifications
-    const hasUnread = notifications.length > 0;
+
+    // Read Status Logic
+    const [lastOpened, setLastOpened] = useState<string | null>(() => {
+        return typeof window !== 'undefined' ? localStorage.getItem('notifications_last_opened') : null;
+    });
+
+    const handleOpenMenu = () => {
+        const newState = !isOpen;
+        setIsOpen(newState);
+        if (newState) {
+            const now = new Date().toISOString();
+            setLastOpened(now);
+            localStorage.setItem('notifications_last_opened', now);
+        }
+    };
+
+    // Calculate unread: Created AFTER lastOpened AND Created WITHIN last 24 hours
+    const hasUnread = notifications.some(n => {
+        const isNew = !lastOpened || new Date(n.createdAt) > new Date(lastOpened);
+        const isRecent = (new Date().getTime() - new Date(n.createdAt).getTime()) < (24 * 60 * 60 * 1000); // 24 hours
+        return isNew && isRecent;
+    });
 
     // Handle click outside
     useEffect(() => {
@@ -103,12 +124,12 @@ const NotificationsMenu: React.FC = () => {
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={handleOpenMenu}
                 className={`relative p-2 rounded-lg transition-all ${isOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'}`}
             >
                 <Bell className="w-5 h-5" />
                 {hasUnread && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
                 )}
             </button>
 
