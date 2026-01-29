@@ -4,13 +4,13 @@ import {
   TrendingUp, Truck, Package, CheckCircle2,
   Sparkles, LineChart, Wallet, Star,
   HelpCircle, Download,
-  Banknote, TrendingDown, Minus
+  Banknote, TrendingDown, Minus, AlertTriangle
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
-import { getSmartInsights } from '../services/geminiService';
+
 import { statusLabels } from '../constants/statusConstants';
 import { StatsCard } from './StatsCard';
 import { ModernSelect, StatsSkeleton } from './common';
@@ -30,7 +30,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
     return <StatsSkeleton />;
   }
 
-  const [insight, setInsight] = useState<string>('جاري تحليل البيانات...');
+
   const [dateRange, setDateRange] = useState('7days');
 
   // 1. Calculate Metrics (Prefer backendStats if available)
@@ -121,24 +121,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       .slice(0, 7);
   }, [orders, backendStats]);
 
-  // 4. Stock Alerts Logic (retained for insights generation)
-  const stockAlerts = useMemo(() =>
-    inventory.filter(p => p.stock < 10).sort((a, b) => a.stock - b.stock)
-    , [inventory]);
 
-  // 5. Generate Insights
-  useEffect(() => {
-    const fetchInsights = async () => {
-      try {
-        const result = await getSmartInsights({ stats, metrics, lowStock: stockAlerts });
-        setInsight(result || "تعذر الحصول على تحليلات.");
-      } catch (error) {
-        console.warn("Failed to fetch insights:", error);
-        setInsight("التحليلات الذكية غير متوفرة حالياً.");
-      }
-    };
-    fetchInsights();
-  }, [stats, metrics, stockAlerts]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -192,17 +175,64 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               </div>
             </div>
 
-            {/* Smart Recommendations Box */}
-            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-indigo-600 mb-1">توجيهات الذكاء الاصطناعي</p>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                  {insight}
-                </p>
-              </div>
+            {/* Dynamic Rate Alerts */}
+            <div className="space-y-4">
+              {/* Confirmation Rate Alert */}
+              {(() => {
+                const conf = parseFloat(metrics.confRate);
+                let message = 'معدل تأكيد جيد، حافظ عليه.';
+                let Icon = CheckCircle2;
+                let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-100';
+
+                if (conf < 40) {
+                  message = 'معدل التأكيد منخفض، يرجى متابعة العملاء.';
+                  Icon = AlertTriangle;
+                  colorClass = 'text-amber-600 bg-amber-50 border-amber-100';
+                } else if (conf >= 60) {
+                  message = 'معدل تأكيد ممتاز! أداء رائع للفريق.';
+                }
+
+                return (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-4 ${colorClass}`}>
+                    <div className={`w-10 h-10 rounded-xl bg-white/60 shadow-sm flex items-center justify-center shrink-0`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">تنبيه التأكيد</p>
+                      <p className="text-xs font-bold leading-relaxed">{message}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Delivery Rate Alert */}
+              {(() => {
+                const deliv = parseFloat(metrics.delivRate);
+                let message = 'معدل توصيل مستقر.';
+                let Icon = Truck;
+                let colorClass = 'text-indigo-600 bg-indigo-50 border-indigo-100';
+
+                if (deliv < 40) {
+                  message = 'معدل التوصيل منخفض، راجع شركات التوصيل.';
+                  Icon = AlertTriangle;
+                  colorClass = 'text-rose-600 bg-rose-50 border-rose-100';
+                } else if (deliv >= 60) {
+                  message = 'معدل توصيل ممتاز! عمليات الشحن تسير بامتياز.';
+                  Icon = CheckCircle2;
+                }
+
+                return (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-4 ${colorClass}`}>
+                    <div className={`w-10 h-10 rounded-xl bg-white/60 shadow-sm flex items-center justify-center shrink-0`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">تنبيه التوصيل</p>
+                      <p className="text-xs font-bold leading-relaxed">{message}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -232,12 +262,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
 
                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2 text-indigo-100">
-                    <span className="text-[10px] font-bold opacity-80 uppercase tracking-wider">الأداء: ممتاز</span>
-                    <div className="flex gap-0.5">
-                      <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
-                      <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
-                      <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
-                    </div>
+
                   </div>
                   <div className="flex items-center gap-2 bg-emerald-500/90 text-white px-3 py-1.5 rounded-lg text-[10px] font-black">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>

@@ -120,11 +120,11 @@ const UsersView: React.FC<UsersViewProps> = ({
     }
     else if (field === 'email') {
       if (!value) newErrors.email = 'البريد مطلوب';
-      else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) newErrors.email = 'بريد إلكتروني غير صالح';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) newErrors.email = 'بريد إلكتروني غير صالح';
     }
     else if (field === 'phone') {
       if (!value) newErrors.phone = 'الهاتف مطلوب';
-      else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+      else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
     }
     else if (field === 'password' && modalMode === 'add') {
       if (!value || value.length < 6) newErrors.password = 'كلمة المرور قصيرة (6 أحرف على الأقل)';
