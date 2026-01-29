@@ -9,13 +9,16 @@ const SYNC_ORDERS_SUBSCRIPTION = gql`
     syncOrdersWithExternalStores(idCompany: $idCompany) {
       id
       fullName
+      isAbandoned
     }
   }
 `;
 
 interface OrderNotificationContextType {
-    hasNewOrders: boolean;
-    markAsRead: () => void;
+    hasConfirmationOrders: boolean;
+    hasAbandonedOrders: boolean;
+    markConfirmationAsRead: () => void;
+    markAbandonedAsRead: () => void;
     duePostponedCount: number;
 }
 
@@ -23,8 +26,8 @@ const OrderNotificationContext = createContext<OrderNotificationContextType | un
 
 export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
-    const [hasNewOrders, setHasNewOrders] = useState(false);
-    const [duePostponedCount, setDuePostponedCount] = useState(0);
+    const [hasConfirmationOrders, setHasConfirmationOrders] = useState(false);
+    const [hasAbandonedOrders, setHasAbandonedOrders] = useState(false);
 
     // Use a ref for the audio to avoid recreating it
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -81,8 +84,12 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
         }
     };
 
-    const handleNewOrder = () => {
-        setHasNewOrders(true);
+    const handleNewOrder = (isAbandoned: boolean) => {
+        if (isAbandoned) {
+            setHasAbandonedOrders(true);
+        } else {
+            setHasConfirmationOrders(true);
+        }
         playNotificationSound();
     };
 
@@ -93,7 +100,8 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
             // console.log("Sync Orders Data:", data);
 
             if (data.data?.syncOrdersWithExternalStores) {
-                handleNewOrder();
+                const order = data.data.syncOrdersWithExternalStores;
+                handleNewOrder(order.isAbandoned);
             }
         },
         onError: (err) => {
@@ -101,12 +109,22 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
         }
     });
 
-    const markAsRead = () => {
-        setHasNewOrders(false);
+    const markConfirmationAsRead = () => {
+        setHasConfirmationOrders(false);
+    };
+
+    const markAbandonedAsRead = () => {
+        setHasAbandonedOrders(false);
     };
 
     return (
-        <OrderNotificationContext.Provider value={{ hasNewOrders, markAsRead, duePostponedCount: 0 }}>
+        <OrderNotificationContext.Provider value={{
+            hasConfirmationOrders,
+            hasAbandonedOrders,
+            markConfirmationAsRead,
+            markAbandonedAsRead,
+            duePostponedCount: 0
+        }}>
             {children}
         </OrderNotificationContext.Provider>
     );

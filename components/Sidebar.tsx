@@ -30,12 +30,20 @@ interface SidebarSection {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, isCollapsed, onToggleCollapse, onLogout }) => {
-  const { hasNewOrders, markAsRead, duePostponedCount } = useOrderNotification();
+  const {
+    hasConfirmationOrders,
+    hasAbandonedOrders,
+    markConfirmationAsRead,
+    markAbandonedAsRead,
+    duePostponedCount
+  } = useOrderNotification();
   const { user } = useAuth();
 
   const handleViewChange = (view: View) => {
     if (view === View.ORDER_CONFIRMATION) {
-      markAsRead();
+      markConfirmationAsRead();
+    } else if (view === View.ORDER_ABANDONED) {
+      markAbandonedAsRead();
     }
     onViewChange(view);
   };
@@ -55,10 +63,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
           id: View.ORDER_CONFIRMATION,
           label: 'تأكيد الطلبيات',
           icon: CheckCircle2,
-          hasNotification: hasNewOrders,
+          hasNotification: hasConfirmationOrders,
           postponedBadge: duePostponedCount
         },
-        { id: View.ORDER_ABANDONED, label: 'الطلبات المتروكة', icon: FileWarning },
+        {
+          id: View.ORDER_ABANDONED,
+          label: 'الطلبات المتروكة',
+          icon: FileWarning,
+          hasNotification: hasAbandonedOrders
+        },
         { id: View.ORDER_TRACKING, label: 'تتبع الطلبيات', icon: Truck },
         { id: View.INVENTORY, label: 'المخزون', icon: Box },
       ]
