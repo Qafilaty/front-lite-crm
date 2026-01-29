@@ -100,8 +100,25 @@ export const OrderNotificationProvider: React.FC<{ children: React.ReactNode }> 
             // console.log("Sync Orders Data:", data);
 
             if (data.data?.syncOrdersWithExternalStores) {
-                const order = data.data.syncOrdersWithExternalStores;
-                handleNewOrder(order.isAbandoned);
+                const orders: any[] = data.data.syncOrdersWithExternalStores;
+
+                if (Array.isArray(orders)) {
+                    let hasAbandoned = false;
+                    let hasNormal = false;
+
+                    for (const order of orders) {
+                        if (order.isAbandoned) {
+                            hasAbandoned = true;
+                        } else {
+                            hasNormal = true;
+                        }
+                    }
+
+                    if (hasAbandoned) setHasAbandonedOrders(true);
+                    if (hasNormal) setHasConfirmationOrders(true);
+
+                    if (hasAbandoned || hasNormal) playNotificationSound();
+                }
             }
         },
         onError: (err) => {
