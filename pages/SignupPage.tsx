@@ -78,7 +78,7 @@ const SignupPage: React.FC = () => {
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         <div>
                             <label htmlFor="nameCompany" className="block text-sm font-medium text-gray-700">
-                                اسم الشركة
+                                اسم المتجر
                             </label>
                             <div className="mt-1">
                                 <input
@@ -88,6 +88,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={formData.nameCompany}
                                     onChange={handleChange}
+                                    placeholder="أدخل اسم المتجر"
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
@@ -95,7 +96,7 @@ const SignupPage: React.FC = () => {
 
                         <div>
                             <label htmlFor="nameAdmin" className="block text-sm font-medium text-gray-700">
-                                اسم المدير
+                                اسم المستخدم
                             </label>
                             <div className="mt-1">
                                 <input
@@ -105,6 +106,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={formData.nameAdmin}
                                     onChange={handleChange}
+                                    placeholder="أدخل الاسم الكامل"
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
@@ -123,6 +125,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={formData.emailAdmin}
                                     onChange={handleChange}
+                                    placeholder="example@store.com"
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
@@ -140,6 +143,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={formData.phoneAdmin}
                                     onChange={handleChange}
+                                    placeholder="05XXXXXXXX"
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
@@ -158,6 +162,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={formData.passwordAdmin}
                                     onChange={handleChange}
+                                    placeholder="••••••••"
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
                             </div>
