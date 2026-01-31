@@ -142,7 +142,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
     // Calculate total pending from all users current counters
     const totalPending = users.reduce((acc, user) => {
-      const count = user.numberDeliveredOrder || 0;
+      const count = user.numberDeliveredOrderNotPaid || 0;
       const price = user.orderPrice || 0;
       return acc + (count * price);
     }, 0);
@@ -172,7 +172,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   // Calculate Due Salaries per User using Counters
   const salariesData = useMemo(() => {
     return users.map(user => {
-      const deliveredCount = user.numberDeliveredOrder || 0;
+      const deliveredCount = user.numberDeliveredOrderNotPaid || 0;
       const orderPrice = user.orderPrice || 0;
       const unpaidAmount = deliveredCount * orderPrice;
 
