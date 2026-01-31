@@ -488,7 +488,13 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
       if (!companyId) return;
 
       const filter = mode
-        ? { idConfirmed: userId, isDelivered: true, "commissions.0": { $exists: false } }
+        ? {
+          idConfirmed: userId, isDelivered: true,
+          $or: [
+            { commissions: { $exists: false } },
+            { commissions: { $eq: null, $exists: true } }
+          ]
+        }
         : { idConfirmed: userId, isDelivered: true };
 
       const result = await orderService.getAllOrders({
