@@ -427,28 +427,34 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Handle Logic for Payment Processing
-  const handleProcessPayment = async () => {
+  const handleProcessPayment = async (payAll: boolean = false) => {
     if (!selectedUserForOrders) return;
     const userId = selectedUserForOrders.id;
 
-    // Calculate totals from selected orders
-    const selectedOrders = userOrders.filter(o => selectedOrderIds.includes(o.id));
-    // If not all loaded, we might need a safer way, but we only select from loaded. 
-    // Wait, selection across pages is hard. Let's assume selection from CURRENT functionality is required.
-    // Ideally we pass just IDs and backend calculates? But we need to show total on Frontend.
-    // For now, let's assume we pay based on IDs.
-
-    // We need to know the 'orderPrice' for the user to calculate total.
     // @ts-ignore
     const userSalaryData = salariesData.find(d => d.user.id === userId);
     const orderPrice = userSalaryData?.orderPrice || 0;
 
-    const count = selectedOrderIds.length;
-    const amount = count * orderPrice;
+    let count = 0;
+    let amount = 0;
+    let note = "";
+    let idsOrder: string[] = [];
 
-    if (count === 0) {
-      toast.error("يرجى تحديد طلب واحد على الأقل");
-      return;
+    if (payAll) {
+      count = userSalaryData?.deliveredCount || 0;
+      amount = count * orderPrice;
+      note = `صرف مستحقات كلي لـ ${count} طلب (سعر الطلب: ${orderPrice})`;
+      // idsOrder remains empty, backend handles it
+    } else {
+      count = selectedOrderIds.length;
+      amount = count * orderPrice;
+      note = `صرف مستحقات لـ ${count} طلب (سعر الطلب: ${orderPrice})`;
+      idsOrder = selectedOrderIds;
+
+      if (count === 0) {
+        toast.error("يرجى تحديد طلب واحد على الأقل");
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -458,9 +464,10 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
         ordersCount: count,
         orderPrice: orderPrice,
         total: amount,
-        note: `صرف مستحقات لـ ${count} طلب (سعر الطلب: ${orderPrice})`,
+        note: note,
         userId: userId,
-        idsOrder: selectedOrderIds,
+        idsOrder: idsOrder,
+        payAll: payAll,
         date: new Date().toISOString()
       };
 
@@ -941,11 +948,23 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
                             </div>
 
                             <button
-                              onClick={handleProcessPayment}
+                              onClick={() => handleProcessPayment(false)}
                               disabled={selectedOrderIds.length === 0 || isProcessing}
                               className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
                               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
                               تأكيد وصرف ({selectedOrderIds.length})
+                            </button>
+
+                            <button
+                              onClick={() => handleProcessPayment(true)}
+                              disabled={isProcessing}
+                              className="px-8 py-4 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-50 disabled:shadow-none flex items-center gap-3">
+                              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                              صرف الكل ({(() => {
+                                // @ts-ignore
+                                const userSalaryData = salariesData.find(d => d.user.id === selectedUserForOrders.id);
+                                return userSalaryData?.deliveredCount || 0;
+                              })()})
                             </button>
                           </div>
                         )}
