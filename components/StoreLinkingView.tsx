@@ -163,7 +163,7 @@ const StoreLinkingView: React.FC = () => {
       // If WooCommerce Direct Link Logic
       if (selectedPlatform.key === 'woocommerce' && isDirectLink) {
         const cleanDomain = cleanUrl(storeDomain);
-        const authUrl = `https://${cleanDomain}/wc-auth/v1/authorize?app_name=Sendibad&user_id=${cleanDomain}&scope=read_write&return_url=http://localhost:3000/woocommerce/success&callback_url=https://4e91346c7a7d.ngrok-free.app/integrations/woocommerce/callback/${user.company.id}`;
+        const authUrl = `https://${cleanDomain}/wc-auth/v1/authorize?app_name=Wilo&user_id=${cleanDomain}&scope=read_write&return_url=https://app.wilo.site/woocommerce/success&callback_url=https://api.wilo.site/integrations/woocommerce/callback/${user.company.id}`;
 
         // Open Popup
         const width = 600;
