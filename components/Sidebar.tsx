@@ -183,7 +183,32 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       </nav>
 
 
-    </aside>
+
+      {/* Subscription Status Footer */}
+      {
+        !isCollapsed && user?.company?.plans && (
+          <div className="p-4 border-t border-slate-800/50 bg-slate-900/50">
+            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">رصيد النقاط</span>
+                <span className={`text-xs font-black ${(user.company.plans.pointes || 0) < 10 ? 'text-rose-500' : 'text-emerald-400'}`}>
+                  {user.company.plans.pointes || 0}
+                </span>
+              </div>
+              <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${(user.company.plans.pointes || 0) < 10 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                  style={{ width: `${Math.min(100, ((user.company.plans.pointes || 0) / 100) * 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-[9px] text-slate-500 mt-2 font-bold text-left">
+                {user.company.plans.name === 'payg' ? 'دفع حسب الاستخدام' : 'اشتراك شهري'}
+              </p>
+            </div>
+          </div>
+        )
+      }
+    </aside >
   );
 };
 

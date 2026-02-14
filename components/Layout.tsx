@@ -8,6 +8,7 @@ import ToastNotifications from './common/ToastNotifications';
 import PostponedOrdersAlert from './common/PostponedOrdersAlert';
 import { useGlobalError } from '../contexts/GlobalErrorContext';
 import NetworkErrorScreen from './common/NetworkErrorScreen';
+import SubscriptionWarning from './common/SubscriptionWarning';
 
 const Layout: React.FC = () => {
   const { user: authUser, logout } = useAuth();
@@ -120,7 +121,10 @@ const Layout: React.FC = () => {
               }}
             />
           ) : (
-            <Outlet />
+            <>
+              <SubscriptionWarning />
+              <Outlet />
+            </>
           )}
         </main>
       </div>

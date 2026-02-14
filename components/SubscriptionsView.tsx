@@ -733,10 +733,9 @@ const SubscriptionsView: React.FC = () => {
                   <h4 className="font-black text-slate-800 text-sm">اختر وسيلة الدفع</h4>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { id: 'ccp', name: 'CCP البريد الجزائري', icon: 'fa-building-columns', color: 'text-yellow-600 bg-yellow-50' },
-                      { id: 'baridimob', name: 'BaridiMob', icon: 'fa-mobile-screen', color: 'text-blue-600 bg-blue-50' },
-                      { id: 'redotpay', name: 'RedotPay (USD)', icon: 'fa-credit-card', color: 'text-rose-600 bg-rose-50' },
-                      { id: 'paypal', name: 'PayPal (USD)', icon: 'fa-paypal', color: 'text-sky-600 bg-sky-50' },
+                      { id: 'ccp', name: 'CCP البريد الجزائري', icon: 'fa-building-columns', color: 'text-yellow-600 bg-yellow-50', details: '0023555199 79 - HICHAM LEHOUEDJ' },
+                      { id: 'baridimob', name: 'BaridiMob', icon: 'fa-mobile-screen', color: 'text-blue-600 bg-blue-50', details: '00799999002355519979' },
+                      { id: 'redotpay', name: 'RedotPay (USD)', icon: 'fa-credit-card', color: 'text-rose-600 bg-rose-50', details: '1484831242' },
                     ].map((method) => (
                       <button
                         key={method.id}
@@ -751,7 +750,8 @@ const SubscriptionsView: React.FC = () => {
                         </div>
                         <div>
                           <h5 className="font-black text-slate-800 text-sm">{method.name}</h5>
-                          <p className="text-[10px] font-bold text-slate-400">دفع آمن وفوري</p>
+                          {/* @ts-ignore */}
+                          <p className="text-[11px] font-bold text-slate-500 mt-1 font-mono">{method.details}</p>
                         </div>
                         {paymentMethod === method.id && <i className="fa-solid fa-circle-check text-indigo-600 mr-auto text-xl"></i>}
                       </button>
@@ -769,8 +769,17 @@ const SubscriptionsView: React.FC = () => {
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                   <div className="bg-slate-50 p-5 rounded-md border border-slate-200 text-center">
                     <p className="text-xs font-bold text-slate-500 mb-2">يرجى إرسال المبلغ: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> إلى:</p>
-                    <div className="bg-white p-3 rounded-sm border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer" onClick={() => { navigator.clipboard.writeText('000000000099') }}>
-                      0000 0000 0000 99 (LITE CRM)
+                    <div className="bg-white p-3 rounded-sm border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer text-center" onClick={() => {
+                      // @ts-ignore
+                      navigator.clipboard.writeText(
+                        paymentMethod === 'ccp' ? '0023555199 79' :
+                          paymentMethod === 'baridimob' ? '00799999002355519979' :
+                            paymentMethod === 'redotpay' ? '1484831242' : ''
+                      )
+                    }}>
+                      {paymentMethod === 'ccp' && <>0023555199 79 <br /><span className="text-xs text-slate-400">HICHAM LEHOUEDJ - DJEDEIDA</span></>}
+                      {paymentMethod === 'baridimob' && '00799999002355519979'}
+                      {paymentMethod === 'redotpay' && '1484831242'}
                     </div>
                   </div>
 

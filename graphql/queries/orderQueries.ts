@@ -238,6 +238,7 @@ export const GET_ALL_ORDERS = gql`
           }
           createdAt
         }
+        isLocked
       }
       total
       numberDeferredOrder
@@ -267,6 +268,7 @@ export const SEARCH_ORDER = gql`
         deliveryCompany {
           trackingCode
         }
+        isLocked
       }
     }
   }

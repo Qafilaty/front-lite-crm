@@ -129,6 +129,7 @@ export interface Order {
     trackingCode?: string;
   };
   confirmed?: User;
+  isLocked?: boolean;
 }
 
 export interface User {

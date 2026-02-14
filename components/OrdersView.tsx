@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { Order, OrderItem, DeliveryCompany } from '../types';
-import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3, Truck, Copy, AlertCircle } from 'lucide-react';
+import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3, Truck, Copy, AlertCircle, Lock } from 'lucide-react';
 import { deliveryCompanyService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './common/LoadingSpinner';
@@ -300,7 +300,19 @@ const OrdersView: React.FC<OrdersViewProps> = ({
               <tbody className="divide-y divide-slate-50">
                 {orders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-all group">
-                    <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">#{order.id}</td>
+                    <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">
+                      <div className="flex items-center gap-2">
+                        #{order.id}
+                        {order.isLocked && (
+                          <div className="group/lock relative">
+                            <Lock className="w-3 h-3 text-rose-500" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none">
+                              الطلب مقفل (رصيد غير كافٍ)
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-[12px] text-slate-800 font-black">{order.customer}</td>
                     <td className="px-6 py-4 text-[11px] text-slate-500 font-medium">{order.product}</td>
                     <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} د.ج</td>
