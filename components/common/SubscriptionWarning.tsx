@@ -67,19 +67,19 @@ const SubscriptionWarning: React.FC = () => {
                     </button>
                 </div>
             ) : isLowPoints ? (
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
                             <Zap className="w-5 h-5" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-indigo-700">رصيد النقاط منخفض ({pointes} نقطة)</h4>
-                            <p className="text-[11px] font-bold text-indigo-500 mt-0.5">اشحن رصيدك الآن لضمان استمرارية إنشاء الطلبات.</p>
+                            <h4 className="text-sm font-black text-rose-700">رصيد النقاط منخفض ({pointes} نقطة)</h4>
+                            <p className="text-[11px] font-bold text-rose-500 mt-0.5">اشحن رصيدك الآن لضمان استمرارية إنشاء الطلبات.</p>
                         </div>
                     </div>
                     <button
                         onClick={() => navigate('/dashboard/subscriptions')}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all"
+                        className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all"
                     >
                         شحن الرصيد
                     </button>
