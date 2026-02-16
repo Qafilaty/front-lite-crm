@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen, Calculator } from 'lucide-react';
 import logo from '../assets/logo.png';
 import logoIcon from '../assets/logo-icon.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
@@ -77,10 +77,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       ]
     },
     {
+      title: 'الاحصائيات والارباح',
+      items: [
+        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard },
+        { id: View.PROFIT_SIMULATOR, label: 'محاكي الأرباح', icon: Calculator }
+      ]
+    },
+    {
       title: 'المالية',
       items: [
         { id: View.FINANCES, label: 'العمليات المالية', icon: Wallet },
-        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard },
         { id: View.SALARIES, label: 'الرواتب والعمولات', icon: Banknote },
       ]
     },
@@ -106,7 +112,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         View.ORDER_CONFIRMATION,
         View.ORDER_ABANDONED,
         View.ORDER_TRACKING,
-        View.SHIPPING_PRICING
+        View.SHIPPING_PRICING,
+        View.PROFIT_SIMULATOR
       ];
       return allowed.includes(item.id);
     })

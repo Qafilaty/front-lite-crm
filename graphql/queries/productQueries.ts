@@ -84,3 +84,88 @@ export const GET_ALL_PRODUCTS = gql`
     }
   }
 `;
+export const GET_PRODUCTS_ANALYTICS = gql`
+  query GetProductsAnalytics($advancedFilter: JSON, $pagination: Pagination) {
+    allProduct(advancedFilter: $advancedFilter, pagination: $pagination) {
+      data {
+        id
+        name
+        variantsProbability {
+          id
+          name
+          sku
+          price
+          cost
+          isDefault
+          quantity
+          orderStatistic {
+            totalQuantity
+            status {
+              id
+              nameAR
+              nameFR
+              nameEN
+              group
+              color
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_PRODUCTS_LIST_LITE = gql`
+  query GetProductsListLite($advancedFilter: JSON, $pagination: Pagination) {
+    allProduct(advancedFilter: $advancedFilter, pagination: $pagination) {
+      data {
+        id
+        name
+      }
+      total
+    }
+  }
+`;
+
+export const GET_PRODUCT_ANALYTICS_SINGLE = gql`
+  query GetProductAnalyticsSingle($id: ID!) {
+    productAnalytics(id: $id) {
+        id
+        name
+        cost
+        ordinary {
+            leads
+            units
+            confirmed
+            confirmedUnits
+            delivered
+            deliveredUnits
+            confirmationRate
+            deliveryRate
+        }
+        abandoned {
+            leads
+            units
+            confirmed
+            confirmedUnits
+            delivered
+            deliveredUnits
+            confirmationRate
+            deliveryRate
+        }
+        variants {
+            name
+            sku
+            sellingPrice
+            cost
+            revenue
+            ordinary {
+                leads
+            }
+            abandoned {
+                leads
+            }
+        }
+    }
+  }
+`;

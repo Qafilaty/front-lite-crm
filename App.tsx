@@ -31,6 +31,7 @@ import SalariesPage from './pages/dashboard/SalariesPage';
 import IntegrationSettingsPage from './pages/dashboard/IntegrationSettingsPage';
 import GoogleSheetsSuccessPage from './pages/GoogleSheetsSuccessPage';
 import GoogleSheetsFailedPage from './pages/GoogleSheetsFailedPage';
+import ProfitSimulatorPage from './pages/dashboard/ProfitSimulatorPage';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -72,6 +73,7 @@ const AppRoutes: React.FC = () => {
         <Route path="finances" element={<RequirePermission allowedView={View.FINANCES}><FinancesPage /></RequirePermission>} />
         <Route path="financial-stats" element={<RequirePermission allowedView={View.FINANCIAL_STATS}><FinancialStatsPage /></RequirePermission>} />
         <Route path="salaries" element={<RequirePermission allowedView={View.SALARIES}><SalariesPage /></RequirePermission>} />
+        <Route path="profit-simulator" element={<RequirePermission allowedView={View.PROFIT_SIMULATOR}><ProfitSimulatorPage /></RequirePermission>} />
         <Route path="integration-settings" element={<RequirePermission allowedView={View.INTEGRATION_SETTINGS}><IntegrationSettingsPage /></RequirePermission>} />
       </Route>
 

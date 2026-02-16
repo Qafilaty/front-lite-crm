@@ -23,7 +23,8 @@ export enum View {
   FINANCES = 'finances',
   FINANCIAL_STATS = 'financial_stats',
   SALARIES = 'salaries',
-  INTEGRATION_SETTINGS = 'integration_settings'
+  INTEGRATION_SETTINGS = 'integration_settings',
+  PROFIT_SIMULATOR = 'profit-simulator'
 }
 
 export interface OrderItem {
