@@ -40,11 +40,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
     try {
       const result = await login(email, password);
       if (!result.success) {
-        setError(result.error || 'فشل تسجيل الدخول');
+        if (result.error === "هذه الشركة محظورة" || result.error?.includes("محظورة")) {
+          setError("هذه الشركة محظورة، يرجى الاتصال بالدعم.");
+        } else {
+          setError(result.error || 'فشل تسجيل الدخول');
+        }
       }
       // إذا نجح، useEffect سيعيد التوجيه تلقائياً
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
+      if (err.message && (err.message === "هذه الشركة محظورة" || err.message.includes("محظورة"))) {
+        setError("هذه الشركة محظورة، يرجى الاتصال بالدعم.");
+      } else {
+        setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
+      }
     } finally {
       setLoading(false);
     }
