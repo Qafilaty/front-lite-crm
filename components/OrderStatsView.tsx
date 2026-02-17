@@ -59,7 +59,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     });
 
     const stats = data?.orderStats || {
-        kpis: { total: 0, confirmedCount: 0, confirmationRate: 0, shippedCount: 0, deliveredCount: 0, deliveryRate: 0 },
+        kpis: { total: 0, confirmedCount: 0, confirmationRate: 0, shippedCount: 0, deliveredCount: 0, deliveryRate: 0, returnedCount: 0, returnRate: 0 },
         topPerformers: { bestStates: [], bestConfirmers: [], bestProducts: [] },
         confirmationDistribution: [],
         logisticsDistribution: []
@@ -215,6 +215,25 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                     <span className="text-[9px] font-bold text-slate-400 mt-1 bg-slate-50 px-2 py-0.5 rounded-lg">{stats.kpis.deliveredCount} / {stats.kpis.shippedCount}</span>
                 </div>
 
+                {/* Return Rate */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
+                    <div className="w-28 h-28 relative mb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={[{ v: stats.kpis.returnRate }, { v: 100 - stats.kpis.returnRate }]} innerRadius={40} outerRadius={50} paddingAngle={0} dataKey="v" startAngle={90} endAngle={450}>
+                                    <Cell fill="#ef4444" stroke="none" />
+                                    <Cell fill="#f1f5f9" stroke="none" />
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-xl font-black text-slate-800 font-mono leading-none">{stats.kpis.returnRate}%</span>
+                        </div>
+                    </div>
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">استرجاع</h4>
+                    <span className="text-[9px] font-bold text-slate-400 mt-1 bg-slate-50 px-2 py-0.5 rounded-lg">{stats.kpis.returnedCount} / {stats.kpis.shippedCount}</span>
+                </div>
+
                 {/* Total Orders */}
                 <div className="bg-slate-900 p-8 rounded-2xl shadow-2xl text-white flex flex-col justify-between relative overflow-hidden">
                     <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-600/20 rounded-full blur-3xl"></div>
@@ -222,15 +241,6 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                     <div>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">إجمالي الطلبات</p>
                         <h3 className="text-3xl font-black font-mono tracking-tighter mt-1">{stats.kpis.total} <span className="text-xs opacity-40">طلب</span></h3>
-                    </div>
-                </div>
-
-                {/* Delivered Count */}
-                <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-6"><Trophy className="w-5 h-5" /></div>
-                    <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">تم توصيلها بنجاح</p>
-                        <h3 className="text-3xl font-black text-slate-800 font-mono tracking-tighter mt-1">{stats.kpis.deliveredCount} <span className="text-xs opacity-40">طرد</span></h3>
                     </div>
                 </div>
             </div>
@@ -245,7 +255,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">نجوم التأكيد</h3>
                     </div>
                     <div className="space-y-6">
-                        {stats.topPerformers.bestConfirmers.length > 0 ? stats.topPerformers.bestConfirmers.map((c: any, i: number) => (
+                        {stats.topPerformers.bestConfirmers.length > 0 ? stats.topPerformers.bestConfirmers.slice(0, 5).map((c: any, i: number) => (
                             <div key={i} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</div>
@@ -264,7 +274,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">أفضل الولايات</h3>
                     </div>
                     <div className="space-y-6">
-                        {stats.topPerformers.bestStates.length > 0 ? stats.topPerformers.bestStates.map((s: any, i: number) => (
+                        {stats.topPerformers.bestStates.length > 0 ? stats.topPerformers.bestStates.slice(0, 5).map((s: any, i: number) => (
                             <div key={i} className="space-y-2">
                                 <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
                                     <span className="text-slate-500">{s.name}</span>
@@ -285,7 +295,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
                         <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">المنتجات الأكثر مبيعاً</h3>
                     </div>
                     <div className="space-y-4">
-                        {stats.topPerformers.bestProducts.length > 0 ? stats.topPerformers.bestProducts.map((p: any, i: number) => (
+                        {stats.topPerformers.bestProducts.length > 0 ? stats.topPerformers.bestProducts.slice(0, 5).map((p: any, i: number) => (
                             <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group">
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <div className="w-8 h-8 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all"><Package className="w-4 h-4" /></div>

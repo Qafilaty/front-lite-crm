@@ -121,6 +121,10 @@ export const GET_PRODUCTS_LIST_LITE = gql`
       data {
         id
         name
+        thumbnail
+        sku
+        price
+        quantity
       }
       total
     }

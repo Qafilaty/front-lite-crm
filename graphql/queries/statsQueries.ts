@@ -10,6 +10,8 @@ export const GET_ORDER_STATS = gql`
         shippedCount
         deliveredCount
         deliveryRate
+        returnedCount
+        returnRate
       }
       topPerformers {
         bestStates {

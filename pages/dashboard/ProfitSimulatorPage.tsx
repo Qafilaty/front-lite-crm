@@ -61,6 +61,10 @@ const ProfitSimulatorPage: React.FC = () => {
    const [customTargetNew, setCustomTargetNew] = useState(100);
    const [customTargetRecovered, setCustomTargetRecovered] = useState(25);
 
+   // Product Selector Switcher
+   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+   const [productSearchQuery, setProductSearchQuery] = useState('');
+
    // Simulation Rates
    const [simNewConf, setSimNewConf] = useState(85);
    const [simNewDeliv, setSimNewDeliv] = useState(70);
@@ -139,11 +143,17 @@ const ProfitSimulatorPage: React.FC = () => {
       const costPerUnit = isReal && product ? product.costPrice : customCost;
 
       const purchaseCost = totalDelivered * costPerUnit;
-      const mktCost = adsCostUSD * exchangeRate;
+      // Marketing
+      const confRate = isReal && product ? product.newConfRate : simNewConf;
+      const calcTotalLeads = isReal && product ? product.totalLeads : (confRate > 0 ? totalConfirmed / (confRate / 100) : 0);
+      const mktCost = (adsCostUSD * exchangeRate) * calcTotalLeads;
+
       const totalConfCost = totalConfirmed * confirmationFee;
       const totalPackCost = totalConfirmed * packagingCost;
       const totalReturnsLoss = totalReturned * returnCost;
-      const totalInsuranceCost = isInsuranceEnabled ? (totalConfirmed * insuranceFee) : 0;
+
+      const avgPriceForIns = totalDelivered > 0 ? totalRevenue / totalDelivered : (isReal && product?.variants?.length ? product.variants[0].sellingPrice : customPrice);
+      const totalInsuranceCost = isInsuranceEnabled ? (totalDelivered * (avgPriceForIns * (insuranceFee / 100))) : 0;
 
       const totalExpenses = purchaseCost + mktCost + totalConfCost + totalPackCost + totalReturnsLoss + totalInsuranceCost + otherCosts;
 
@@ -212,11 +222,12 @@ const ProfitSimulatorPage: React.FC = () => {
                   بيانات واقعية
                </button>
                <button
-                  onClick={() => setMode('new')}
-                  className={`px-6 py-2 rounded-md text-xs font-black transition-all flex items-center gap-2 ${mode === 'new' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  disabled
+                  className={`px-6 py-2 rounded-md text-xs font-black transition-all flex items-center gap-2 opacity-50 cursor-not-allowed text-slate-400 bg-slate-50 border border-transparent`}
                >
                   <i className="fa-solid fa-wand-magic-sparkles"></i>
                   محاكاة جديدة
+                  <span className="bg-slate-200 text-slate-500 text-[9px] px-1.5 py-0.5 rounded">قريباً</span>
                </button>
             </div>
          </div>
@@ -237,16 +248,119 @@ const ProfitSimulatorPage: React.FC = () => {
                   <div className="p-6">
                      {mode === 'existing' ? (
                         <div className="space-y-6">
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">المنتج المستهدف</label>
-                              <select
-                                 value={selectedProductId}
-                                 onChange={(e) => setSelectedProductId(e.target.value)}
-                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 text-sm font-black text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all hover:bg-slate-100"
-                              >
-                                 <option value="">-- اختر منتجاً للتحليل --</option>
-                                 {productsList.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
+                           <div className="relative z-50">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2 block">المنتج المستهدف</label>
+
+                              <div className="relative">
+                                 <button
+                                    onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
+                                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group"
+                                 >
+                                    {selectedProductId ? (
+                                       (() => {
+                                          const selected = productsList.find((p: any) => p.id === selectedProductId);
+                                          return selected ? (
+                                             <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                                   {selected.thumbnail ? (
+                                                      <img src={selected.thumbnail} alt={selected.name} className="w-full h-full object-cover" />
+                                                   ) : (
+                                                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                         <i className="fa-solid fa-image"></i>
+                                                      </div>
+                                                   )}
+                                                </div>
+                                                <div className="text-right">
+                                                   <p className="text-sm font-black text-slate-800 line-clamp-1">{selected.name}</p>
+                                                   <p className="text-[10px] text-slate-400 font-bold">{selected.sku || '---'} | {selected.price?.toLocaleString()} دج</p>
+                                                </div>
+                                             </div>
+                                          ) : <span className="text-slate-400 font-bold">منتج غير موجود</span>;
+                                       })()
+                                    ) : (
+                                       <div className="flex items-center gap-2 text-slate-400">
+                                          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 border-dashed flex items-center justify-center">
+                                             <i className="fa-solid fa-box-open"></i>
+                                          </div>
+                                          <span className="font-bold text-sm">اختر منتجاً للتحليل...</span>
+                                       </div>
+                                    )}
+                                    <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-300 ${isProductDropdownOpen ? 'rotate-180 text-indigo-500' : ''}`}></i>
+                                 </button>
+
+                                 {/* Dropdown Menu */}
+                                 {isProductDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
+                                       {/* Search */}
+                                       <div className="p-3 border-b border-slate-100 bg-slate-50/50 sticky top-0">
+                                          <div className="relative">
+                                             <i className="fa-solid fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                             <input
+                                                type="text"
+                                                placeholder="بحث عن منتج..."
+                                                value={productSearchQuery}
+                                                onChange={(e) => setProductSearchQuery(e.target.value)}
+                                                autoFocus
+                                                className="w-full bg-white border border-slate-200 rounded-lg py-2.5 pr-9 pl-3 text-xs font-bold outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                                             />
+                                          </div>
+                                       </div>
+
+                                       {/* List */}
+                                       <div className="max-h-60 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                          {productsList
+                                             .filter((p: any) => p.name.toLowerCase().includes(productSearchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(productSearchQuery.toLowerCase()))
+                                             .map((p: any) => (
+                                                <button
+                                                   key={p.id}
+                                                   onClick={() => {
+                                                      setSelectedProductId(p.id);
+                                                      setIsProductDropdownOpen(false);
+                                                      setProductSearchQuery('');
+                                                   }}
+                                                   className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all text-right group ${selectedProductId === p.id ? 'bg-indigo-50 border border-indigo-100' : 'hover:bg-slate-50 border border-transparent'}`}
+                                                >
+                                                   <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 relative">
+                                                      {p.thumbnail ? (
+                                                         <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
+                                                      ) : (
+                                                         <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50">
+                                                            <i className="fa-solid fa-image text-xs"></i>
+                                                         </div>
+                                                      )}
+                                                      {selectedProductId === p.id && (
+                                                         <div className="absolute inset-0 bg-indigo-500/10 flex items-center justify-center">
+                                                            <i className="fa-solid fa-check text-indigo-600 drop-shadow-sm"></i>
+                                                         </div>
+                                                      )}
+                                                   </div>
+                                                   <div className="flex-1 min-w-0">
+                                                      <p className={`text-xs font-black truncate ${selectedProductId === p.id ? 'text-indigo-700' : 'text-slate-700 group-hover:text-slate-900'}`}>{p.name}</p>
+                                                      <div className="flex items-center gap-2 mt-0.5">
+                                                         <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 rounded">{p.sku || 'No SKU'}</span>
+                                                         <span className="text-[9px] font-bold text-slate-500">{p.price?.toLocaleString()} دج</span>
+                                                      </div>
+                                                   </div>
+                                                   {p.quantity > 0 && (
+                                                      <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{p.quantity}</span>
+                                                   )}
+                                                </button>
+                                             ))}
+
+                                          {productsList.filter((p: any) => p.name.toLowerCase().includes(productSearchQuery.toLowerCase())).length === 0 && (
+                                             <div className="p-4 text-center text-slate-400 text-xs font-bold">
+                                                لا توجد نتائج
+                                             </div>
+                                          )}
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+
+                              {/* Click Outside Handler (SimplifiedOverlay) */}
+                              {isProductDropdownOpen && (
+                                 <div className="fixed inset-0 z-40" onClick={() => setIsProductDropdownOpen(false)}></div>
+                              )}
                            </div>
 
                            {!selectedProductId ? (
@@ -434,29 +548,41 @@ const ProfitSimulatorPage: React.FC = () => {
                            </h5>
 
                            <div className="bg-indigo-50/30 rounded-xl p-5 border border-indigo-100/50 space-y-4 hover:shadow-sm hover:border-indigo-200 transition-all">
-                              <div className="space-y-1.5">
-                                 <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-bold text-slate-500">سعر الإعلان (USD)</label>
-                                    <span className="text-[9px] bg-white border border-slate-200 px-1.5 rounded text-slate-400">ADS COST</span>
+                              <div className="flex justify-between items-center relative group/info cursor-help">
+                                 <div className="flex items-center gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 cursor-help">سعر الإعلان (USD)</label>
+                                    <i className="fa-solid fa-circle-info text-slate-300 text-[10px]"></i>
+                                    <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                       يتم ضرب هذا السعر في عدد الطلبات الإجمالي لحساب تكلفة التسويق الكلية
+                                       <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                    </div>
                                  </div>
-                                 <div className="relative group">
-                                    <input type="number" value={adsCostUSD} onChange={(e) => setAdsCostUSD(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2.5 pl-3 pr-9 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
-                                    <i className="fa-solid fa-dollar-sign absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-indigo-500 transition-colors"></i>
-                                 </div>
+                                 <span className="text-[9px] bg-white border border-slate-200 px-1.5 rounded text-slate-400">ADS COST</span>
                               </div>
+                              <div className="relative group">
+                                 <input type="number" value={adsCostUSD} onChange={(e) => setAdsCostUSD(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2.5 pl-3 pr-9 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
+                                 <i className="fa-solid fa-dollar-sign absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-indigo-500 transition-colors"></i>
+                              </div>
+                           </div>
 
-                              <div className="space-y-1.5">
-                                 <label className="text-[10px] font-bold text-slate-500">سعر الصرف (1$ = DZD)</label>
-                                 <div className="relative group">
-                                    <input type="number" value={exchangeRate} onChange={(e) => setExchangeRate(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2.5 pl-3 pr-9 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
-                                    <i className="fa-solid fa-money-bill-transfer absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors"></i>
+                           <div className="space-y-1.5">
+                              <div className="flex items-center gap-1 relative group/info cursor-help">
+                                 <label className="text-[10px] font-bold text-slate-500 cursor-help">سعر الصرف (1$ = DZD)</label>
+                                 <i className="fa-solid fa-circle-info text-slate-300 text-[10px]"></i>
+                                 <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                    سعر صرف الدولار مقابل الدينار الجزائري
+                                    <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
                                  </div>
                               </div>
-
-                              <div className="pt-3 border-t border-indigo-100/50 flex items-center justify-between">
-                                 <span className="text-[10px] font-bold text-slate-400">إجمالي التكلفة</span>
-                                 <span className="text-sm font-black text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100 shadow-sm">{analysis ? Math.round(analysis.mktCost).toLocaleString() : '0'} دج</span>
+                              <div className="relative group">
+                                 <input type="number" value={exchangeRate} onChange={(e) => setExchangeRate(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2.5 pl-3 pr-9 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
+                                 <i className="fa-solid fa-money-bill-transfer absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors"></i>
                               </div>
+                           </div>
+
+                           <div className="pt-3 border-t border-indigo-100/50 flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-slate-400">إجمالي التكلفة</span>
+                              <span className="text-sm font-black text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100 shadow-sm">{analysis ? Math.round(analysis.mktCost).toLocaleString() : '0'} دج</span>
                            </div>
                         </div>
 
@@ -474,11 +600,25 @@ const ProfitSimulatorPage: React.FC = () => {
                               {/* Returns & Packaging Group */}
                               <div className="grid grid-cols-2 gap-4">
                                  <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-rose-500">سعر الإرجاع (للطلب)</label>
+                                    <div className="flex items-center gap-1 relative group/info cursor-help">
+                                       <label className="text-[10px] font-bold text-rose-500 cursor-help">سعر الإرجاع (للطلب)</label>
+                                       <i className="fa-solid fa-circle-info text-rose-300 text-[10px]"></i>
+                                       <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                          تكلفة خسارة كل طلب يتم إرجاعه (رسوم التوصيل + رسوم الإرجاع)
+                                          <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                       </div>
+                                    </div>
                                     <input type="number" value={returnCost} onChange={(e) => setReturnCost(Number(e.target.value))} className="w-full bg-rose-50 border border-rose-100 rounded-lg py-2 px-3 text-sm font-black outline-none text-rose-600 focus:ring-2 focus:ring-rose-500/10 focus:border-rose-300 transition-all" />
                                  </div>
                                  <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500">التغليف (للطرد)</label>
+                                    <div className="flex items-center gap-1 relative group/info cursor-help">
+                                       <label className="text-[10px] font-bold text-slate-500 cursor-help">التغليف (للطرد)</label>
+                                       <i className="fa-solid fa-circle-info text-slate-300 text-[10px]"></i>
+                                       <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                          تكلفة تغليف وتجهيز كل طلب تم تأكيده
+                                          <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                       </div>
+                                    </div>
                                     <input type="number" value={packagingCost} onChange={(e) => setPackagingCost(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
                                  </div>
                               </div>
@@ -501,8 +641,18 @@ const ProfitSimulatorPage: React.FC = () => {
                                  {isInsuranceEnabled && (
                                     <div className="animate-in fade-in zoom-in-95 duration-200 pt-2 border-t border-slate-200/50">
                                        <div className="space-y-1">
-                                          <label className="text-[9px] font-bold text-slate-400 block mb-1">الرسوم للطرد الواحد</label>
-                                          <input type="number" value={insuranceFee} onChange={(e) => setInsuranceFee(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-black outline-none focus:ring-1 focus:ring-indigo-500" />
+                                          <div className="flex items-center gap-1 relative group/info cursor-help mb-1">
+                                             <label className="text-[9px] font-bold text-slate-400 cursor-help">الرسوم للطرد الواحد (%)</label>
+                                             <i className="fa-solid fa-circle-info text-slate-300 text-[10px]"></i>
+                                             <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                                نسبة مئوية من سعر المنتج تقتطع لتأمين الطلبات الموصلة فقط
+                                                <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                             </div>
+                                          </div>
+                                          <div className="relative group">
+                                             <input type="number" value={insuranceFee} onChange={(e) => setInsuranceFee(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 pl-8 text-sm font-black outline-none focus:ring-1 focus:ring-indigo-500 transition-all" />
+                                             <i className="fa-solid fa-percent absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors"></i>
+                                          </div>
                                        </div>
                                     </div>
                                  )}
@@ -510,7 +660,14 @@ const ProfitSimulatorPage: React.FC = () => {
 
                               {/* Other Costs */}
                               <div className="space-y-1.5">
-                                 <label className="text-[10px] font-bold text-slate-500">تكاليف إضافية أخرى</label>
+                                 <div className="flex items-center gap-1 relative group/info cursor-help">
+                                    <label className="text-[10px] font-bold text-slate-500 cursor-help">تكاليف إضافية أخرى</label>
+                                    <i className="fa-solid fa-circle-info text-slate-300 text-[10px]"></i>
+                                    <div className="absolute bottom-full mb-2 -right-2 w-48 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg z-20 hidden group-hover/info:block pointer-events-none">
+                                       مبلغ ثابت إضافي يضاف إلى إجمالي التكاليف (مثل رواتب، إيجار...)
+                                       <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                    </div>
+                                 </div>
                                  <input type="number" value={otherCosts} onChange={(e) => setOtherCosts(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-300 transition-all" />
                               </div>
                            </div>
@@ -538,6 +695,7 @@ const ProfitSimulatorPage: React.FC = () => {
                      </div>
                   </div>
                </div>
+
             </div>
 
             {/* Scoreboard Column */}
@@ -612,8 +770,7 @@ const ProfitSimulatorPage: React.FC = () => {
                </div>
             </div>
          </div>
-
-      </div>
+      </div >
    );
 };
 
