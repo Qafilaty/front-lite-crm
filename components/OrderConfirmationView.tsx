@@ -55,6 +55,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
       return saved ? JSON.parse(saved) : {
         customerInfo: true,
         locationInfo: true,
+        source: true, // New column defaults to true
         financials: true,
         orderSummary: true,
         status: true,       // Split
@@ -64,7 +65,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
       };
     } catch {
       return {
-        customerInfo: true, locationInfo: true, financials: true, orderSummary: true, status: true, confirmedBy: true, note: false, actions: true
+        customerInfo: true, locationInfo: true, source: true, financials: true, orderSummary: true, status: true, confirmedBy: true, note: false, actions: true
       };
     }
   });
@@ -81,6 +82,16 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     const newCols: any = { ...visibleColumns, [key]: !(visibleColumns as any)[key] };
     setVisibleColumns(newCols);
     localStorage.setItem('ordersTableColumns_v4', JSON.stringify(newCols));
+  };
+  const labels: any = {
+    customerInfo: 'العميل',
+    locationInfo: 'الموقع',
+    source: 'المصدر', // Label
+    orderSummary: 'الطلبية',
+    financials: 'المالية والشحن',
+    status: 'الحالة',
+    confirmedBy: 'مؤكد الطلب',
+    note: 'الملاحظة'
   };
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchTerm, setSearchTerm] = useState('');
@@ -632,6 +643,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     </th>
                     {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
                     {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
+                    {(visibleColumns as any).source && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المصدر</th>}
                     {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
                     {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية والشحن</th>}
                     {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
@@ -707,6 +719,30 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                               <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>
                                 {order.address}
                               </p>
+                            )}
+                          </div>
+                        </td>}
+
+                        {(visibleColumns as any).source && <td className="px-6 py-5">
+                          <div className="flex flex-col gap-1">
+                            {order.store?.store ? (
+                              <div className="flex items-center gap-1.5 bg-violet-50 px-2 py-1 rounded-md border border-violet-100 max-w-fit" title={`المتجر: ${order.store.store.name}`}>
+                                <Store className="w-3 h-3 text-violet-500" />
+                                <span className="text-[9px] font-black text-violet-700 truncate max-w-[80px]">
+                                  {order.store.store.name}
+                                </span>
+                              </div>
+                            ) : order.sheet ? (
+                              <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100 max-w-fit" title={`الشيت: ${order.sheet.nameSheet}`}>
+                                <FileText className="w-3 h-3 text-emerald-500" />
+                                <span className="text-[9px] font-black text-emerald-700 truncate max-w-[80px]">
+                                  {order.sheet.nameSheet}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 max-w-fit">
+                                <span className="text-[9px] font-bold text-slate-400">يدوي</span>
+                              </div>
                             )}
                           </div>
                         </td>}

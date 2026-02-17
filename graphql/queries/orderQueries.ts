@@ -187,6 +187,11 @@ export const GET_ALL_ORDERS = gql`
             logo
           }
         }
+        sheet {
+          id
+          nameSheet
+          typeOrder
+        }
         deliveryCompany {
           deliveryCompany {
             id

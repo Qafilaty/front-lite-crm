@@ -131,6 +131,19 @@ export interface Order {
   };
   confirmed?: User;
   isLocked?: boolean;
+  store?: {
+    store: {
+      id: string;
+      name: string;
+      logo?: string;
+    };
+    idOrderStore?: string;
+  };
+  sheet?: {
+    id: string;
+    nameSheet: string;
+    typeOrder: string;
+  };
 }
 
 export interface User {

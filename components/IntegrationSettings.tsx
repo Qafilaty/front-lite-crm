@@ -485,6 +485,7 @@ export const IntegrationSettings: React.FC = () => {
         { id: 'products.quantity', label: 'الكمية', Icon: Box, required: false },
         { id: 'products.price', label: 'السعر', Icon: Box, required: false },
         { id: 'totalPrice', label: 'السعر الإجمالي', Icon: Box, required: false },
+        { id: 'deliveryType', label: 'نوع التوصيل', Icon: Box, required: false },
         { id: 'note', label: 'ملاحظة', Icon: Box, required: false },
     ];
 
