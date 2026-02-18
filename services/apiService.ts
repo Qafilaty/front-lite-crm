@@ -126,10 +126,20 @@ export const authService = {
         mutation: LOGOUT,
       });
       localStorage.removeItem('authToken');
+      try {
+        await apolloClient.clearStore(); // Clear Apollo Cache
+      } catch (e) {
+        console.error('Error clearing Apollo store:', e);
+      }
       return { success: true };
     } catch (error: any) {
       console.error('Logout error:', error);
       localStorage.removeItem('authToken');
+      try {
+        await apolloClient.clearStore(); // Clear Apollo Cache
+      } catch (e) {
+        console.error('Error clearing Apollo store:', e);
+      }
       return { success: true }; // Always clear local storage
     }
   },

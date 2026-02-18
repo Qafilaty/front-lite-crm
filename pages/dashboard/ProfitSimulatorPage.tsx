@@ -20,6 +20,7 @@ const processProductData = (analytics: any) => {
       totalLeads: analytics.ordinary?.leads || 0,
       newConfRate: Math.round(analytics.ordinary?.confirmationRate || 0),
       newDelivRate: Math.round(analytics.ordinary?.deliveryRate || 0),
+      ordinaryTotalCost: analytics.ordinary?.totalCost || 0, // NEW
 
       // Recovered (Abandoned)
       soldOrdersRecovered: analytics.abandoned?.delivered || 0,
@@ -28,6 +29,7 @@ const processProductData = (analytics: any) => {
       totalAbandoned: analytics.abandoned?.leads || 0,
       recConfRate: Math.round(analytics.abandoned?.confirmationRate || 0),
       recDelivRate: Math.round(analytics.abandoned?.deliveryRate || 0),
+      recoveredTotalCost: analytics.abandoned?.totalCost || 0, // NEW
 
       variants: analytics.variants.map((v: any) => ({
          name: v.name,
@@ -194,9 +196,9 @@ const ProfitSimulatorPage: React.FC = () => {
       const avgSellingPrice = isReal ? (totalUnitsDelivered > 0 ? totalRevenue / totalUnitsDelivered : 5000) : customPrice;
       const recoveredRevenue = unitsRecoveredDelivered * avgSellingPrice;
       const recExpenses =
-         (unitsRecoveredDelivered * costPerUnit) +
+         (isReal && product ? product.recoveredTotalCost : (unitsRecoveredDelivered * costPerUnit)) +
          (ordersRecConfirmed * packagingCost) +
-         (ordersRecConfirmed * confirmationFee) +
+         (ordersRecoveredDelivered * confirmationFee) + // Updated to use Delivered count to match global logic
          (ordersRecReturned * returnCost) +
          (isInsuranceEnabled ? (unitsRecoveredDelivered * avgSellingPrice * (insuranceFee / 100)) : 0);
 

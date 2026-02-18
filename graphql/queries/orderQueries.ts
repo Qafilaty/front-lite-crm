@@ -47,6 +47,11 @@ export const GET_ORDER = gql`
         }
         idOrderStore
       }
+      sheet {
+        id
+        nameSheet
+        typeOrder
+      }
       deliveryCompany {
         deliveryCompany {
           id
@@ -270,6 +275,18 @@ export const SEARCH_ORDER = gql`
           style
           order
         }
+        store {
+          store {
+             id
+             name
+             logo
+          }
+        }
+        sheet {
+          id
+          nameSheet
+          typeOrder
+        }
         deliveryCompany {
           trackingCode
         }
@@ -364,6 +381,11 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
             name
             logo
           }
+        }
+        sheet {
+          id
+          nameSheet
+          typeOrder
         }
         products {
           product {

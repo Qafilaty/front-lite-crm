@@ -171,10 +171,14 @@ const SubscriptionsView: React.FC = () => {
     fetchInvoices();
   }, [user]);
 
+  /* Ramadan Offer State */
+  const [isRamadanOffer, setIsRamadanOffer] = useState(false);
+
   /* Helper Functions */
   const handleOpenModal = (plan: any) => {
     setSelectedPlan(plan);
     setStep(1);
+    setIsRamadanOffer(false); // Reset offer
 
     if (plan.id === 'payg') {
       setDuration(0);
@@ -190,8 +194,25 @@ const SubscriptionsView: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleRamadanOffer = () => {
+    const ultimatePlan = MAIN_PLANS.find(p => p.id === 'ultimate');
+    if (ultimatePlan) {
+      setSelectedPlan(ultimatePlan);
+      setStep(1);
+      setDuration(12); // Forced 1 year
+      setIsRamadanOffer(true); // Activate offer
+      setSelectedPoints(null);
+
+      setPaymentMethod('ccp');
+      setProofFile(null);
+      setProofPreview(null);
+      setIsModalOpen(true);
+    }
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setIsRamadanOffer(false);
     setProofFile(null);
     setProofPreview(null);
     setCouponCode('');
@@ -212,6 +233,13 @@ const SubscriptionsView: React.FC = () => {
         }
         setTotalPrice(Math.floor(price));
       } else {
+        // [RAMADAN OFFER LOGIC]
+        if (isRamadanOffer && selectedPlan.id === 'ultimate' && duration === 12) {
+          // Fixed Price: 19800 DZD (~$99)
+          setTotalPrice(24750);
+          return;
+        }
+
         // Parse price logic (removing commas if string)
         const basePrice = parseInt(selectedPlan.price.replace(/,/g, ''));
         let price = basePrice * duration;
@@ -229,7 +257,7 @@ const SubscriptionsView: React.FC = () => {
         setTotalPrice(Math.floor(price));
       }
     }
-  }, [selectedPlan, duration, selectedPoints, appliedCoupon]);
+  }, [selectedPlan, duration, selectedPoints, appliedCoupon, isRamadanOffer]);
 
   useEffect(() => {
     if (paymentMethod === 'redotpay' || paymentMethod === 'paypal') {
@@ -243,7 +271,7 @@ const SubscriptionsView: React.FC = () => {
   const getDisplayPrice = () => {
     if (currency === 'USD') {
       // Approximate conversion for UI demo (1 USD ~ 200 DZD)
-      return (totalPrice / 200).toFixed(2);
+      return (totalPrice / 250).toFixed(2);
     }
     return totalPrice.toLocaleString();
   };
@@ -373,6 +401,93 @@ const SubscriptionsView: React.FC = () => {
       <section className="text-center space-y-4 max-w-3xl mx-auto px-4">
         <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">جميع الباقات والخيارات المتاحة</h2>
         <p className="text-slate-500 font-medium text-base">بإمكانك الترقية أو تغيير خطتك في أي وقت، التغيير يتم فوراً وبكل سهولة.</p>
+      </section>
+
+      {/* Ramadan Banner */}
+      <section className="relative overflow-hidden bg-[#022C22] rounded-[2.5rem] p-6 lg:p-10 text-white border-2 border-amber-400/20 shadow-2xl shadow-emerald-950/40 group">
+
+        {/* Decorative Patterns */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fbbf24 1px, transparent 0)', backgroundSize: '30px 30px' }}></div>
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-500/15 rounded-full -mr-48 -mt-48 blur-[100px]"></div>
+
+        {/* Floating Icons */}
+        <div className="absolute top-8 right-8 animate-bounce duration-[5000ms] opacity-20">
+          <i className="fa-solid fa-star text-amber-400 text-xl"></i>
+        </div>
+
+        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-10">
+
+          <div className="flex-1 space-y-5">
+            <div className="inline-flex items-center gap-2 bg-amber-400 text-[#022C22] px-5 py-1.5 rounded-full shadow-lg shadow-amber-400/10">
+              <i className="fa-solid fa-mosque text-[10px]"></i>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">باقة البركة الرمضانية</span>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-3xl lg:text-5xl font-black leading-tight tracking-tighter">
+                الآن <span className="text-amber-400">الوصول اللامحدود</span> <br />
+                بأقل سعر سنوي
+              </h2>
+              <p className="text-emerald-100/60 text-sm lg:text-base font-medium leading-relaxed max-w-xl">
+                احصل على ميزات <span className="text-white font-black underline underline-offset-4 decoration-amber-400/50">الباقة اللامحدودة</span> لمدة سنة كاملة. وفر أكثر من 200$ واستمتع بطلبيات، مستخدمين، ودعم VIP بلا حدود.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              {[
+                { icon: 'fa-infinity', label: 'ميزات لامحدودة' },
+                { icon: 'fa-gift', label: '+3 شهور إضافية' },
+                { icon: 'fa-headset', label: 'دعم VIP حصري' }
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm group-hover:bg-white/10 transition-all">
+                  <i className={`fa-solid ${item.icon} text-amber-400 text-[10px]`}></i>
+                  <span className="text-[10px] font-black text-white uppercase">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pricing Card - Professional Banner Style */}
+          <div className="w-full lg:w-[360px] shrink-0">
+            <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 text-slate-900 shadow-2xl relative overflow-hidden ring-4 ring-white/10">
+              {/* Discount Tag */}
+              <div className="absolute top-0 left-0 bg-rose-600 text-white px-6 py-2 rounded-br-2xl font-black text-[10px] shadow-lg z-20">
+                توفير 200$
+              </div>
+
+              <div className="text-center space-y-6 relative z-10">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">الاشتراك السنوي غير المحدود</span>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xl font-black text-slate-300 line-through tracking-tighter">$299</span>
+                    <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black">خصم رمضان</span>
+                  </div>
+                </div>
+
+                <div className="relative inline-block px-10 py-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 group-hover:scale-105 transition-transform duration-500">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#022C22] text-white px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl">
+                    عرض حصري
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className="text-xl font-bold text-emerald-800/40">$</span>
+                    <h3 className="text-7xl font-black text-emerald-900 tracking-tighter">99</h3>
+                  </div>
+                  <p className="text-[10px] font-black text-emerald-700 mt-1 uppercase tracking-widest">لعام كامل من النجاح</p>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={handleRamadanOffer}
+                    className="w-full bg-[#022C22] text-white py-5 rounded-2xl font-black text-sm hover:bg-emerald-800 transition-all shadow-xl shadow-emerald-200 flex items-center justify-center gap-3 group">
+                    <i className="fa-solid fa-rocket text-amber-400 group-hover:rotate-12 transition-transform"></i>
+                    اغتنم الفرصة الآن
+                  </button>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">يسري العرض حتى نهاية شهر رمضان فقط</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* 2. Monthly Subscriptions Grid */}
@@ -655,8 +770,14 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 1: Duration */}
               {step === 1 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <h4 className="font-black text-slate-800 text-sm">
+                  <h4 className="font-black text-slate-800 text-sm flex items-center gap-3">
                     {selectedPlan.id === 'payg' ? 'اختر حزمة النقاط' : 'اختر مدة الاشتراك'}
+                    {isRamadanOffer && (
+                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black border border-emerald-200 animate-pulse">
+                        <i className="fa-solid fa-star text-amber-500 mr-1"></i>
+                        تم تطبيق عرض رمضان
+                      </span>
+                    )}
                   </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {selectedPlan.id === 'payg' ? (

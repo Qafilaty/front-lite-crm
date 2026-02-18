@@ -9,7 +9,9 @@ import {
   Save,
   X,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet,
+  UserCheck
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
@@ -229,7 +231,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const handleSave = async () => {
     if (readOnly) return;
     try {
-      const content = {
+      const content: any = {
         fullName: editedOrder.customer,
         phone: editedOrder.phone,
         state: { name: typeof editedOrder.state === 'string' ? editedOrder.state : (editedOrder.state as any).name }, // Handle state safely
@@ -241,7 +243,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         weight: editedOrder.weight,
 
         idDeliveryCompanyCenter: editedOrder.deliveryCenterId || undefined,
-        deliveryCompany: editedOrder.deliveryCompanyId ? { idDeliveryCompany: editedOrder.deliveryCompanyId } : undefined,
 
         note: editedOrder.notes,
         discount: editedOrder.discount,
@@ -255,6 +256,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           quantity: Number(item.quantity)
         }))
       };
+
+      // Only send deliveryCompany if it changed to avoid wiping existing data (status, trackingCode)
+      // Normalize IDs to handle potential null/undefined vs empty string differences
+      const currentCompanyId = editedOrder.deliveryCompanyId || '';
+      const originalCompanyId = order.deliveryCompany?.deliveryCompany?.id || '';
+
+      if (currentCompanyId !== originalCompanyId) {
+        content.deliveryCompany = currentCompanyId ? { idDeliveryCompany: currentCompanyId } : undefined;
+      }
 
       await updateOrder({
         variables: {
@@ -1274,6 +1284,63 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     <span className="text-[10px] font-black">رقم هاتف مكرر</span>
                   </div>
                 )}
+
+                {/* Source & Confirmer Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مصدر الطلب</label>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3">
+                      {order.store.store ? (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <Store className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-700">{order.store.store?.name}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">متجر</p>
+                          </div>
+                        </>
+                      ) : order.sheet ? (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                            <FileSpreadsheet className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-700">{order.sheet.nameSheet}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Google Sheet</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-700">يدوي</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Manual</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مؤكد الطلب</label>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${order.confirmed ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-700">
+                          {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user) || '-'}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">
+                          {order.confirmed ? 'Confirmed By' : 'Not Confirmed'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة داخلية</label>

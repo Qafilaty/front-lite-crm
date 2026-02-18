@@ -73,6 +73,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const [productFilter, setProductFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
   const [confirmerFilter, setConfirmerFilter] = useState('all');
+  const [isAbandonedFilter, setIsAbandonedFilter] = useState(false); // New Filter State
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // New state for collapsible filters
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -155,6 +156,14 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
       }
     }
 
+    // Abandoned Filter
+    if (isAbandonedFilter) {
+      filter.isAbandoned = true;
+      // If we filter by abandoned, we might want to relax the status filter if needed, 
+      // but usually abandoned orders in tracking ARE confirmed/delivered, so they have tracking status.
+      // So keeping status filter as is is correct.
+    }
+
     // Store Filter
     if (storeFilter !== 'all') {
       filter["store.idStore"] = storeFilter;
@@ -187,7 +196,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     }
 
     return filter;
-  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, trackingStatuses]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, trackingStatuses, isAbandonedFilter, confirmerFilter]);
 
   // 4. Fetch Orders
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
@@ -243,15 +252,25 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               />
             </div>
 
+            {/* Abandoned Filter Toggle */}
+            <button
+              onClick={() => setIsAbandonedFilter(!isAbandonedFilter)}
+              className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isAbandonedFilter ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-500 hover:border-rose-200 hover:text-rose-600'}`}
+              title="عرض الطلبات المتروكة فقط"
+            >
+              <AlertTriangle className={`w-4 h-4 ${isAbandonedFilter ? 'fill-rose-600' : ''}`} />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">المتروكة</span>
+            </button>
+
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
               className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
             >
               <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
               <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
-              {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all') && (
+              {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all' || confirmerFilter !== 'all') && (
                 <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
-                  {[storeFilter, stateFilter, productFilter].filter(f => f !== 'all').length}
+                  {[storeFilter, stateFilter, productFilter, confirmerFilter].filter(f => f !== 'all').length}
                 </span>
               )}
             </button>

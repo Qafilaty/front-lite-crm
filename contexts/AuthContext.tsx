@@ -91,6 +91,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null);
       localStorage.removeItem('authToken');
+      // Force page reload to clear all state
+      window.location.href = '/login';
     }
   };
 

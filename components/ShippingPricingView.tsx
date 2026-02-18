@@ -149,8 +149,8 @@ const ShippingPricingView: React.FC = () => {
         if (!pricingId && result.deliveryPrice) {
           setPricingId(result.deliveryPrice.id);
         }
-        // Reload to ensure sync
-        loadData();
+        // Reload to ensure sync - REMOVED to prevent reverting to stale data
+        // loadData();
       } else {
         toast.error('فشل حفظ الأسعار');
       }

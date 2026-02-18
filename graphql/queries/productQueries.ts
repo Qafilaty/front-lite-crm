@@ -147,6 +147,7 @@ export const GET_PRODUCT_ANALYTICS_SINGLE = gql`
             deliveredUnits
             confirmationRate
             deliveryRate
+            totalCost
         }
         abandoned {
             leads
@@ -157,6 +158,7 @@ export const GET_PRODUCT_ANALYTICS_SINGLE = gql`
             deliveredUnits
             confirmationRate
             deliveryRate
+            totalCost
         }
         variants {
             name
