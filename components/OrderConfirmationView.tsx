@@ -757,7 +757,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                                   className={`text-[9px] font-bold truncate block text-right ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
                                   title={isProductMissing ? 'هذا المنتج غير متوفر في المخزون (محذوف)' : item.name}
                                 >
-                                  • {item.name} {item.variant ? `(${item.variant})` : ''}
+                                  {item?.product?.name || item.name} {(item.variantsProduct?.name || item.variant) ? `(${item.variantsProduct?.name || item.variant})` : ''}
                                   {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
                                   <span className="text-slate-400"> x{item.quantity}</span>
                                 </span>
