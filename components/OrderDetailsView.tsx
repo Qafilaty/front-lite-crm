@@ -213,6 +213,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }
   }, [order.id, order.items]);
 
+
   // Recalculate total amount whenever items or shipping cost change
   useEffect(() => {
     const items = editedOrder.items || [];
@@ -995,6 +996,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                               placeholder="بحث عن منتج..."
                               className="flex-1 bg-transparent border-none p-0 text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
                               autoComplete="off"
+                              onFocus={(e) => e.target.select()}
+                              onBlur={() => {
+                                setTimeout(() => setFocusedProductIndex(null), 200);
+                              }}
                             />
                           </div>
 
@@ -1016,14 +1021,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                   if (variants && variants.length > 0) {
                                     variants.forEach((variant: any) => {
                                       const variantFullName = `${product.name} - ${variant.name}`; // e.g. "T-Shirt - Red/XL"
-                                      if (variantFullName.toLowerCase().includes(searchTerm)) {
+                                      // Search Logic: Match precise OR match product name (to show siblings)
+                                      if (variantFullName.toLowerCase().includes(searchTerm) || product.name.toLowerCase().includes(searchTerm)) {
                                         flattenedSuggestions.push({
                                           id: variant.id || `${product.id}-${variant.id}`, // specific ID
                                           name: variantFullName,
                                           price: variant.price || product.price,
                                           sku: variant.sku || product.sku,
                                           isVariant: true,
-                                          originalProduct: product
+                                          originalProduct: product,
+                                          variantId: variant.id || variant._id
                                         });
                                       }
                                     });
@@ -1058,35 +1065,45 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                   </div>
                                 );
 
-                                return flattenedSuggestions.map((suggestion, sIdx) => (
-                                  <button
-                                    key={suggestion.id || sIdx}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      updateItemFields(idx, {
-                                        name: suggestion.name,
-                                        price: suggestion.price || 0,
-                                        sku: suggestion.sku,
-                                        productId: suggestion.originalProduct.id,
-                                        idVariantsProduct: suggestion.isVariant ? suggestion.id.split('-').pop() : undefined, // Assumes mapping or needs refinement if ID is composed
-                                        variant: ''
-                                      });
-                                      setFocusedProductIndex(null);
-                                    }}
-                                    className="w-full text-right px-4 py-3 hover:bg-slate-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0 group/item"
-                                  >
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="text-xs font-bold text-slate-700 group-hover/item:text-indigo-700 transition-colors">{suggestion.name}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-slate-400">{suggestion.sku || 'No SKU'}</span>
-                                        {suggestion.isVariant && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded">Option</span>}
+                                return flattenedSuggestions.map((suggestion, sIdx) => {
+                                  // Check if this suggestion matches current item
+                                  const isSelected =
+                                    (suggestion.isVariant && item.idVariantsProduct === suggestion.variantId) ||
+                                    (suggestion.name === item.name);
+
+                                  return (
+                                    <button
+                                      key={suggestion.id || sIdx}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        updateItemFields(idx, {
+                                          name: suggestion.name,
+                                          price: suggestion.price || 0,
+                                          sku: suggestion.sku,
+                                          productId: suggestion.originalProduct.id,
+                                          idVariantsProduct: suggestion.isVariant ? suggestion.variantId : undefined,
+                                          variant: ''
+                                        });
+                                        setFocusedProductIndex(null); // Close dropdown
+                                      }}
+                                      className={`w-full text-right px-4 py-3 hover:bg-slate-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0 group/item ${isSelected ? 'bg-indigo-50/60' : ''}`}
+                                    >
+                                      <div className="flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-xs font-bold transition-colors ${isSelected ? 'text-indigo-700' : 'text-slate-700 group-hover/item:text-indigo-700'}`}>{suggestion.name}</span>
+                                          {isSelected && <CheckCircle2 className="w-3 h-3 text-indigo-600" />}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[9px] text-slate-400">{suggestion.sku || 'No SKU'}</span>
+                                          {suggestion.isVariant && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded">Option</span>}
+                                        </div>
                                       </div>
-                                    </div>
-                                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                                      {suggestion.price?.toLocaleString()} دج
-                                    </span>
-                                  </button>
-                                ));
+                                      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                        {suggestion.price?.toLocaleString()} دج
+                                      </span>
+                                    </button>
+                                  )
+                                });
                               })()}
                             </div>,
                             document.body
@@ -1473,7 +1490,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                 <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4 shrink-0">
                   <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100">إلغاء</button>
-                  <button onClick={addStatusUpdate} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700">تأكيد التحديث</button>
+                  <button
+                    onClick={addStatusUpdate}
+                    disabled={isStatusUpdating}
+                    className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isStatusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد التحديث'}
+                  </button>
                 </div>
               </div>
             </div>,

@@ -137,6 +137,7 @@ export const GET_PRODUCT_ANALYTICS_SINGLE = gql`
         id
         name
         cost
+        totalCost
         ordinary {
             leads
             units
@@ -163,6 +164,7 @@ export const GET_PRODUCT_ANALYTICS_SINGLE = gql`
             sellingPrice
             cost
             revenue
+            totalCost
             ordinary {
                 leads
             }

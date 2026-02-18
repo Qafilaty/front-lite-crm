@@ -12,6 +12,7 @@ import { RequirePermission } from './components/RequirePermission';
 // Pages
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import UsersPage from './pages/dashboard/UsersPage';
 import OrdersPage from './pages/dashboard/OrdersPage';
@@ -41,6 +42,7 @@ const AppRoutes: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/woocommerce/success" element={<WooCommerceSuccess />} />
       <Route path="/google-sheets/success" element={<GoogleSheetsSuccessPage />} />
       <Route path="/google-sheets/failed" element={<GoogleSheetsFailedPage />} />

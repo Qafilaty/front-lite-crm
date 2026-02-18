@@ -14,28 +14,31 @@ const processProductData = (analytics: any) => {
       costPrice: analytics.cost || 0,
 
       // Ordinary (Ads)
-      soldUnitsNew: analytics.ordinary?.delivered || 0,
+      soldOrdersNew: analytics.ordinary?.delivered || 0,
+      soldUnitsNew: analytics.ordinary?.deliveredUnits || analytics.ordinary?.delivered || 0,
+      confirmedOrdersNew: analytics.ordinary?.confirmed || 0, // Added exact count
       totalLeads: analytics.ordinary?.leads || 0,
       newConfRate: Math.round(analytics.ordinary?.confirmationRate || 0),
       newDelivRate: Math.round(analytics.ordinary?.deliveryRate || 0),
 
       // Recovered (Abandoned)
-      soldUnitsRecovered: analytics.abandoned?.delivered || 0,
+      soldOrdersRecovered: analytics.abandoned?.delivered || 0,
+      soldUnitsRecovered: analytics.abandoned?.deliveredUnits || analytics.abandoned?.delivered || 0,
+      confirmedOrdersRecovered: analytics.abandoned?.confirmed || 0, // Added exact count
       totalAbandoned: analytics.abandoned?.leads || 0,
       recConfRate: Math.round(analytics.abandoned?.confirmationRate || 0),
       recDelivRate: Math.round(analytics.abandoned?.deliveryRate || 0),
 
       variants: analytics.variants.map((v: any) => ({
          name: v.name,
+         sku: v.sku || '',
          units: v.ordinary?.leads || 0,
          unitsAbandoned: v.abandoned?.leads || 0,
          sellingPrice: v.sellingPrice || 0,
          revenue: v.revenue || 0,
-
-         // Only for table display if needed, but main revenue is v.revenue
-         revenueOrdinary: 0,
-         revenueAbandoned: 0
-      }))
+         totalCost: v.totalCost || 0,
+      })),
+      totalHistoricalCost: analytics.totalCost || 0 // Global Total Cost from DB
    };
 };
 
@@ -58,8 +61,9 @@ const ProfitSimulatorPage: React.FC = () => {
    // Custom Product Inputs (Simulation)
    const [customCost, setCustomCost] = useState(2000);
    const [customPrice, setCustomPrice] = useState(5500);
-   const [customTargetNew, setCustomTargetNew] = useState(100);
-   const [customTargetRecovered, setCustomTargetRecovered] = useState(25);
+   const [customTargetNew, setCustomTargetNew] = useState(100); // Orders
+   const [customTargetRecovered, setCustomTargetRecovered] = useState(25); // Orders
+   const [simItemsPerOrder, setSimItemsPerOrder] = useState(1); // New input for simulation
 
    // Product Selector Switcher
    const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
@@ -102,31 +106,43 @@ const ProfitSimulatorPage: React.FC = () => {
       // In Real Mode, if no product selected or loading, return null
       if (isReal && !product) return null;
 
-      // --- 1. Quantities ---
-      const unitsNewDelivered = isReal && product ? product.soldUnitsNew : customTargetNew;
-      const unitsRecoveredDelivered = isReal && product ? product.soldUnitsRecovered : customTargetRecovered;
-      const totalDelivered = unitsNewDelivered + unitsRecoveredDelivered;
+      // --- 1. Quantities (Separating Orders vs Units) ---
+      // Orders (for Operations: Packaging, Returns, Shipping Fees usually per order)
+      const ordersNewDelivered = isReal && product ? product.soldOrdersNew : customTargetNew;
+      const ordersRecoveredDelivered = isReal && product ? product.soldOrdersRecovered : customTargetRecovered;
+      const totalOrdersDelivered = ordersNewDelivered + ordersRecoveredDelivered;
 
-      // Rates
+      // Units (for COGS: Purchase Cost)
+      const unitsNewDelivered = isReal && product ? product.soldUnitsNew : (customTargetNew * simItemsPerOrder);
+      const unitsRecoveredDelivered = isReal && product ? product.soldUnitsRecovered : (customTargetRecovered * simItemsPerOrder);
+      const totalUnitsDelivered = unitsNewDelivered + unitsRecoveredDelivered;
+
+      // Rates (Apply to Orders)
       const newRate = isReal && product ? product.newDelivRate : simNewDeliv;
       const recRate = isReal && product ? product.recDelivRate : simRecDeliv;
 
-      // Confirmed
-      const newConfirmed = newRate > 0 ? unitsNewDelivered / (newRate / 100) : 0;
-      const recConfirmed = recRate > 0 ? unitsRecoveredDelivered / (recRate / 100) : 0;
-      const totalConfirmed = newConfirmed + recConfirmed;
+      // Confirmed (Orders)
+      const ordersNewConfirmed = isReal && product
+         ? product.confirmedOrdersNew
+         : (newRate > 0 ? ordersNewDelivered / (newRate / 100) : 0);
 
-      // Returned
-      const newReturned = newConfirmed - unitsNewDelivered;
-      const recReturned = recConfirmed - unitsRecoveredDelivered;
-      const totalReturned = newReturned + recReturned;
+      const ordersRecConfirmed = isReal && product
+         ? product.confirmedOrdersRecovered
+         : (recRate > 0 ? ordersRecoveredDelivered / (recRate / 100) : 0);
 
-      // --- 2. Revenue ---
+      const totalOrdersConfirmed = ordersNewConfirmed + ordersRecConfirmed;
+
+      // Returned (Orders)
+      const ordersNewReturned = ordersNewConfirmed - ordersNewDelivered;
+      const ordersRecReturned = ordersRecConfirmed - ordersRecoveredDelivered;
+      const totalOrdersReturned = ordersNewReturned + ordersRecReturned;
+
+      // --- 2. Revenue (Already sums up total price of all items) ---
       let totalRevenue = 0;
       const sortedVariants = isReal && product
          ? [...product.variants].map((v: any) => ({
             ...v,
-            profit: v.revenue // Simplified profit tracking - just showing revenue here as profit logic was undefined
+            profit: v.revenue // Simplified profit tracking
          }))
          : [];
 
@@ -136,54 +152,67 @@ const ProfitSimulatorPage: React.FC = () => {
             totalRevenue += v.revenue;
          });
       } else {
-         totalRevenue = totalDelivered * customPrice;
+         // Simulation: Orders * AvgPrice (Or Units * Price? Usually Price is per piece, but here we simplify)
+         // Let's assume customPrice is Selling Price Per Unit
+         totalRevenue = totalUnitsDelivered * customPrice;
       }
 
       // --- 3. Expenses ---
       const costPerUnit = isReal && product ? product.costPrice : customCost;
 
-      const purchaseCost = totalDelivered * costPerUnit;
-      // Marketing
+      // COGS is calculated on UNITS
+      // If Real Mode: Use the historical cost from DB (sum of all order costs)
+      // If Sim Mode: Use the calculated cost (Units * CustomCost)
+      const purchaseCost = (isReal && product)
+         ? product.totalHistoricalCost
+         : (totalUnitsDelivered * costPerUnit);
+
+      // Marketing (Usually Cost per Lead/Order)
       const confRate = isReal && product ? product.newConfRate : simNewConf;
-      const calcTotalLeads = isReal && product ? product.totalLeads : (confRate > 0 ? totalConfirmed / (confRate / 100) : 0);
+      const calcTotalLeads = isReal && product ? product.totalLeads : (confRate > 0 ? totalOrdersConfirmed / (confRate / 100) : 0);
       const mktCost = (adsCostUSD * exchangeRate) * calcTotalLeads;
 
-      const totalConfCost = totalConfirmed * confirmationFee;
-      const totalPackCost = totalConfirmed * packagingCost;
-      const totalReturnsLoss = totalReturned * returnCost;
+      // Operational Costs (Usually per Order)
+      // User requested confirmation cost to be calculated on DELIVERED orders only
+      const totalConfCost = totalOrdersDelivered * confirmationFee;
+      const totalPackCost = totalOrdersConfirmed * packagingCost;
+      const totalReturnsLoss = totalOrdersReturned * returnCost;
 
-      const avgPriceForIns = totalDelivered > 0 ? totalRevenue / totalDelivered : (isReal && product?.variants?.length ? product.variants[0].sellingPrice : customPrice);
-      const totalInsuranceCost = isInsuranceEnabled ? (totalDelivered * (avgPriceForIns * (insuranceFee / 100))) : 0;
+      // Insurance (Percentage of Revenue of Delivered items)
+      // avgPrice for insurance base
+      const avgPriceForIns = totalUnitsDelivered > 0 ? totalRevenue / totalUnitsDelivered : 0;
+      const totalInsuranceCost = isInsuranceEnabled ? (totalUnitsDelivered * (avgPriceForIns * (insuranceFee / 100))) : 0; // Simplified to % of total revenue
 
       const totalExpenses = purchaseCost + mktCost + totalConfCost + totalPackCost + totalReturnsLoss + totalInsuranceCost + otherCosts;
 
       // --- 4. Net Profit ---
       const netProfit = totalRevenue - totalExpenses;
-      const realCPS = totalDelivered > 0 ? (totalExpenses / totalDelivered) : 0;
-      const realProfitPerUnit = totalDelivered > 0 ? (netProfit / totalDelivered) : 0;
+      const realCPS = totalUnitsDelivered > 0 ? (totalExpenses / totalUnitsDelivered) : 0; // Cost Per Sale (Unit)
+      const realProfitPerUnit = totalUnitsDelivered > 0 ? (netProfit / totalUnitsDelivered) : 0; // Profit Per Unit
 
       // --- 5. Recovered (Simplified for sim) ---
-      const avgSellingPrice = isReal ? (totalDelivered > 0 ? totalRevenue / totalDelivered : 5000) : customPrice;
+      const avgSellingPrice = isReal ? (totalUnitsDelivered > 0 ? totalRevenue / totalUnitsDelivered : 5000) : customPrice;
       const recoveredRevenue = unitsRecoveredDelivered * avgSellingPrice;
       const recExpenses =
          (unitsRecoveredDelivered * costPerUnit) +
-         (recConfirmed * packagingCost) +
-         (recConfirmed * confirmationFee) +
-         (recReturned * returnCost) +
-         (isInsuranceEnabled ? (recConfirmed * insuranceFee) : 0);
+         (ordersRecConfirmed * packagingCost) +
+         (ordersRecConfirmed * confirmationFee) +
+         (ordersRecReturned * returnCost) +
+         (isInsuranceEnabled ? (unitsRecoveredDelivered * avgSellingPrice * (insuranceFee / 100)) : 0);
 
       const recoveredNetProfit = recoveredRevenue - recExpenses;
 
       return {
-         totalDelivered,
+         totalDelivered: totalOrdersDelivered, // For display (Orders usually shown as successes)
+         totalUnits: totalUnitsDelivered,
          unitsNewDelivered,
          unitsRecoveredDelivered,
-         totalConfirmed,
-         totalReturned,
+         totalConfirmed: totalOrdersConfirmed,
+         totalReturned: totalOrdersReturned,
          totalRevenue,
          totalExpenses,
          netProfit,
-         realCPS,
+         realCPS, // Cost Per Order
          realProfitPerUnit,
          recoveredNetProfit,
          totalConfCost,
@@ -194,7 +223,7 @@ const ProfitSimulatorPage: React.FC = () => {
          sortedVariants,
          costPerUnit
       };
-   }, [mode, selectedProductId, customCost, customPrice, customTargetNew, customTargetRecovered, simNewConf, simNewDeliv, simRecConf, simRecDeliv, adsCostUSD, exchangeRate, returnCost, insuranceFee, isInsuranceEnabled, packagingCost, confirmationFee, otherCosts, product]);
+   }, [mode, selectedProductId, customCost, customPrice, customTargetNew, customTargetRecovered, simItemsPerOrder, simNewConf, simNewDeliv, simRecConf, simRecDeliv, adsCostUSD, exchangeRate, returnCost, insuranceFee, isInsuranceEnabled, packagingCost, confirmationFee, otherCosts, product]);
 
    if (listLoading) return <div className="p-12 text-center text-slate-400 font-bold">جاري تحميل قائمة المنتجات...</div>;
 
@@ -422,7 +451,7 @@ const ProfitSimulatorPage: React.FC = () => {
                         </div>
                      ) : (
                         <div className="space-y-6">
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               <div className="space-y-1">
                                  <label className="text-[10px] font-black text-slate-400 uppercase px-1">تكلفة الشراء (دج)</label>
                                  <input type="number" value={customCost} onChange={(e) => setCustomCost(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-black outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all" />
@@ -430,6 +459,10 @@ const ProfitSimulatorPage: React.FC = () => {
                               <div className="space-y-1">
                                  <label className="text-[10px] font-black text-slate-400 uppercase px-1">سعر البيع المستهدف (دج)</label>
                                  <input type="number" value={customPrice} onChange={(e) => setCustomPrice(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-black outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                              </div>
+                              <div className="space-y-1">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase px-1">متوسط القطع/الطلب</label>
+                                 <input type="number" min="1" step="0.1" value={simItemsPerOrder} onChange={(e) => setSimItemsPerOrder(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-black outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all" />
                               </div>
                            </div>
 

@@ -94,7 +94,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegisterRedirect, onLoginSucces
           <div className="space-y-1.5">
             <div className="flex justify-between items-center px-1">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">كلمة المرور</label>
-              <button type="button" className="text-[10px] font-black text-indigo-600 hover:underline">نسيت كلمة المرور؟</button>
+              <button type="button" onClick={() => navigate('/forgot-password')} className="text-[10px] font-black text-indigo-600 hover:underline">نسيت كلمة المرور؟</button>
             </div>
             <div className="relative">
               <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
