@@ -184,12 +184,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                 let Icon = CheckCircle2;
                 let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-100';
 
-                if (conf < 40) {
-                  message = 'معدل التأكيد منخفض، يرجى متابعة العملاء.';
+                if (conf < 30) {
+                  message = 'معدل التأكيد منخفض جداً، يرجى مراجعة الاستراتيجية.';
+                  Icon = AlertTriangle;
+                  colorClass = 'text-rose-600 bg-rose-50 border-rose-100';
+                } else if (conf >= 30 && conf < 50) {
+                  message = 'معدل التأكيد غير مستقر، يحتاج تحسين.';
                   Icon = AlertTriangle;
                   colorClass = 'text-amber-600 bg-amber-50 border-amber-100';
-                } else if (conf >= 60) {
-                  message = 'معدل تأكيد ممتاز! أداء رائع للفريق.';
+                } else if (conf >= 50 && conf < 70) {
+                  message = 'معدل تأكيد مستقر، جيد نسبياً.';
+                  Icon = CheckCircle2;
+                  colorClass = 'text-blue-600 bg-blue-50 border-blue-100';
+                } else {
+                  message = 'معدل تأكيد جيد، أداء ممتاز.';
                 }
 
                 return (
@@ -208,17 +216,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               {/* Delivery Rate Alert */}
               {(() => {
                 const deliv = parseFloat(metrics.delivRate);
-                let message = 'معدل توصيل مستقر.';
+                let message = 'معدل توصيل جيد.';
                 let Icon = Truck;
-                let colorClass = 'text-indigo-600 bg-indigo-50 border-indigo-100';
+                let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-100';
 
-                if (deliv < 40) {
-                  message = 'معدل التوصيل منخفض، راجع شركات التوصيل.';
+                if (deliv < 30) {
+                  message = 'معدل التوصيل منخفض جداً، راجع شركات التوصيل.';
                   Icon = AlertTriangle;
                   colorClass = 'text-rose-600 bg-rose-50 border-rose-100';
-                } else if (deliv >= 60) {
-                  message = 'معدل توصيل ممتاز! عمليات الشحن تسير بامتياز.';
+                } else if (deliv >= 30 && deliv < 50) {
+                  message = 'معدل التوصيل غير مستقر.';
+                  Icon = AlertTriangle;
+                  colorClass = 'text-amber-600 bg-amber-50 border-amber-100';
+                } else if (deliv >= 50 && deliv < 70) {
+                  message = 'معدل توصيل مستقر.';
                   Icon = CheckCircle2;
+                  colorClass = 'text-blue-600 bg-blue-50 border-blue-100';
+                } else {
+                  message = 'معدل توصيل جيد، عمليات الشحن ممتازة.';
                 }
 
                 return (
