@@ -23,7 +23,7 @@ import InventoryPage from './pages/dashboard/InventoryPage';
 import ShippingCarriersPage from './pages/dashboard/ShippingCarriersPage';
 import ShippingPricingPage from './pages/dashboard/ShippingPricingPage';
 import StoreLinkingPage from './pages/dashboard/StoreLinkingPage';
-import ApiDocsPage from './pages/dashboard/ApiDocsPage';
+// import ApiDocsPage from './pages/dashboard/ApiDocsPage';
 import SubscriptionsPage from './pages/dashboard/SubscriptionsPage';
 import WooCommerceSuccess from './pages/WooCommerceSuccess';
 import FinancesPage from './pages/dashboard/FinancesPage';
@@ -70,7 +70,7 @@ const AppRoutes: React.FC = () => {
         <Route path="carriers" element={<RequirePermission allowedView={View.SHIPPING_CARRIERS}><ShippingCarriersPage /></RequirePermission>} />
         <Route path="pricing" element={<RequirePermission allowedView={View.SHIPPING_PRICING}><ShippingPricingPage /></RequirePermission>} />
         <Route path="stores" element={<RequirePermission allowedView={View.STORE_LINKING}><StoreLinkingPage /></RequirePermission>} />
-        <Route path="api-docs" element={<RequirePermission allowedView={View.API_DOCS}><ApiDocsPage /></RequirePermission>} />
+        {/* <Route path="api-docs" element={<RequirePermission allowedView={View.API_DOCS}><ApiDocsPage /></RequirePermission>} /> */}
         <Route path="subscriptions" element={<RequirePermission allowedView={View.SUBSCRIPTIONS}><SubscriptionsPage /></RequirePermission>} />
         <Route path="finances" element={<RequirePermission allowedView={View.FINANCES}><FinancesPage /></RequirePermission>} />
         <Route path="financial-stats" element={<RequirePermission allowedView={View.FINANCIAL_STATS}><FinancialStatsPage /></RequirePermission>} />

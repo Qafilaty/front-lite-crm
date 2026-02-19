@@ -770,8 +770,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                     </button>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-4 py-2 text-center text-[10px] text-indigo-400 font-medium">
-                                                            </td>
+
                                                         </tr>
                                                         <tr>
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">المتغير</th>
@@ -779,7 +778,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">السعر</th>
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">التكلفة</th>
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-32">الكمية</th>
-                                                            <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-20">افتراضي</th>
+
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-50">
@@ -820,18 +819,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                         onChange={(e) => updateVariantProbability(idx, 'quantity', parseFloat(e.target.value))}
                                                                     />
                                                                 </td>
-                                                                <td className="px-4 py-1.5 text-center">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="defaultVariant"
-                                                                        checked={item.isDefault}
-                                                                        onChange={() => {
-                                                                            const updated = formData.variantsProbability.map((p, i) => ({ ...p, isDefault: i === idx }));
-                                                                            setFormData(prev => ({ ...prev, variantsProbability: updated }));
-                                                                        }}
-                                                                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
-                                                                    />
-                                                                </td>
+
                                                             </tr>
                                                         ))}
                                                     </tbody>

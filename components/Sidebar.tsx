@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },
-        { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
+        // { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
       ]
     }
   ];

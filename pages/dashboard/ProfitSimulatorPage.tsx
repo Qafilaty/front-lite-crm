@@ -787,20 +787,16 @@ const ProfitSimulatorPage: React.FC = () => {
                </div>
 
                {/* Smart Advice */}
-               <div className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm">
+               {/* Ad Cost Warning */}
+               <div className="bg-amber-50 border border-amber-100 rounded-xl p-6 shadow-sm">
                   <div className="flex items-center gap-3 mb-3">
-                     <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shrink-0">
-                        <i className="fa-solid fa-lightbulb"></i>
+                     <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-lg shrink-0">
+                        <i className="fa-solid fa-triangle-exclamation"></i>
                      </div>
-                     <h5 className="text-sm font-black text-slate-900">نصيحة WILO المالية</h5>
+                     <h5 className="text-sm font-black text-slate-900">تنبيه هام حول التكاليف</h5>
                   </div>
                   <p className="text-[11px] font-bold text-slate-600 leading-relaxed">
-                     {analysis ? (analysis.netProfit > 0
-                        ? (mode === 'existing' && analysis.sortedVariants.length > 0
-                           ? `منتجك يحقق أرباحاً جيدة بصافي ${Math.round(analysis.netProfit).toLocaleString()} دج. تكلفة المبيعة (CPS) هي ${Math.round(analysis.realCPS)} دج. حاول تحسين نسبة الاستلام (${product.newDelivRate}%) لرفع الأرباح أكثر.`
-                           : `نموذجك المالي الحالي رابح! بصافي ربح ${Math.round(analysis.netProfit).toLocaleString()} دج. تأكد من ثبات نسب التوصيل المرتفعة للمتروك (${simRecDeliv}%) لضمان استمرار هذه النتائج.`)
-                        : `انتبه! تكلفة المبيعة (CPS) الحالية البالغة ${Math.round(analysis.realCPS)} دج مرتفعة جداً مقارنة بسعر التكلفة (${analysis.costPerUnit} دج). حاول رفع سعر البيع أو تقليل ميزانية الإعلان.`) : 'اختر منتجاً للحصول على النصائح.'
-                     }
+                     التكلفة الإعلانية المحسوبة في هذا التحليل تخص فقط <span className="text-indigo-600">الطلبات الجديدة (Ordinary)</span>، ولا تشمل أي ميزانية إعلانية للطلبات المتروكة (Recovered) حيث نعتبرها أرباحاً صافية بدون تكلفة استحواذ إضافية.
                   </p>
                </div>
             </div>

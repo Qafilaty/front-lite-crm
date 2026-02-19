@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
 import {
-    Search, Filter, Eye, ChevronLeft, ChevronRight, LayoutList, MapPin, AlertTriangle, Home, Building2, User, UserCheck
+    Search, Filter, Eye, ChevronLeft, ChevronRight, LayoutList, MapPin, AlertTriangle, Home, Building2, User, UserCheck,
+    AlertOctagon, RefreshCw, CheckCircle2, Truck, X, Calendar, ShoppingBag, DollarSign, ArrowLeft, CheckSquare
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
 import { useQuery, useLazyQuery } from '@apollo/client';
@@ -436,26 +437,73 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                         ? (statusColors[order.status] || statusColors.default)
                                         : statusColors.default;
 
+                                    // Row Coloring Logic
+                                    let hexColor = '#64748b'; // Default
+                                    if (typeof order.status === 'string') {
+                                        const hexMap: Record<string, string> = {
+                                            confirmed: '#4f46e5', delivered: '#10b981', pending: '#64748b', cancelled: '#e11d48',
+                                            postponed: '#d97706', failed_01: '#ef4444', failed_02: '#ef4444', failed_03: '#ef4444',
+                                            processing: '#2563eb', out_of_stock: '#ea580c', ramasse: '#8b5cf6', shipped: '#8b5cf6',
+                                            paid: '#10b981', retour_vendeur: '#9333ea', retourne_vendeur: '#9333ea',
+                                        };
+                                        if (hexMap[order.status]) hexColor = hexMap[order.status];
+                                    } else if (order.status && (order.status as any).color) {
+                                        hexColor = (order.status as any).color;
+                                    }
+
                                     return (
-                                        <tr key={order.id} onClick={() => navigate(`/dashboard/orders/${order.id}`)} className="group hover:bg-slate-50 transition-all cursor-pointer">
+                                        <tr
+                                            key={order.id}
+                                            onClick={() => navigate(`/dashboard/orders/${order.id}`)}
+                                            className="group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95"
+                                            style={{ backgroundColor: `${hexColor}08` }}
+                                        >
 
                                             {/* Customer Info */}
                                             {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="space-y-0.5">
-                                                        <p className="text-[12px] font-black text-slate-800">{order.fullName || order.customer || 'زائر'}</p>
+                                                <div className="flex items-center gap-4">
+                                                    {/* Avatar */}
+                                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shadow-sm shrink-0 uppercase transition-transform group-hover:scale-110 duration-300 ring-2 ring-offset-2 ring-offset-white
+                                                        ${(() => {
+                                                            const name = order.fullName || order.customer || '?';
+                                                            const char = name.charCodeAt(0);
+                                                            const colors = [
+                                                                'bg-indigo-100 text-indigo-600 ring-indigo-50',
+                                                                'bg-emerald-100 text-emerald-600 ring-emerald-50',
+                                                                'bg-rose-100 text-rose-600 ring-rose-50',
+                                                                'bg-amber-100 text-amber-600 ring-amber-50',
+                                                                'bg-violet-100 text-violet-600 ring-violet-50',
+                                                                'bg-cyan-100 text-cyan-600 ring-cyan-50',
+                                                                'bg-pink-100 text-pink-600 ring-pink-50',
+                                                                'bg-slate-100 text-slate-600 ring-slate-50'
+                                                            ];
+                                                            return colors[char % colors.length];
+                                                        })()}
+                                                    `}>
+                                                        <span className="font-black drop-shadow-sm">
+                                                            {(order.fullName || order.customer || '?').charAt(0)}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-1">
+                                                        <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                                            {order.fullName || order.customer || 'زائر'}
+                                                        </p>
                                                         <div className="flex items-center gap-2">
-                                                            <p className="text-[10px] font-bold text-slate-400">{order.phone}</p>
+                                                            <span className="text-[10px] font-bold font-mono tracking-tight text-slate-400 dir-ltr">
+                                                                {order.phone}
+                                                            </span>
                                                             {order.duplicatePhone && order.duplicatePhone > 1 && (
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setSearchTerm(order.phone);
                                                                     }}
-                                                                    className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[9px] font-black hover:bg-amber-200 transition-colors"
+                                                                    className="px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
                                                                     title={`${order.duplicatePhone} طلبات لهذا الرقم`}
                                                                 >
-                                                                    {order.duplicatePhone}
+                                                                    <span className="text-[9px] font-black">{order.duplicatePhone}</span>
+                                                                    <RefreshCw className="w-2.5 h-2.5" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -526,9 +574,30 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                         </span>
                                                     )}
                                                     <span
-                                                        className={`px-3 py-1 rounded-md text-[9px] font-black border uppercase tracking-widest ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                                                        className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center gap-2 ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                                                         style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
                                                     >
+                                                        {(() => {
+                                                            const statusKey = typeof order.status === 'string' ? order.status : (order.status as any).nameEN?.toLowerCase();
+                                                            let Icon = AlertOctagon;
+                                                            if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
+                                                            else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
+                                                            else if (statusKey?.includes('deliver')) Icon = Truck;
+                                                            else if (statusKey?.includes('cancel') || statusKey?.includes('fail') || statusKey?.includes('wrong')) Icon = X;
+                                                            else if (statusKey?.includes('postpone')) Icon = Calendar;
+                                                            else if (statusKey?.includes('ramasse') || statusKey?.includes('shipped')) Icon = ShoppingBag;
+                                                            else if (statusKey?.includes('out')) Icon = AlertTriangle;
+                                                            else if (statusKey?.includes('paid')) Icon = DollarSign;
+                                                            else if (statusKey?.includes('return')) Icon = ArrowLeft;
+
+                                                            if (statusKey === 'pending') Icon = RefreshCw;
+                                                            if (statusKey === 'confirmed') Icon = CheckCircle2;
+                                                            if (statusKey === 'delivered') Icon = CheckSquare;
+                                                            if (statusKey === 'cancelled') Icon = X;
+                                                            if (statusKey === 'postponed') Icon = Calendar;
+
+                                                            return <Icon className="w-3.5 h-3.5" />;
+                                                        })()}
                                                         {statusLabel}
                                                     </span>
                                                 </div>
@@ -536,7 +605,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
                                             {/* Actions */}
                                             <td className="px-6 py-5 text-center">
-                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
+                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">
                                                     مراجعة <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                             </td>
