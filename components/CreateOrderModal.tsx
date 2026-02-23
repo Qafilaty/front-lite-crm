@@ -36,6 +36,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         deliveryType: 'home' as 'home' | "inDesk",
         shippingCost: 0,
         weight: 0,
+        discount: 0,
         notes: '',
         deliveryCompanyId: '',
         deliveryCenterId: ''
@@ -239,7 +240,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
         const totalQuantity = cart.reduce((acc, item) => acc + item.quantity, 0);
         const subTotalPrice = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        const totalPrice = subTotalPrice + (newOrder.shippingCost || 0);
+        const totalPrice = Math.max(0, subTotalPrice - (newOrder.discount || 0)) + (newOrder.shippingCost || 0);
 
         // Find selected state object
         const selectedWilaya = wilayas.find(w => w.name === newOrder.state);
@@ -265,6 +266,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         deliveryType: newOrder.deliveryType,
                         deliveryPrice: newOrder.shippingCost,
                         weight: newOrder.weight,
+                        discount: newOrder.discount,
                         note: newOrder.notes,
 
                         totalPrice,
@@ -291,7 +293,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
             // Reset form
             setNewOrder({
                 customer: '', phone: '', state: '', stateCode: '', city: '',
-                address: '', deliveryType: 'home', shippingCost: 0, weight: 0, notes: '',
+                address: '', deliveryType: 'home', shippingCost: 0, weight: 0, discount: 0, notes: '',
                 deliveryCompanyId: '', deliveryCenterId: ''
             });
             setCart([]);
@@ -303,7 +305,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         }
     };
 
-    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + (newOrder.shippingCost || 0);
+    const subTotalForDisplay = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const total = Math.max(0, subTotalForDisplay - (newOrder.discount || 0)) + (newOrder.shippingCost || 0);
     const selectedWilaya = wilayas.find(w => w.name === newOrder.state);
 
     // Ensure we don't render until client-side (mounted) to access document.body safely
@@ -572,7 +575,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             <Info className="w-4 h-4 text-indigo-500" />
                             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">التكاليف والملاحظات</span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
                                 <div className="relative">
@@ -601,6 +604,23 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         onChange={e => setNewOrder({ ...newOrder, weight: parseFloat(e.target.value) || 0 })}
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-700 focus:bg-white focus:border-indigo-400 transition-all outline-none"
                                         placeholder="0.0"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الخصم (دج)</label>
+                                <div className="relative">
+                                    <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={newOrder.discount || ''}
+                                        onChange={e => {
+                                            const val = Math.max(0, parseFloat(e.target.value) || 0);
+                                            setNewOrder({ ...newOrder, discount: val });
+                                        }}
+                                        className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-rose-500 focus:bg-white focus:border-indigo-400 transition-all outline-none"
+                                        placeholder="0"
                                     />
                                 </div>
                             </div>

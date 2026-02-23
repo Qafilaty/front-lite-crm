@@ -37,8 +37,7 @@ export const RequirePermission: React.FC<RequirePermissionProps> = ({ children, 
             View.ORDER_ABANDONED,
             View.ORDER_TRACKING,
             View.FINANCIAL_STATS,
-            View.SHIPPING_PRICING,
-            View.PROFIT_SIMULATOR
+            View.SHIPPING_PRICING
         ];
 
         if (allowedForConfirmed.includes(allowedView)) {

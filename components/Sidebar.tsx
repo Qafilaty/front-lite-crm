@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         View.ORDER_ABANDONED,
         View.ORDER_TRACKING,
         View.SHIPPING_PRICING,
-        View.PROFIT_SIMULATOR
+        // View.PROFIT_SIMULATOR
       ];
       return allowed.includes(item.id);
     })
