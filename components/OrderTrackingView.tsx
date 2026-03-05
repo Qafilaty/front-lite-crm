@@ -41,6 +41,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
       return saved ? JSON.parse(saved) : {
         customerInfo: true,
         locationInfo: true,
+        orderSummary: true,
         trackingInfo: true,
         confirmedBy: true,
         financials: true,
@@ -49,7 +50,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
       };
     } catch {
       return {
-        customerInfo: true, locationInfo: true, trackingInfo: true,
+        customerInfo: true, locationInfo: true, orderSummary: true, trackingInfo: true,
         confirmedBy: true, financials: true, status: true, actions: true
       };
     }
@@ -300,6 +301,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                       const labels: any = {
                         customerInfo: 'العميل',
                         locationInfo: 'الموقع',
+                        orderSummary: 'الطلبية',
                         trackingInfo: 'كود التتبع',
                         confirmedBy: 'مؤكد الطلب',
                         financials: 'المالية',
@@ -466,6 +468,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
                   {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
                   {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
+                  {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
                   {(visibleColumns as any).trackingInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>}
                   {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
                   {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
@@ -479,6 +482,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   const statusStyle = getStatusStyle(order.status);
                   const statusName = typeof order.status === 'object' && order.status ? ((order.status as any).nameAR || (order.status as any).nameEN) : order.status;
                   const trackingCode = order.deliveryCompany?.trackingCode || '-';
+                  const displayItems = order.products || order.items || [];
 
                   // Row Coloring Logic
                   let hexColor = '#64748b'; // Default
@@ -565,6 +569,29 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                               {order.city && ` - ${order.city}`}
                             </span>
                           </div>
+                        </div>
+                      </td>}
+
+                      {/* Order Summary (Products) */}
+                      {(visibleColumns as any).orderSummary && <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1 max-w-[200px]">
+                          {displayItems && displayItems.length > 0 ? displayItems.slice(0, 2).map((item: any, idx: number) => {
+                            const isProductMissing = !item.product;
+                            return (
+                              <span
+                                key={idx}
+                                className={`text-[9px] font-bold truncate block text-right ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
+                                title={isProductMissing ? 'هذا المنتج غير متوفر في المخزون (محذوف)' : item.name}
+                              >
+                                {item?.product?.name || item.name} {(item.variantsProduct?.name || item.variant) ? `(${item.variantsProduct?.name || item.variant})` : ''}
+                                {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
+                                <span className="text-slate-400"> x{item.quantity}</span>
+                              </span>
+                            );
+                          }) : <span className="text-[9px] text-slate-300 font-bold">-</span>}
+                          {displayItems && displayItems.length > 2 && (
+                            <span className="text-[8px] text-indigo-500 font-black">+ {displayItems.length - 2} المزيد</span>
+                          )}
                         </div>
                       </td>}
 
