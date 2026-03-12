@@ -799,6 +799,24 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       ? (editedOrder.city as any).name
                       : editedOrder.city;
                     savedMunc = (savedMunc || '').trim();
+
+                    // Find if it matches Arabic or English name from Wilaya options
+                    const currentStateName = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                      ? (editedOrder.state as any).name
+                      : editedOrder.state;
+                    if (currentStateName && wilayasData?.allWilayas) {
+                      const wilaya = wilayasData.allWilayas.find((w: any) =>
+                        w.name?.toLowerCase() === currentStateName.toLowerCase() ||
+                        w.code == currentStateName
+                      );
+                      if (wilaya && wilaya.communes) {
+                        const matchedCommune = wilaya.communes.find((c: any) => 
+                          c.name?.toLowerCase() === savedMunc.toLowerCase() || 
+                          c.arName === savedMunc
+                        );
+                        if (matchedCommune) return matchedCommune.name;
+                      }
+                    }
                     return savedMunc;
                   })()}
                   onChange={(val) => setEditedOrder({ ...editedOrder, city: val })}
