@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
     ShoppingCart, X, User, MapPinned, Home, Building2, ShoppingBag,
     PlusCircle, ChevronDown, Search, Package, MinusCircle, Trash2,
-    Info, DollarSign, ChevronLeft, Loader2
+    Info, DollarSign, ChevronLeft, Loader2, Store
 } from 'lucide-react';
 import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
 import { GET_ALL_WILAYAS } from '../graphql/queries';
@@ -39,7 +39,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         discount: 0,
         notes: '',
         deliveryCompanyId: '',
-        deliveryCenterId: ''
+        deliveryCenterId: '',
+        storageLocation: 'SHOP' as 'SHOP' | 'DELIVERY_COMPANY'
     });
 
     const [cart, setCart] = useState<{
@@ -184,7 +185,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 variant: variantName,
                 quantity: 1,
                 price,
-                sku
+                sku,
+                storageLocation: variant?.storageLocation || product.storageLocation || 'SHOP'
             }]);
         }
         setIsProductPickerOpen(false);
@@ -268,6 +270,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         weight: newOrder.weight,
                         discount: newOrder.discount,
                         note: newOrder.notes,
+                        storageLocation: newOrder.storageLocation,
 
                         totalPrice,
                         subTotalPrice,
@@ -279,7 +282,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             name: item.name,
                             sku: item.sku || "",
                             price: item.price,
-                            quantity: item.quantity
+                            quantity: item.quantity,
+                            storageLocation: item.storageLocation
                         })),
 
 
@@ -294,7 +298,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
             setNewOrder({
                 customer: '', phone: '', state: '', stateCode: '', city: '',
                 address: '', deliveryType: 'home', shippingCost: 0, weight: 0, discount: 0, notes: '',
-                deliveryCompanyId: '', deliveryCenterId: ''
+                deliveryCompanyId: '', deliveryCenterId: '',
+                storageLocation: 'SHOP'
             });
             setCart([]);
             setErrors({});
@@ -566,6 +571,31 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Withdraw Location (Storage Location) - Switch UI */}
+                        <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                                    <Store className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">مكان السحب</p>
+                                    <p className="text-[8px] font-bold text-slate-400 mt-0.5">
+                                        {newOrder.storageLocation === 'SHOP' ? 'سيتم السحب من المحل' : 'سيتم السحب من شركة التوصيل'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setNewOrder({ ...newOrder, storageLocation: newOrder.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' })}
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                >
+                                    <span
+                                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-5.5' : '-translate-x-1'}`}
+                                    />
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -39,6 +39,7 @@ export interface OrderItem {
   variant: string;
   quantity: number;
   price: number;
+  storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
 }
 
 export interface OrderLog {
@@ -131,6 +132,7 @@ export interface Order {
   };
   confirmed?: User;
   isLocked?: boolean;
+  storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
   store?: {
     store: {
       id: string;
@@ -192,6 +194,7 @@ export interface ProductVariantProbability {
   cost: number;
   quantity: number; // Mapped to quantityInStock or allQuantity
   isDefault?: boolean;
+  storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
 }
 
 export interface ProductVariant {
@@ -224,6 +227,7 @@ export interface Product {
   status?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
 }
 
 export interface Stats {

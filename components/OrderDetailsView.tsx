@@ -246,6 +246,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
         note: editedOrder.notes,
         discount: editedOrder.discount,
+        storageLocation: editedOrder.storageLocation,
         // Map items
         products: editedOrder.items.map(item => ({
           idProduct: item.productId,
@@ -1110,7 +1111,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                           sku: suggestion.sku,
                                           productId: suggestion.originalProduct.id,
                                           idVariantsProduct: suggestion.isVariant ? suggestion.variantId : undefined,
-                                          variant: ''
+                                          variant: '',
+                                          storageLocation: suggestion.isVariant 
+                                            ? (suggestion.originalProduct.variantsProbability?.find((v: any) => v._id === suggestion.variantId || v.id === suggestion.variantId)?.storageLocation || 'SHOP')
+                                            : (suggestion.originalProduct.storageLocation || 'SHOP')
                                         });
                                         setFocusedProductIndex(null); // Close dropdown
                                       }}
@@ -1357,6 +1361,31 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         </p>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">مكان السحب</p>
+                      <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">
+                        {editedOrder.storageLocation === 'SHOP' ? 'من المحل' : 'من شركة التوصيل'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={readOnly}
+                      onClick={() => setEditedOrder({ ...editedOrder, storageLocation: editedOrder.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' })}
+                      className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-200'} ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
+                      />
+                    </button>
                   </div>
                 </div>
 
