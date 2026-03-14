@@ -16,6 +16,7 @@ export const GET_PRODUCT = gql`
       cost
       status
       note
+      storageLocation
       variants {
         id
         name
@@ -60,6 +61,7 @@ export const GET_ALL_PRODUCTS = gql`
         cost
         status
         note
+        storageLocation
         variants {
           id
           name
@@ -125,6 +127,7 @@ export const GET_PRODUCTS_LIST_LITE = gql`
         sku
         price
         quantity
+        storageLocation
       }
       total
     }

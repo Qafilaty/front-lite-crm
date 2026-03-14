@@ -1112,9 +1112,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                           productId: suggestion.originalProduct.id,
                                           idVariantsProduct: suggestion.isVariant ? suggestion.variantId : undefined,
                                           variant: '',
-                                          storageLocation: suggestion.isVariant 
-                                            ? (suggestion.originalProduct.variantsProbability?.find((v: any) => v._id === suggestion.variantId || v.id === suggestion.variantId)?.storageLocation || 'SHOP')
-                                            : (suggestion.originalProduct.storageLocation || 'SHOP')
+                                          storageLocation: suggestion.originalProduct.storageLocation || 'SHOP'
                                         });
                                         setFocusedProductIndex(null); // Close dropdown
                                       }}
@@ -1364,9 +1362,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                <div 
+                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all duration-300 ${editedOrder.storageLocation === 'SHOP' ? 'bg-indigo-50/30 border-indigo-100/50' : 'bg-indigo-50/60 border-indigo-100'} ${!readOnly ? 'cursor-pointer hover:bg-indigo-100/40 group' : ''}`}
+                  onClick={() => {
+                    if (!readOnly) {
+                      setEditedOrder(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
+                    }
+                  }}
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm">
+                    <div className={`w-10 h-10 rounded-xl bg-white shadow-sm border border-indigo-100 flex items-center justify-center transition-all duration-300 ${editedOrder.storageLocation === 'SHOP' ? 'text-indigo-400' : 'text-indigo-600 group-hover:scale-110 shadow-indigo-100'}`}>
                       <Store className="w-5 h-5" />
                     </div>
                     <div>
@@ -1376,16 +1381,22 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'SHOP' ? 'text-indigo-600' : 'text-slate-400'}`}>المحل</span>
                     <button
+                      type="button"
                       disabled={readOnly}
-                      onClick={() => setEditedOrder({ ...editedOrder, storageLocation: editedOrder.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' })}
-                      className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-200'} ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditedOrder(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
+                      }}
+                      className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600 shadow-md ring-2 ring-indigo-100/50' : 'bg-slate-300'} ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
                       />
                     </button>
+                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>الشركة</span>
                   </div>
                 </div>
 

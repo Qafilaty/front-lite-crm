@@ -186,7 +186,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 quantity: 1,
                 price,
                 sku,
-                storageLocation: variant?.storageLocation || product.storageLocation || 'SHOP'
+                storageLocation: product.storageLocation || 'SHOP'
             }]);
         }
         setIsProductPickerOpen(false);
@@ -574,27 +574,37 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         </div>
 
                         {/* Withdraw Location (Storage Location) - Switch UI */}
-                        <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 flex items-center justify-between mt-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
-                                    <Store className="w-4 h-4" />
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between cursor-pointer hover:bg-indigo-100/50 transition-colors group"
+                            onClick={() => {
+                                setNewOrder(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-indigo-100 flex items-center justify-center text-indigo-600 transition-transform group-hover:scale-110">
+                                    <Store className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">مكان السحب</p>
-                                    <p className="text-[8px] font-bold text-slate-400 mt-0.5">
+                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">مكان السحب</p>
+                                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">
                                         {newOrder.storageLocation === 'SHOP' ? 'سيتم السحب من المحل' : 'سيتم السحب من شركة التوصيل'}
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
+                                <span className={`text-[10px] font-bold transition-colors ${newOrder.storageLocation === 'SHOP' ? 'text-indigo-600' : 'text-slate-400'}`}>المحل</span>
                                 <button
-                                    onClick={() => setNewOrder({ ...newOrder, storageLocation: newOrder.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' })}
-                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setNewOrder(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
+                                    }}
+                                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600 shadow-md ring-2 ring-indigo-200' : 'bg-slate-300'}`}
                                 >
                                     <span
-                                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-5.5' : '-translate-x-1'}`}
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
                                     />
                                 </button>
+                                <span className={`text-[10px] font-bold transition-colors ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>الشركة</span>
                             </div>
                         </div>
                     </div>

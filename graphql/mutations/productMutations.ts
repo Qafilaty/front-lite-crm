@@ -16,6 +16,7 @@ export const CREATE_PRODUCT = gql`
       status
       note
       quantity
+      storageLocation
       createdAt
       variantsProbability {
         id
@@ -44,6 +45,7 @@ export const UPDATE_PRODUCT = gql`
         status
         note
         quantity
+        storageLocation
         variantsProbability {
           id
           name

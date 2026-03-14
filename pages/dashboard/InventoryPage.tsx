@@ -47,7 +47,8 @@ const InventoryPage: React.FC = () => {
       if (result.success && result.products) {
         // Transform backend data to frontend format
         const transformedProducts: Product[] = result.products.map((p: any) => ({
-          id: p.id,
+          ...p,
+          id: p.id || p._id,
           name: p.name || '',
           sku: p.sku || '',
           category: 'عام', // Default category
@@ -78,6 +79,7 @@ const InventoryPage: React.FC = () => {
           })) || [],
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
+          storageLocation: p.storageLocation || 'SHOP',
         }));
         setInventory(transformedProducts);
         setTotalItems(result.total || 0);

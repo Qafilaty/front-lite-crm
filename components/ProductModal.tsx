@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, UploadCloud, Plus, Trash2, Package, Tag, Layers, DollarSign, Archive, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, UploadCloud, Plus, Trash2, Package, Tag, Layers, DollarSign, Archive, CheckCircle2, AlertCircle, RefreshCw, Store } from 'lucide-react';
 import { ProductVariantDefinition, ProductVariantProbability, VariantValue, Product } from '../types';
 import { Input, TextArea, Toggle, Button } from './UIComponents';
 import { useMutation } from '@apollo/client';
@@ -25,6 +25,7 @@ interface ProductFormState {
     quantity: number; // For simple products (no variants)
     variants: ProductVariantDefinition[];
     variantsProbability: ProductVariantProbability[];
+    storageLocation: 'SHOP' | 'DELIVERY_COMPANY';
 
     // IDs (Mocked for UI or passed from context if needed)
     idDeliveryPrice?: string;
@@ -41,6 +42,7 @@ const INITIAL_STATE: ProductFormState = {
     quantity: 0,
     variants: [],
     variantsProbability: [],
+    storageLocation: 'SHOP',
 };
 
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess, product }) => {
@@ -77,6 +79,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                     quantity: product.quantity || 0,
                     variants: product.variants || [], // Assuming structure matches or needs mapping
                     variantsProbability: product.variantsProbability || [],
+                    storageLocation: product.storageLocation || 'SHOP',
                 });
             } else {
                 // Reset for Add Mode
@@ -197,7 +200,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                 cost: existing?.cost || formData.cost,
                 quantity: existing?.quantity || 0,
                 isDefault: existing?.isDefault || false,
-                storageLocation: existing?.storageLocation || 'SHOP'
             };
         });
 
@@ -277,6 +279,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                 status: formData.status,
                 note: formData.note,
                 quantity: Number(formData.quantity),
+                storageLocation: formData.storageLocation,
 
                 variants: formData.variants.map(v => ({
                     name: v.name,
@@ -292,8 +295,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                     sku: vp.sku,
                     price: vp.price,
                     cost: vp.cost,
-                    quantity: vp.quantity,
-                    storageLocation: vp.storageLocation || 'SHOP'
+                    quantity: vp.quantity
                 })) : [],
             };
 
@@ -412,6 +414,33 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                             <span className="text-xs text-slate-500">المنتج متاح للبيع في المتجر</span>
                                         </div>
                                         <Toggle checked={formData.status} onChange={(v) => setFormData(prev => ({ ...prev, status: v }))} />
+                                    </div>
+
+                                    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Store size={18} className="text-indigo-600" />
+                                            <span className="text-sm font-bold text-slate-900">مكان السحب</span>
+                                        </div>
+                                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <div className="flex-1">
+                                                <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
+                                                    {formData.storageLocation === 'SHOP' ? 'المحل' : 'شركة التوصيل'}
+                                                </p>
+                                                <p className="text-[9px] font-bold text-slate-400">موقع سحب المنتج للشحن</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setFormData(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
+                                                }}
+                                                className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${formData.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
+                                                />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -772,38 +801,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                     </button>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-4 py-2">
-                                                                <div className="flex items-center justify-center gap-2 bg-white border border-indigo-200 rounded-lg px-2 py-1">
-                                                                    <span className="text-[9px] font-bold text-slate-400">المحل</span>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const currentVal = formData.variantsProbability[0]?.storageLocation || 'SHOP';
-                                                                            const newVal = currentVal === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP';
-                                                                            setFormData(prev => ({
-                                                                                ...prev,
-                                                                                variantsProbability: prev.variantsProbability.map(p => ({ ...p, storageLocation: newVal as any }))
-                                                                            }));
-                                                                            toast.success(`تم تحويل الكل إلى ${newVal === 'SHOP' ? 'المحل' : 'شركة التوصيل'}`);
-                                                                        }}
-                                                                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors focus:outline-none ${formData.variantsProbability.every(p => p.storageLocation === 'DELIVERY_COMPANY') ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                                                                    >
-                                                                        <span
-                                                                            className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${formData.variantsProbability.every(p => p.storageLocation === 'DELIVERY_COMPANY') ? '-translate-x-4.5' : '-translate-x-1'}`}
-                                                                        />
-                                                                    </button>
-                                                                    <span className="text-[9px] font-bold text-indigo-600">الشركة</span>
-                                                                </div>
-                                                            </td>
 
                                                         </tr>
                                                         <tr>
                                                             <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">المتغير</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-48">SKU</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">السعر</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-36">التكلفة</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-32">الكمية</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-40">مكان التخزين</th>
-
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-40">SKU</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">السعر</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">التكلفة</th>
+                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">الكمية</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-50">
@@ -844,23 +849,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                         onChange={(e) => updateVariantProbability(idx, 'quantity', parseFloat(e.target.value))}
                                                                     />
                                                                 </td>
-                                                                <td className="px-4 py-1.5 text-center">
-                                                                    <div className="flex items-center justify-center gap-1.5">
-                                                                        <button
-                                                                            onClick={() => updateVariantProbability(idx, 'storageLocation', item.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP')}
-                                                                            className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${item.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                                                                            title={item.storageLocation === 'SHOP' ? 'تخزين في المحل' : 'تخزين عند شركة التوصيل'}
-                                                                        >
-                                                                            <span
-                                                                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${item.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-5.5' : '-translate-x-1'}`}
-                                                                            />
-                                                                        </button>
-                                                                        <span className={`text-[10px] font-bold ${item.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                                                            {item.storageLocation === 'SHOP' ? 'المحل' : 'الشركة'}
-                                                                        </span>
-                                                                    </div>
-                                                                </td>
-
                                                             </tr>
                                                         ))}
                                                     </tbody>

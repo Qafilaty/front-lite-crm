@@ -194,7 +194,6 @@ export interface ProductVariantProbability {
   cost: number;
   quantity: number; // Mapped to quantityInStock or allQuantity
   isDefault?: boolean;
-  storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
 }
 
 export interface ProductVariant {
