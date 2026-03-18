@@ -379,6 +379,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                     الكل
                                 </button>
                                 {confirmationStatuses.map((s: any) => {
+                                    if (!s) return null;
                                     const isActive = statusFilter === s.id;
                                     const style = getStatusStyle(s);
                                     return (
@@ -578,7 +579,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                         style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
                                                     >
                                                         {(() => {
-                                                            const statusKey = typeof order.status === 'string' ? order.status : (order.status as any).nameEN?.toLowerCase();
+                                                            const statusKey = typeof order?.status === 'string' ? order?.status : (order?.status as any)?.nameEN?.toLowerCase();
                                                             let Icon = AlertOctagon;
                                                             if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
                                                             else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
