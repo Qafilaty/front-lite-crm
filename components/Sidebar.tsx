@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from '../types';
 import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen, Calculator } from 'lucide-react';
 import logo from '../assets/logo.png';
 import logoIcon from '../assets/logo-icon.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { storeService } from '../services/apiService';
+
+const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
 
 interface SidebarProps {
   currentView: View;
@@ -38,6 +41,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
     duePostponedCount
   } = useOrderNotification();
   const { user } = useAuth();
+  const [hasSmartFunnel, setHasSmartFunnel] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (user?.company?.id) {
+      storeService.getAllStores().then(res => {
+        if (res.success && res.stores) {
+          setHasSmartFunnel(res.stores.some((s: any) => s.typeStore === 'smartfunnel'));
+        }
+      }).catch(err => console.error("Error fetching stores for sidebar:", err));
+    }
+  }, [user?.company?.id]);
 
   const handleViewChange = (view: View) => {
     if (view === View.ORDER_CONFIRMATION) {
@@ -95,7 +109,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       items: [
         { id: View.SHIPPING_CARRIERS, label: 'شركات التوصيل', icon: Share2 },
         { id: View.SHIPPING_PRICING, label: 'تسعير التوصيل', icon: Map },
-        { id: View.STORE_LINKING, label: 'ربط المتاجر', icon: Store },
+        { 
+          id: View.STORE_LINKING, 
+          label: 'ربط المتاجر', 
+          icon: Store, 
+          badge: (ALLOWED_EMAILS.includes(user?.email || '') && hasSmartFunnel === false) ? 'جديد ✨' : undefined 
+        },
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },
         // { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
@@ -167,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                     <span className="text-[12px] font-bold">{item.label}</span>
                     <div className="flex items-center gap-2">
 
-                      {item.badge && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
+                      {item.badge && <span className="text-[8px] bg-indigo-900 text-indigo-300 px-1.5 py-0.5 rounded font-black">{item.badge}</span>}
                     </div>
                   </div>
                 )}

@@ -6,8 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client';
 import { SPOTLIGHT_SEARCH } from '../graphql/queries/orderQueries';
 import { useDebounce } from '../hooks/useDebounce';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ExternalLink } from 'lucide-react';
 import NotificationsMenu from './NotificationsMenu';
+import { storeService } from '../services/apiService';
+
+const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
 
 interface HeaderProps {
   currentUser: UserType;
@@ -26,6 +29,17 @@ const Header: React.FC<HeaderProps> = ({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType>({ ...currentUser });
+  const [hasSmartFunnel, setHasSmartFunnel] = useState(false);
+
+  React.useEffect(() => {
+    if (currentUser?.company?.id) {
+      storeService.getAllStores().then(res => {
+        if (res.success && res.stores) {
+          setHasSmartFunnel(res.stores.some((s: any) => s.typeStore === 'smartfunnel'));
+        }
+      }).catch(err => console.error("Error fetching stores for header:", err));
+    }
+  }, [currentUser?.company?.id]);
 
   // Spotlight Search Logic
   const navigate = useNavigate();
@@ -284,6 +298,21 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                     تحديث الملف الشخصي
                   </button>
+
+                  {hasSmartFunnel && ALLOWED_EMAILS.includes(currentUser.email) && (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        window.open('https://funnels.wilo.site', '_blank');
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                        <ExternalLink className="w-4 h-4" />
+                      </div>
+                      الانتقال إلى Smart Funnel
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {

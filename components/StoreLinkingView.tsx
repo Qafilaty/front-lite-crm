@@ -9,6 +9,8 @@ import LoadingSpinner from './common/LoadingSpinner';
 import { CardGridSkeleton } from './common';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 
+const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
+
 // Fixed list of supported stores
 const SUPPORTED_STORES = [
   {
@@ -38,6 +40,13 @@ const SUPPORTED_STORES = [
     logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/ayor-logo.png',
     color: '#7269f8',
     description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+  },
+  {
+    key: 'smartfunnel',
+    name: 'Smart Funnel',
+    logo: 'https://funnels.wilo.site/logo.png',
+    color: '#8b5cf6',
+    description: 'بناء صفحات هبوط احترافية ومسارات بيع ذكية'
   }
 ];
 
@@ -139,6 +148,31 @@ const StoreLinkingView: React.FC = () => {
 
   const cleanUrl = (url: string) => {
     return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  };
+
+  const handleSmartFunnelConnect = async (platform: typeof SUPPORTED_STORES[0]) => {
+    if (!user?.company?.id) return;
+    const existingStore = stores.find(s => s.typeStore === platform.key);
+    if (existingStore) return;
+
+    const toastId = toast.loading('جاري ربط Smart Funnel...');
+    try {
+      const payload = {
+        name: platform.name,
+        typeStore: platform.key,
+        status: true
+      };
+      const createResult = await storeService.createStore(payload);
+      if (createResult.success && createResult.store) {
+        setStores(prev => [...prev, createResult.store]);
+        toast.success('تم ربط Smart Funnel بنجاح', { id: toastId });
+      } else {
+        throw new Error('فشل الربط');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء الربط', { id: toastId });
+    }
   };
 
   const handleConnect = async (isDirectLink: boolean = false) => {
@@ -253,6 +287,13 @@ const StoreLinkingView: React.FC = () => {
     return <CardGridSkeleton count={3} />;
   }
 
+  const filteredSupportedStores = SUPPORTED_STORES.filter(platform => {
+    if (platform.key === 'smartfunnel') {
+      return ALLOWED_EMAILS.includes(user?.email || '');
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -265,7 +306,7 @@ const StoreLinkingView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {SUPPORTED_STORES.map((platform) => {
+        {filteredSupportedStores.map((platform) => {
           const connectedStore = stores.find(s => s.typeStore === platform.key);
           const isConnected = !!connectedStore;
 
@@ -278,6 +319,16 @@ const StoreLinkingView: React.FC = () => {
                 <div className="absolute top-3 left-3 flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md">
                   <ShieldCheck className="w-3 h-3" />
                   <span className="text-[9px] font-black uppercase">تم الربط</span>
+                </div>
+              )}
+
+              {!isConnected && platform.key === 'smartfunnel' && (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md border border-indigo-100/50 shadow-sm animate-in fade-in zoom-in duration-500">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-600"></span>
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider">جديد</span>
                 </div>
               )}
 
@@ -296,10 +347,16 @@ const StoreLinkingView: React.FC = () => {
                   {isConnected ? (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleOpenSettings(platform)}
+                        onClick={() => {
+                          if (platform.key === 'smartfunnel') {
+                            window.open('https://funnels.wilo.site', '_blank');
+                          } else {
+                            handleOpenSettings(platform);
+                          }
+                        }}
                         className="flex-1 py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
                       >
-                        <Settings className="w-3.5 h-3.5" /> معلومات الربط
+                        {platform.key === 'smartfunnel' ? <ExternalLink className="w-3.5 h-3.5" /> : <Settings className="w-3.5 h-3.5" />} {platform.key === 'smartfunnel' ? 'الانتقال للفانل' : 'معلومات الربط'}
                       </button>
                       <button
                         onClick={() => connectedStore?.id && handleOpenDeleteModal(connectedStore.id)}
@@ -311,7 +368,10 @@ const StoreLinkingView: React.FC = () => {
                     </div>
                   ) : (
                     <button
-                      onClick={() => handleOpenSettings(platform)}
+                      onClick={() => {
+                        if (platform.key === 'smartfunnel') handleSmartFunnelConnect(platform);
+                        else handleOpenSettings(platform);
+                      }}
                       className="w-full py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
                     >
                       <Link2 className="w-3.5 h-3.5" /> إعداد الربط
