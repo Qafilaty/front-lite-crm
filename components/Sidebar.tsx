@@ -7,7 +7,7 @@ import { useOrderNotification } from '../contexts/OrderNotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { storeService } from '../services/apiService';
 
-const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
+// const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
 
 interface SidebarProps {
   currentView: View;
@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
           id: View.STORE_LINKING, 
           label: 'ربط المتاجر', 
           icon: Store, 
-          badge: (ALLOWED_EMAILS.includes(user?.email || '') && hasSmartFunnel === false) ? 'جديد ✨' : undefined 
+          badge: hasSmartFunnel === false ? 'جديد ✨' : undefined 
         },
         { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
         { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },

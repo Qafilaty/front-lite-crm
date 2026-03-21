@@ -9,7 +9,7 @@ import LoadingSpinner from './common/LoadingSpinner';
 import { CardGridSkeleton } from './common';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 
-const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
+
 
 // Fixed list of supported stores
 const SUPPORTED_STORES = [
@@ -42,6 +42,20 @@ const SUPPORTED_STORES = [
     description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
   },
   {
+    key: 'feeef',
+    name: 'Feeef',
+    logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/feeef-logo.png',
+    color: '#7269f8',
+    description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+  },
+  // {
+  //   key: 'hanotify',
+  //   name: 'Hanotify',
+  //   logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/hanotify-logo.png',
+  //   color: '#5820b8',
+  //   description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+  // },
+  {
     key: 'smartfunnel',
     name: 'Smart Funnel',
     logo: 'https://funnels.wilo.site/logo.png',
@@ -49,7 +63,7 @@ const SUPPORTED_STORES = [
     description: 'بناء صفحات هبوط احترافية ومسارات بيع ذكية'
   }
 ];
-
+//https://api.wilo.site/api/hooks/hanotify/createdOrder/ew9T0P8jI0
 const StoreLinkingView: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -287,12 +301,7 @@ const StoreLinkingView: React.FC = () => {
     return <CardGridSkeleton count={3} />;
   }
 
-  const filteredSupportedStores = SUPPORTED_STORES.filter(platform => {
-    if (platform.key === 'smartfunnel') {
-      return ALLOWED_EMAILS.includes(user?.email || '');
-    }
-    return true;
-  });
+  const filteredSupportedStores = SUPPORTED_STORES;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">

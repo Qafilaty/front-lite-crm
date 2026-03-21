@@ -10,7 +10,7 @@ import { Loader2, ExternalLink } from 'lucide-react';
 import NotificationsMenu from './NotificationsMenu';
 import { storeService } from '../services/apiService';
 
-const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
+// const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
 
 interface HeaderProps {
   currentUser: UserType;
@@ -299,7 +299,7 @@ const Header: React.FC<HeaderProps> = ({
                     تحديث الملف الشخصي
                   </button>
 
-                  {hasSmartFunnel && ALLOWED_EMAILS.includes(currentUser.email) && (
+                  {hasSmartFunnel && (
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
