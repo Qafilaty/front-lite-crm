@@ -178,6 +178,7 @@ export interface VariantValue {
 
 // Corresponds to 'VariantsProduct' in backend (e.g. Color, Size definitions)
 export interface ProductVariantDefinition {
+  _id?: string;
   id?: string;
   name: string;
   type: string;

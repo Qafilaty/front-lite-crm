@@ -361,20 +361,47 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                     <p className="text-sm">هذا المنتج بسيط وليس له متغيرات (مثل اللون أو المقاس).</p>
                                   </div>
                                 ) : (
-                                  <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-right">
-                                      <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
-                                        <tr>
-                                          <th className="px-4 py-3 font-medium text-xs">خيار المنتج</th>
-                                          <th className="px-4 py-3 font-medium text-xs">SKU</th>
-                                          <th className="px-4 py-3 font-medium text-xs">السعر</th>
-                                          <th className="px-4 py-3 font-medium text-xs">التكلفة</th>
-                                          <th className="px-4 py-3 font-medium text-xs">الكمية المتوفرة</th>
-                                          <th className="px-4 py-3 font-medium text-xs text-center">الافتراضي</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-50">
-                                        {product.variantsProbability?.map((variant, idx) => (
+                                  <>
+                                    {product.variants && product.variants.length > 0 && (
+                                      <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap gap-6 bg-slate-50/30">
+                                        {product.variants.map((v, i) => (
+                                          <div key={i} className="flex flex-col">
+                                            <span className="text-[10px] uppercase font-black text-indigo-400 tracking-wider">
+                                              {v.type === 'color' ? 'لون' : v.type === 'size' ? 'حجم' : v.type === 'material' ? 'مادة' : 'مخصص'}
+                                            </span>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-xs font-bold text-slate-600">{v.name}</span>
+                                                {v.type === 'color' && (
+                                                  <div className="flex -space-x-1 items-center mr-1">
+                                                    {v.value.slice(0, 4).map((val: any, idx: number) => (
+                                                      <span 
+                                                        key={idx} 
+                                                        className="w-2.5 h-2.5 rounded-full border border-white shadow-sm shrink-0" 
+                                                        style={{ backgroundColor: val.value }} 
+                                                        title={val.name}
+                                                      ></span>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm text-right">
+                                        <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
+                                          <tr>
+                                            <th className="px-4 py-3 font-medium text-xs">خيار المنتج</th>
+                                            <th className="px-4 py-3 font-medium text-xs">SKU</th>
+                                            <th className="px-4 py-3 font-medium text-xs">السعر</th>
+                                            <th className="px-4 py-3 font-medium text-xs">التكلفة</th>
+                                            <th className="px-4 py-3 font-medium text-xs">الكمية المتوفرة</th>
+                                            <th className="px-4 py-3 font-medium text-xs text-center">الافتراضي</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                          {product.variantsProbability?.map((variant, idx) => (
                                           <tr key={idx} className="hover:bg-gray-50/50">
                                             <td className="px-4 py-3 font-medium text-slate-700">{variant.name}</td>
                                             <td className="px-4 py-3 font-mono text-xs text-gray-500">{variant.sku}</td>
@@ -396,7 +423,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                         ))}
                                       </tbody>
                                     </table>
-                                  </div>
+                                    </div>
+                                  </>
                                 )}
                               </div>
                             </div>

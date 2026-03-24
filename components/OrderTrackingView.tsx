@@ -5,8 +5,9 @@ import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
   PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2, AlertTriangle,
-  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar
+  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar, Copy, MessageSquare, MessageCircle
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
@@ -46,12 +47,13 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
         confirmedBy: true,
         financials: true,
         status: true,
+        communication: true,
         actions: true
       };
     } catch {
       return {
         customerInfo: true, locationInfo: true, orderSummary: true, trackingInfo: true,
-        confirmedBy: true, financials: true, status: true, actions: true
+        confirmedBy: true, financials: true, status: true, communication: true, actions: true
       };
     }
   });
@@ -305,7 +307,8 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         trackingInfo: 'كود التتبع',
                         confirmedBy: 'مؤكد الطلب',
                         financials: 'المالية',
-                        status: 'الحالة'
+                        status: 'الحالة',
+                        communication: 'التواصل'
                       };
                       return (
                         <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
@@ -468,6 +471,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
                   {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
+                  {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">التواصل</th>}
                   {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
                   {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
                   {(visibleColumns as any).trackingInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>}
@@ -559,6 +563,50 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                           </div>
                         </div>
                       </td>}
+
+                        {/* Communication Buttons */}
+                        {(visibleColumns as any).communication && (
+                          <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(order.phone);
+                                  toast.success('تم نسخ الرقم!');
+                                }}
+                                className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100"
+                                title="نسخ الرقم"
+                              >
+                                <Copy size={14} />
+                              </button>
+                              
+                              <a
+                                href={`sms:${order.phone.replace(/\s/g, '')}`}
+                                className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100"
+                                title="إرسال SMS"
+                              >
+                                <MessageSquare size={14} />
+                              </a>
+                              
+                              <button
+                                onClick={() => {
+                                  const phone = order.phone.replace(/\s/g, '');
+                                  const name = order.fullName || order.customer || 'عميلنا العزيز';
+                                  const storeName = order.store?.store?.name || 'متجرنا';
+                                  const products = (order.products || order.items || []).map((p: any) => p.product?.name || p.name).join(', ');
+                                  const total = order.totalPrice || order.amount || 0;
+                                  const trCode = order.deliveryCompany?.trackingCode || 'غير متوفر حاليا';
+                                  
+                                  const message = `السلام عليكم ${name}، معك ${storeName}. بخصوص طلبك رقم #${order.numberOrder}${products ? ` (${products})` : ''}. يسعدنا إبلاغك بأن الطلبية قيد التوصيل بقيمة ${total} دج. رقم التتبع الخاص بك هو: ${trCode}`;
+                                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                                }}
+                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100"
+                                title="واتساب"
+                              >
+                                <MessageCircle size={14} className="fill-current" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
 
                       {/* Location Info */}
                       {(visibleColumns as any).locationInfo && <td className="px-6 py-5">

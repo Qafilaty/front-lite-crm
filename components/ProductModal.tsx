@@ -53,8 +53,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
 
     // Variant Input State
     const [newVariantName, setNewVariantName] = useState('');
+    const [newVariantType, setNewVariantType] = useState('size');
     const [newVariantValueInput, setNewVariantValueInput] = useState('');
-    const [currentVariantValues, setCurrentVariantValues] = useState<string[]>([]);
+    const [newVariantColor, setNewVariantColor] = useState('#4f46e5');
+    const [currentVariantValues, setCurrentVariantValues] = useState<VariantValue[]>([]);
+    const [editingValueIndex, setEditingValueIndex] = useState<number | null>(null);
+    const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
+    const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
     // Mutations
@@ -124,26 +129,77 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
 
     const addVariantValue = () => {
         if (!newVariantValueInput.trim()) return;
-        if (!currentVariantValues.includes(newVariantValueInput.trim())) {
-            setCurrentVariantValues([...currentVariantValues, newVariantValueInput.trim()]);
+
+        const newValue: VariantValue = {
+            name: newVariantValueInput.trim(),
+            value: newVariantType === 'color' ? newVariantColor : newVariantValueInput.trim()
+        };
+
+        if (editingValueIndex !== null) {
+            const updated = [...currentVariantValues];
+            updated[editingValueIndex] = newValue;
+            setCurrentVariantValues(updated);
+            setEditingValueIndex(null);
+        } else {
+            if (!currentVariantValues.find(v => v.name === newValue.name)) {
+                setCurrentVariantValues([...currentVariantValues, newValue]);
+            }
         }
         setNewVariantValueInput('');
     };
 
+    const editVariantValue = (index: number) => {
+        const val = currentVariantValues[index];
+        setNewVariantValueInput(val.name);
+        if (newVariantType === 'color') {
+            setNewVariantColor(val.value);
+        }
+        setEditingValueIndex(index);
+    };
+
+    const cancelEditValue = () => {
+        setNewVariantValueInput('');
+        setEditingValueIndex(null);
+    };
+
     const removeVariantValue = (val: string) => {
-        setCurrentVariantValues(currentVariantValues.filter(v => v !== val));
+        setCurrentVariantValues(currentVariantValues.filter(v => v.name !== val));
+    };
+
+    const editVariantGroup = (index: number) => {
+        const variant = formData.variants[index];
+        setNewVariantName(variant.name);
+        setNewVariantType(variant.type);
+        setCurrentVariantValues(variant.value);
+        setEditingVariantIndex(index);
+        setEditingVariantId(variant._id?.toString() || null);
+    };
+
+    const cancelEditVariant = () => {
+        setNewVariantName('');
+        setNewVariantType('size');
+        setCurrentVariantValues([]);
+        setEditingVariantIndex(null);
+        setEditingVariantId(null);
     };
 
     const handleAddVariantGroup = () => {
         if (!newVariantName.trim() || currentVariantValues.length === 0) return;
 
         const newVariant: ProductVariantDefinition = {
+            _id: editingVariantId ? (editingVariantId as any) : undefined,
             name: newVariantName,
-            type: 'select',
-            value: currentVariantValues.map(v => ({ name: v, value: v }))
+            type: newVariantType,
+            value: currentVariantValues
         };
 
-        const updatedVariants = [...formData.variants, newVariant];
+        let updatedVariants;
+        if (editingVariantIndex !== null) {
+            updatedVariants = [...formData.variants];
+            updatedVariants[editingVariantIndex] = newVariant;
+        } else {
+            updatedVariants = [...formData.variants, newVariant];
+        }
 
         setFormData(prev => ({
             ...prev,
@@ -153,6 +209,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
         setNewVariantName('');
         setCurrentVariantValues([]);
         setNewVariantValueInput('');
+        setEditingVariantIndex(null);
+        setEditingVariantId(null);
 
         generateCombinations(updatedVariants);
     };
@@ -194,6 +252,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
             const existing = formData.variantsProbability.find(p => p.name === name);
 
             return {
+                _id: existing?._id, // Preserve ID
                 name: name,
                 sku: existing?.sku || `${formData.sku || 'SKU'}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
                 price: existing?.price || formData.price,
@@ -565,24 +624,36 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                                     <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                                         <div className="p-1.5 bg-gray-100 rounded-md">
-                                            <Plus size={16} className="text-gray-600" />
+                                            {editingVariantIndex !== null ? <RefreshCw size={16} className="text-indigo-600" /> : <Plus size={16} className="text-gray-600" />}
                                         </div>
-                                        إضافة نوع متغير
+                                        {editingVariantIndex !== null ? 'تعديل المتغير المختار' : 'إضافة نوع متغير'}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                                         <div className="md:col-span-3">
                                             <Input
-                                                placeholder="الاسم (مثال: اللون)"
+                                                placeholder="الاسم (مثل: اللون)"
                                                 value={newVariantName}
                                                 onChange={(e) => setNewVariantName(e.target.value)}
                                                 className="bg-gray-50 border-gray-200 focus:bg-white"
                                             />
                                         </div>
-                                        <div className="md:col-span-7">
+                                        <div className="md:col-span-3">
+                                            <select
+                                                value={newVariantType}
+                                                onChange={(e) => setNewVariantType(e.target.value)}
+                                                className="block w-full rounded-lg border-gray-200 border bg-gray-50 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white transition-all font-bold text-slate-800"
+                                            >
+                                                <option value="size">حجم (Size)</option>
+                                                <option value="color">لون (Color)</option>
+                                                <option value="material">مادة (Material)</option>
+                                                <option value="custom">مخصص (Custom)</option>
+                                            </select>
+                                        </div>
+                                        <div className={newVariantType === 'color' ? 'md:col-span-3' : 'md:col-span-4'}>
                                             <div className="relative">
                                                 <input
-                                                    className="block w-full rounded-lg border-gray-200 border bg-gray-50 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white transition-all"
-                                                    placeholder="القيم (مثال: أحمر) - اضغط Enter للإضافة"
+                                                    className={`block w-full rounded-lg border bg-gray-50 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white transition-all font-bold ${editingValueIndex !== null ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/30' : 'border-gray-200'}`}
+                                                    placeholder={newVariantType === 'color' ? (editingValueIndex !== null ? "تعديل اسم اللون" : "اسم اللون (مثال: أحمر)") : (editingValueIndex !== null ? "تعديل القيمة" : "القيم (مثال: XL) - اضغط Enter")}
                                                     value={newVariantValueInput}
                                                     onChange={(e) => setNewVariantValueInput(e.target.value)}
                                                     onKeyDown={(e) => {
@@ -592,51 +663,102 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                         }
                                                     }}
                                                 />
-                                                <button
-                                                    onClick={addVariantValue}
-                                                    className="absolute left-2 top-1.5 p-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-600 transition-colors"
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            {currentVariantValues.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-3">
-                                                    {currentVariantValues.map((val, idx) => (
-                                                        <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                                            {val}
-                                                            <button onClick={() => removeVariantValue(val)} className="hover:text-red-500 transition-colors"><X size={12} /></button>
-                                                        </span>
-                                                    ))}
+                                                <div className="absolute left-2 top-1.5 flex gap-1">
+                                                    {editingValueIndex !== null && (
+                                                        <button
+                                                            onClick={cancelEditValue}
+                                                            className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors"
+                                                            title="إلغاء التعديل"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={addVariantValue}
+                                                        className={`p-1 rounded transition-colors ${editingValueIndex !== null ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-600'}`}
+                                                    >
+                                                        {editingValueIndex !== null ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                                                    </button>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
-                                        <div className="md:col-span-2">
+
+                                        {newVariantType === 'color' && (
+                                            <div className="md:col-span-1 flex items-center justify-center">
+                                                <input 
+                                                    type="color" 
+                                                    value={newVariantColor} 
+                                                    onChange={(e) => setNewVariantColor(e.target.value)}
+                                                    className="w-10 h-10 rounded-lg border-2 border-white shadow-sm cursor-pointer p-0 overflow-hidden"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="md:col-span-2 flex flex-col gap-2">
                                             <Button
-                                                variant="secondary"
-                                                className="w-full justify-center border-gray-200 hover:bg-gray-50"
+                                                variant={editingVariantIndex !== null ? "primary" : "secondary"}
+                                                className="w-full justify-center border-gray-200 hover:bg-gray-50 font-bold"
                                                 onClick={handleAddVariantGroup}
                                                 disabled={!newVariantName || currentVariantValues.length === 0}
                                             >
-                                                إضافة
+                                                {editingVariantIndex !== null ? 'تحديث' : 'إضافة'}
                                             </Button>
+                                            {editingVariantIndex !== null && (
+                                                <button onClick={cancelEditVariant} className="text-[10px] text-gray-400 hover:text-red-500 font-bold transition-colors underline">إلغاء التعديل</button>
+                                            )}
                                         </div>
                                     </div>
+
+                                    {/* Current Values Pills */}
+                                    {currentVariantValues.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-4 bg-slate-50/50 p-3 rounded-xl border border-dashed border-gray-200">
+                                            {currentVariantValues.map((val, idx) => (
+                                                <span key={idx} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm group/pill transition-all ${editingValueIndex === idx ? 'bg-indigo-50 border-indigo-300 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white border-indigo-100 text-indigo-700'}`}>
+                                                    {newVariantType === 'color' && (
+                                                        <span className="w-3 h-3 rounded-full border border-black/5 shadow-inner" style={{ backgroundColor: val.value }}></span>
+                                                    )}
+                                                    {val.name}
+                                                     <div className="flex items-center gap-1.5 mr-1">
+                                                         <button 
+                                                             onClick={(e) => { e.preventDefault(); editVariantValue(idx); }}
+                                                             className="hover:text-indigo-600 text-gray-400 transition-colors"
+                                                             title="تعديل"
+                                                         >
+                                                             <RefreshCw size={10} />
+                                                         </button>
+                                                         <button 
+                                                             onClick={(e) => { e.preventDefault(); removeVariantValue(val.name); }}
+                                                             className="hover:text-red-500 text-gray-400 transition-colors"
+                                                             title="حذف"
+                                                         >
+                                                             <X size={12} />
+                                                         </button>
+                                                     </div>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Active Variants List */}
                                 {formData.variants.length > 0 && (
                                     <div className="flex flex-wrap gap-3">
                                         {formData.variants.map((variant, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm group">
+                                            <div key={idx} className={`flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm group transition-all ${editingVariantIndex === idx ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/10' : 'border-gray-200'}`}>
                                                 <div>
-                                                    <span className="text-xs font-bold text-gray-500 block mb-1">نوع المتغير</span>
+                                                    <span className="text-[10px] font-bold text-indigo-500 uppercase block mb-1">{variant.type}</span>
                                                     <span className="text-sm font-bold text-slate-800">{variant.name}</span>
                                                 </div>
                                                 <div className="h-6 w-px bg-gray-200 mx-1"></div>
                                                 <div className="flex -space-x-2 space-x-reverse overflow-hidden">
                                                     {(variant.value || []).slice(0, 3).map((v, vIdx) => (
-                                                        <span key={vIdx} className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 border-2 border-white text-xs text-gray-600 font-medium" title={v.name}>
-                                                            {v.name.charAt(0)}
+                                                        <span 
+                                                            key={vIdx} 
+                                                            className="inline-flex items-center justify-center h-8 w-8 rounded-full border-2 border-white text-[10px] text-gray-600 font-bold shadow-sm shrink-0" 
+                                                            title={v.name}
+                                                            style={variant.type === 'color' ? { backgroundColor: v.value } : { backgroundColor: '#f8fafc' }}
+                                                        >
+                                                            {variant.type !== 'color' && v.name.charAt(0).toUpperCase()}
                                                         </span>
                                                     ))}
                                                     {(variant.value?.length || 0) > 3 && (
@@ -645,9 +767,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                         </span>
                                                     )}
                                                 </div>
-                                                <button onClick={() => removeVariantGroup(idx)} className="mr-2 text-gray-300 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                 <div className="mr-auto flex items-center gap-1 shrink-0">
+                                                     <button onClick={(e) => { e.preventDefault(); editVariantGroup(idx); }} className="text-gray-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-all opacity-0 group-hover:opacity-100" title="تعديل">
+                                                         <RefreshCw size={14} />
+                                                     </button>
+                                                     <button onClick={(e) => { e.preventDefault(); removeVariantGroup(idx); }} className="text-gray-300 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" title="حذف">
+                                                         <Trash2 size={14} />
+                                                     </button>
+                                                 </div>
                                             </div>
                                         ))}
                                     </div>

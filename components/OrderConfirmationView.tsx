@@ -4,7 +4,7 @@ import { Order, OrderStatus, OrderItem, StatusOrderObject } from '../types';
 import {
   Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft,
   Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User, CheckSquare, Square,
-  LayoutList, FileText, DollarSign, AlertOctagon, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Home, Building2
+  LayoutList, FileText, DollarSign, AlertOctagon, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Home, Building2, Copy, MessageSquare, MessageCircle
 } from 'lucide-react';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
@@ -60,6 +60,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
         orderSummary: true,
         status: true,       // Split
         confirmedBy: true,  // Split
+        communication: true, // New column
         note: false,
         actions: true
       };
@@ -470,6 +471,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           financials: 'المالية والشحن',
                           status: 'الحالة',
                           confirmedBy: 'مؤكد الطلب',
+                          communication: 'التواصل',
                           note: 'الملاحظة'
                         };
                         return (
@@ -643,6 +645,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       />
                     </th>
                     {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
+                    {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">التواصل</th>}
                     {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
                     {(visibleColumns as any).source && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المصدر</th>}
                     {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
@@ -762,6 +765,53 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                             </div>
                           </div>
                         </td>}
+
+                        {/* Communication Buttons */}
+                        {(visibleColumns as any).communication && (
+                          <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Copy Button */}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(order.phone);
+                                  toast.success('تم نسخ الرقم!');
+                                }}
+                                className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100"
+                                title="نسخ الرقم"
+                              >
+                                <Copy size={14} />
+                              </button>
+                              
+                              {/* SMS Button */}
+                              <a
+                                href={`sms:${order.phone.replace(/\s/g, '')}`}
+                                className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100"
+                                title="إرسال SMS"
+                              >
+                                <MessageSquare size={14} />
+                              </a>
+                              
+                              {/* WhatsApp Button */}
+                              <button
+                                onClick={() => {
+                                  const phone = order.phone.replace(/\s/g, '');
+                                  const name = order.fullName || order.customer || 'عميلنا العزيز';
+                                  const storeName = order.store?.store?.name || 'متجرنا';
+                                  const products = (order.products || order.items || []).map((p: any) => p.product?.name || p.name).join(', ');
+                                  const total = order.totalPrice || order.amount || 0;
+                                  
+                                  const message = `السلام عليكم ${name}، معك ${storeName} بخصوص طلبك رقم #${order.numberOrder}${products ? ` (${products})` : ''} بقيمة ${total} دج. هل ترغب في تأكيد الطلب؟`;
+                                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                                }}
+                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100"
+                                title="واتساب"
+                              >
+                                <MessageCircle size={14} className="fill-current" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+
                         {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 ">
