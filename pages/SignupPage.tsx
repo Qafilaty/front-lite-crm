@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/apiService';
 import { Button, ErrorMessage } from '../components/common';
@@ -8,7 +8,9 @@ import { Store, User, Phone, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-rea
 
 const SignupPage: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { login } = useAuth();
+    const referralCode = searchParams.get('ref') || '';
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,10 @@ const SignupPage: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const result = await authService.signup(formData);
+            const result = await authService.signup({
+                ...formData,
+                ...(referralCode && { referralCode }),
+            });
 
             if (result.success && result.token) {
                 window.location.href = '/dashboard';
