@@ -22,6 +22,11 @@ export const LOGIN = gql`
             dateExpiry
             pointes
           }
+          affiliate {
+            id
+            name
+            referralDiscount
+          }
         }
       }
     }
@@ -45,6 +50,11 @@ export const GET_CURRENT_USER = gql`
           name
           dateExpiry
           pointes
+        }
+        affiliate {
+          id
+          name
+          referralDiscount
         }
       }
       createdAt

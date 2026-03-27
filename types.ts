@@ -168,6 +168,12 @@ export interface User {
       dateExpiry?: string;
       pointes?: number;
     };
+    affiliate?: {
+      id: string;
+      name: string;
+      code: string;
+      referralDiscount: number;
+    };
   };
 }
 
@@ -340,4 +346,11 @@ export interface Payout {
     name: string;
   };
   total?: number; // unpaidAmount or calculated total
+}
+
+export interface Affiliate {
+  id: string;
+  name: string;
+  code: string;
+  referralDiscount: number;
 }
