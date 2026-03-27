@@ -445,7 +445,7 @@ const SubscriptionsView: React.FC = () => {
                           <span className="text-lg font-bold text-slate-300 line-through">{plan.price}</span>
                         </div>
                         <div className="mt-1 flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md w-fit border border-emerald-100">
-                          <span className="text-[9px] font-black uppercase tracking-wider">خصم المندوب: {referralDiscount}%</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider">خصم: {referralDiscount}%</span>
                         </div>
                       </div>
                     );
@@ -719,7 +719,7 @@ const SubscriptionsView: React.FC = () => {
                     )}
                   </div>
 
-                  {!user?.company?.affiliate && (
+                  {!(user?.company?.affiliate && isFirstPurchase) && (
                     <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-4">
                       <div className="flex items-center gap-2">
                         <input
@@ -744,13 +744,25 @@ const SubscriptionsView: React.FC = () => {
                       )}
                     </div>
                   )}
+
+                  {(user?.company?.affiliate && isFirstPurchase) && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg space-y-2 animate-in zoom-in duration-300">
+                      <div className="flex items-center gap-2 text-emerald-700">
+                        <i className="fa-solid fa-gift text-sm"></i>
+                        <span className="text-xs font-black">لقد حصلت على خصم تلقائي!</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-600 font-bold leading-relaxed">
+                        بما أنك قمت بالتسجيل عن طريق رابط خاص، فقد تم تطبيق خصم {user.company.affiliate.referralDiscount}% على فاتورتك الأولى بنجاح.
+                      </p>
+                    </div>
+                  )}
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex items-center justify-between border-t border-slate-200 pt-4">
                       <span className="text-xs font-black text-slate-500 uppercase">الإجمالي</span>
                       <div className="text-left">
                         <span className="text-2xl font-black text-slate-900">{getDisplayPrice()} <small className="text-sm font-bold text-slate-400">{currency}</small></span>
-                        {user?.company?.affiliate?.referralDiscount ? (
-                          <p className="text-[9px] font-bold text-emerald-600 text-left mt-0.5">شامل خصم المندوب ({user.company.affiliate.referralDiscount}%)</p>
+                        {(user?.company?.affiliate && isFirstPurchase) ? (
+                          <p className="text-[9px] font-bold text-emerald-600 text-left mt-0.5">شامل الخصم ({user.company.affiliate.referralDiscount}%)</p>
                         ) : null}
                       </div>
                     </div>
