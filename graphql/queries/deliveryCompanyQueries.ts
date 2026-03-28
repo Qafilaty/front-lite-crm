@@ -27,6 +27,8 @@ export const GET_DELIVERY_COMPANY = gql`
         logo
         fields 
       }
+      webhookUrl
+      isWebhookConnected
       createdAt
       updatedAt
     }
@@ -55,6 +57,8 @@ export const GET_ALL_DELIVERY_COMPANIES = gql`
         name
         code
       }
+      webhookUrl
+      isWebhookConnected
       createdAt
     }
   }

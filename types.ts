@@ -296,6 +296,8 @@ export interface DeliveryCompany {
   logo?: string;
   originalName?: string;
   availableDeliveryCompany?: AvailableDeliveryCompany;
+  webhookUrl?: string;
+  isWebhookConnected?: boolean;
   // Dynamic fields will be stored here or handled via a specific property
   [key: string]: any;
 }

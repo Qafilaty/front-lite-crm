@@ -11,6 +11,8 @@ export const CREATE_DELIVERY_COMPANY = gql`
       name
       originalName
       active
+      webhookUrl
+      isWebhookConnected
       createdAt
     }
   }
@@ -69,6 +71,16 @@ export const ADD_ORDER_TO_DELIVERY_COMPANY = gql`
         }
         errors
       }
+    }
+  }
+`;
+
+export const REGENERATE_WEBHOOK_URL = gql`
+  mutation RegenerateWebhookURL($id: ID!) {
+    regenerateWebhookURL(id: $id) {
+      id
+      webhookUrl
+      isWebhookConnected
     }
   }
 `;
