@@ -681,7 +681,7 @@
       "variant_value_placeholder": "Tapez la valeur puis Entrée...",
       "thumbnail": "Vignette",
       "upload_prompt": "Glissez-déposez l'image ici ou cliquez pour sélectionner",
-      "upload_info": "Supporte JPG, PNG. Max 2Mo.",
+      "upload_info": "Supporte tous les formats d'image (JPG, PNG, WEBP, JFIF...). Max 2Mo.",
       "status": "Statut du produit",
       "status_info": "Déterminer si le produit est actuellement disponible à la vente",
       "variant_management_info": "Le prix, le coût et la quantité sont gérés via le tableau des variantes ci-dessous lorsque les options sont activées.",

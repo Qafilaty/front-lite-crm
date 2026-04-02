@@ -684,7 +684,7 @@
       "variant_value_placeholder": "Type value then press Enter...",
       "thumbnail": "Thumbnail",
       "upload_prompt": "Drag and drop image here or click to select",
-      "upload_info": "Supports JPG, PNG. Max 2MB.",
+      "upload_info": "Supports all image formats (JPG, PNG, WEBP, JFIF...). Max 2MB.",
       "status": "Product Status",
       "status_info": "Determine if the product is currently available for sale",
       "variant_management_info": "Price, cost, and quantity are managed through the variants table below when options are enabled.",
