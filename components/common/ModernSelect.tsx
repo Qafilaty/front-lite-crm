@@ -93,7 +93,7 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-[1000] w-full mt-2 bg-white border border-slate-100 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
 
                     {/* Search Input */}
                     {showSearch && !isLoading && (

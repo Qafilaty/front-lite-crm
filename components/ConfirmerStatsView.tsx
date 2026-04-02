@@ -7,20 +7,23 @@ import { PaginationControl } from './common';
 import { Printer } from 'lucide-react';
 import logoBlack from '../assets/logo-black.png';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
-const CONFIRMATION_STATS_MOCK = [
-    { name: 'مؤكدة', value: 78, color: '#4F46E5' },
-    { name: 'ملغاة', value: 15, color: '#E11D48' },
-    { name: 'مؤجلة', value: 7, color: '#D97706' },
+const CONFIRMATION_STATS_MOCK = (t: any) => [
+    { name: t('confirmer_stats.status_confirmed'), value: 78, color: '#4F46E5' },
+    { name: t('confirmer_stats.status_cancelled'), value: 15, color: '#E11D48' },
+    { name: t('confirmer_stats.status_postponed'), value: 7, color: '#D97706' },
 ];
 
-const DELIVERY_STATS_MOCK = [
-    { name: 'تم التسليم', value: 65, color: '#059669' },
-    { name: 'قيد التوصيل', value: 20, color: '#4F46E5' },
-    { name: 'مرتجع', value: 15, color: '#E11D48' },
+const DELIVERY_STATS_MOCK = (t: any) => [
+    { name: t('confirmer_stats.status_delivered'), value: 65, color: '#059669' },
+    { name: t('confirmer_stats.status_delivering'), value: 20, color: '#4F46E5' },
+    { name: t('confirmer_stats.status_returned'), value: 15, color: '#E11D48' },
 ];
 
 export const ConfirmerStatsView: React.FC = () => {
+    const { t, i18n } = useTranslation();
+    const isRtl = i18n.language === 'ar';
     const { user } = useAuth();
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -77,62 +80,62 @@ export const ConfirmerStatsView: React.FC = () => {
     // 1) Confirmation Charts (Base: Total Orders)
     const confirmationStatsRaw = stats.confirmationBreakdown ? [
         {
-            name: 'مؤكدة',
+            name: t('confirmer_stats.status_confirmed'),
             count: stats.confirmationBreakdown.confirmed || 0,
             value: calcPct(stats.confirmationBreakdown.confirmed || 0, totalOrdersEstimate),
             color: '#4F46E5'
         },
         {
-            name: 'ملغاة',
+            name: t('confirmer_stats.status_cancelled'),
             count: stats.confirmationBreakdown.cancelled || 0,
             value: calcPct(stats.confirmationBreakdown.cancelled || 0, totalOrdersEstimate),
             color: '#E11D48'
         },
         {
-            name: 'مؤجلة',
+            name: t('confirmer_stats.status_postponed'),
             count: stats.confirmationBreakdown.postponed || 0,
             value: calcPct(stats.confirmationBreakdown.postponed || 0, totalOrdersEstimate),
             color: '#D97706'
         },
-    ] : CONFIRMATION_STATS_MOCK;
+    ] : CONFIRMATION_STATS_MOCK(t);
 
     // Calculate 'Other' for Pie Chart visual accuracy (so 50% looks like 50%)
     const confirmationTotalPct = (confirmationStatsRaw as any[]).reduce((acc, curr) => acc + (curr.value || 0), 0);
     // Only add 'Other' if we are using real data (not mock)
     const confirmationChartData = stats.confirmationBreakdown ? [
         ...confirmationStatsRaw,
-        { name: 'أخرى', value: Math.max(0, 100 - confirmationTotalPct), color: '#F1F5F9', hidden: true }
-    ] : CONFIRMATION_STATS_MOCK;
+        { name: t('confirmer_stats.status_other'), value: Math.max(0, 100 - confirmationTotalPct), color: '#F1F5F9', hidden: true }
+    ] : CONFIRMATION_STATS_MOCK(t);
 
 
     // 2) Delivery Charts (Base: Confirmed Orders)
     const deliveryStatsRaw = stats.deliveryBreakdown ? [
         {
-            name: 'تم التسليم',
+            name: t('confirmer_stats.status_delivered'),
             count: stats.deliveryBreakdown.delivered || 0,
             value: calcPct(stats.deliveryBreakdown.delivered || 0, confirmedCountVal),
             color: '#059669'
         },
         {
-            name: 'قيد التوصيل',
+            name: t('confirmer_stats.status_delivering'),
             count: stats.deliveryBreakdown.delivering || 0,
             value: calcPct(stats.deliveryBreakdown.delivering || 0, confirmedCountVal),
             color: '#4F46E5'
         },
         {
-            name: 'مرتجع',
+            name: t('confirmer_stats.status_returned'),
             count: stats.deliveryBreakdown.returned || 0,
             value: calcPct(stats.deliveryBreakdown.returned || 0, confirmedCountVal),
             color: '#E11D48'
         },
-    ] : DELIVERY_STATS_MOCK;
+    ] : DELIVERY_STATS_MOCK(t);
 
     // Calculate 'Other' for Pie Chart visual accuracy
     const deliveryTotalPct = (deliveryStatsRaw as any[]).reduce((acc, curr) => acc + (curr.value || 0), 0);
     const deliveryChartData = stats.deliveryBreakdown ? [
         ...deliveryStatsRaw,
-        { name: 'أخرى', value: Math.max(0, 100 - deliveryTotalPct), color: '#F1F5F9', hidden: true }
-    ] : DELIVERY_STATS_MOCK;
+        { name: t('confirmer_stats.status_other'), value: Math.max(0, 100 - deliveryTotalPct), color: '#F1F5F9', hidden: true }
+    ] : DELIVERY_STATS_MOCK(t);
 
     // 6. Invoices
     const invoices = stats.invoices || [];
@@ -147,25 +150,27 @@ export const ConfirmerStatsView: React.FC = () => {
     const handlePrint = (invoice: any) => {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            const date = new Date(invoice.date).toLocaleDateString('ar-DZ');
-            const time = new Date(invoice.date).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+            const locale = isRtl ? 'ar-DZ' : (i18n.language === 'fr' ? 'fr-FR' : 'en-US');
+            const date = new Date(invoice.date).toLocaleDateString(locale);
+            const time = new Date(invoice.date).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
             const html = `
         <!DOCTYPE html>
-        <html dir="rtl">
+        <html dir="${isRtl ? 'rtl' : 'ltr'}">
         <head>
-          <title>وصل دفع - ${invoice.id}</title>
+          <title>${t('confirmer_stats.print_receipt')} - ${invoice.id}</title>
           <meta charset="utf-8">
           <style>
             @page { margin: 0; }
             body { 
-                font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                font-family: ${isRtl ? "'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" : "'Inter', 'Segoe UI', sans-serif"}; 
                 background: #fff;
                 margin: 0;
                 padding: 40px;
                 color: #1e293b;
                 -webkit-print-color-adjust: exact;
             }
+            /* ... rest of styles remain same ... */
             .invoice-container {
                 max-width: 800px;
                 margin: 0 auto;
@@ -209,7 +214,7 @@ export const ConfirmerStatsView: React.FC = () => {
                 font-weight: 500;
             }
             .invoice-details {
-                text-align: left;
+                text-align: ${isRtl ? 'left' : 'right'};
             }
             .status-badge {
                 background: #ecfdf5;
@@ -312,31 +317,31 @@ export const ConfirmerStatsView: React.FC = () => {
                 .invoice-container { border: none; }
             }
           </style>
-          <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
         </head>
         <body>
           <div class="invoice-container">
-            <div class="watermark">مدفــوع</div>
+            <div class="watermark">${t('confirmer_stats.paid')}</div>
             
             <div class="header">
               <div class="logo-section">
                 <img src="${logoBlack}" alt="Lite CRM" style="height: 50px; margin-bottom: 8px;" />
-                <p>نظام إدارة المبيعات والعمولات</p>
+                <p>Lite CRM - Sales & Commissions</p>
               </div>
               <div class="invoice-details">
-                <div class="status-badge">تم الدفع بنجاح</div>
+                <div class="status-badge">${t('confirmer_stats.paid')}</div>
                 <div class="invoice-id">#${invoice.id.substring(invoice.id.length - 8).toUpperCase()}</div>
               </div>
             </div>
 
             <div class="info-grid">
               <div class="info-group">
-                <h3>معلومات المستفيد</h3>
+                <h3>${t('order_details.customer_info')}</h3>
                 <div class="value">${user?.name || '-'}</div>
                 <div class="sub-value">${user?.email || ''}</div>
               </div>
               <div class="info-group">
-                <h3>تاريخ ووقت المعاملة</h3>
+                <h3>${t('confirmer_stats.invoice_date')}</h3>
                 <div class="value">${date}</div>
                 <div class="sub-value">${time}</div>
               </div>
@@ -344,18 +349,18 @@ export const ConfirmerStatsView: React.FC = () => {
 
             <div class="summary-card">
               <div class="summary-row">
-                 <span class="summary-label">ملاحظات</span>
+                 <span class="summary-label">${t('confirmer_stats.invoice_note')}</span>
                  <span class="summary-value" style="font-size: 12px;">${invoice.note || '-'}</span>
               </div>
               <div class="summary-row total">
-                <span class="summary-label">صافي المبلغ المدفوع</span>
-                <span class="summary-value">${(invoice.total || 0).toLocaleString()} دج</span>
+                <span class="summary-label">${t('confirmer_stats.invoice_amount')}</span>
+                <span class="summary-value">${(invoice.total || 0).toLocaleString()} ${t('common.curr')}</span>
               </div>
             </div>
 
             <div class="footer">
-              <p>هذا المستند تم إنشاؤه إلكترونياً وهو يثبت استلام الموظف للمبلغ المذكور أعلاه.</p>
-              <p>تاريخ الطباعة: ${new Date().toLocaleString('ar-DZ')}</p>
+              <p>Generated by Lite CRM</p>
+              <p>${t('confirmer_stats.invoice_date')}: ${new Date().toLocaleString(locale)}</p>
             </div>
           </div>
         </body>
@@ -371,16 +376,16 @@ export const ConfirmerStatsView: React.FC = () => {
 
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20 max-w-[1400px] mx-auto text-right">
+        <div className={`space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20 max-w-[1400px] mx-auto ${isRtl ? 'text-right' : 'text-left'}`}>
 
             {/* 1. Page Header */}
-            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
-                <div>
-                    <h2 className="text-xl font-extrabold text-slate-900">ملخص الأداء والمالية</h2>
-                    <p className="text-xs text-slate-500 font-bold mt-1">متابعة دقيقة لمعدلات الإنجاز والأرباح المحققة</p>
+            <div className={`flex justify-between items-center border-b border-slate-200 pb-4 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                <div className={`bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-lg border border-indigo-100 text-[10px] font-black`}>
+                    {t('confirmer_stats.commission_price', { price: commissionPrice })}
                 </div>
-                <div className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-lg border border-indigo-100 text-[10px] font-black">
-                    سعر العمولة: {commissionPrice} دج
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                    <h2 className="text-xl font-extrabold text-slate-900">{t('confirmer_stats.title')}</h2>
+                    <p className="text-xs text-slate-500 font-bold mt-1">{t('confirmer_stats.subtitle')}</p>
                 </div>
             </div>
 
@@ -388,42 +393,42 @@ export const ConfirmerStatsView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* Card 1: Confirmation Rate */}
                 <div className="bg-white border border-slate-200 p-6 rounded-lg shadow-sm flex flex-col justify-between h-36">
-                    <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">معدل التأكيد</span>
+                    <div className={`flex justify-between items-center ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <div className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center">
                             <i className="fa-solid fa-check-double text-xs"></i>
                         </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('confirmer_stats.conf_rate')}</span>
                     </div>
-                    <div>
+                    <div className={isRtl ? 'text-right' : 'text-left'}>
                         <h3 className="text-3xl font-black text-slate-900">{confirmationRate}%</h3>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1">نسبة الطلبات المؤكدة من الإجمالي</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1">{t('confirmer_stats.conf_rate_desc')}</p>
                     </div>
                 </div>
 
                 {/* Card 2: Delivery Rate */}
                 <div className="bg-white border border-slate-200 p-6 rounded-lg shadow-sm flex flex-col justify-between h-36">
-                    <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">معدل التوصيل</span>
+                    <div className={`flex justify-between items-center ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <div className="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
                             <i className="fa-solid fa-truck-fast text-xs"></i>
                         </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('confirmer_stats.deliv_rate')}</span>
                     </div>
-                    <div>
+                    <div className={isRtl ? 'text-right' : 'text-left'}>
                         <h3 className="text-3xl font-black text-slate-900">{deliveryRate}%</h3>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1">نسبة النجاح في التسليم الفعلي</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1">{t('confirmer_stats.deliv_rate_desc')}</p>
                     </div>
                 </div>
 
                 {/* Card 3: Earnings (Delivered x Commission) */}
                 <div className="bg-slate-900 text-white p-6 rounded-lg shadow-xl shadow-slate-200 flex flex-col justify-between h-36 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
-                    <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">أرباح التوصيل ({deliveredCount} طلبية)</span>
+                    <div className={`flex justify-between items-center relative z-10 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <i className="fa-solid fa-money-bill-trend-up text-indigo-400 opacity-60"></i>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('confirmer_stats.delivery_earnings', { count: deliveredCount })}</span>
                     </div>
-                    <div className="relative z-10">
-                        <h3 className="text-3xl font-black">{totalEarnings.toLocaleString()} <span className="text-sm font-normal opacity-50">دج</span></h3>
-                        <p className="text-[9px] font-bold text-indigo-300 mt-1 italic">المبلغ الصافي بناءً على التسليمات</p>
+                    <div className={`relative z-10 ${isRtl ? 'text-right' : 'text-left'}`}>
+                        <h3 className="text-3xl font-black">{totalEarnings.toLocaleString()} <span className="text-sm font-normal opacity-50">{t('common.curr')}</span></h3>
+                        <p className="text-[9px] font-bold text-indigo-300 mt-1 italic">{t('confirmer_stats.net_earnings_desc')}</p>
                     </div>
                 </div>
             </div>
@@ -431,37 +436,37 @@ export const ConfirmerStatsView: React.FC = () => {
             {/* 3. Performance Alerts */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {postponedCount > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-center gap-4">
+                    <div className={`bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-center gap-4 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <div className={isRtl ? 'text-right' : 'text-left'}>
+                            <p className="text-xs font-black text-amber-900">{t('confirmer_stats.alert_postponed', { count: postponedCount })}</p>
+                            <p className="text-[10px] text-amber-700 font-bold">{t('confirmer_stats.alert_postponed_desc')}</p>
+                        </div>
                         <div className="w-10 h-10 rounded bg-amber-500 text-white flex items-center justify-center shrink-0">
                             <i className="fa-solid fa-hourglass-start"></i>
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-amber-900">تنبيه: {postponedCount} طلبية مؤجلة</p>
-                            <p className="text-[10px] text-amber-700 font-bold">يرجى متابعة الطلبات المؤجلة لرفع نسبة التأكيد.</p>
                         </div>
                     </div>
                 )}
 
                 {confirmationRate < 80 && (
-                    <div className="bg-rose-50 border border-rose-200 p-4 rounded-lg flex items-center gap-4">
+                    <div className={`bg-rose-50 border border-rose-200 p-4 rounded-lg flex items-center gap-4 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <div className={isRtl ? 'text-right' : 'text-left'}>
+                            <p className="text-xs font-black text-rose-900">{t('confirmer_stats.alert_low_conf')}</p>
+                            <p className="text-[10px] text-rose-700 font-bold">{t('confirmer_stats.alert_low_conf_desc', { rate: confirmationRate })}</p>
+                        </div>
                         <div className="w-10 h-10 rounded bg-rose-500 text-white flex items-center justify-center shrink-0">
                             <i className="fa-solid fa-triangle-exclamation"></i>
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-rose-900">معدل التأكيد منخفض</p>
-                            <p className="text-[10px] text-rose-700 font-bold">المعدل الحالي ({confirmationRate}%) تحت الحد المطلوب.</p>
                         </div>
                     </div>
                 )}
 
                 {deliveryRate < 65 && (
-                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex items-center gap-4">
+                    <div className={`bg-slate-50 border border-slate-200 p-4 rounded-lg flex items-center gap-4 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <div className={isRtl ? 'text-right' : 'text-left'}>
+                            <p className="text-xs font-black text-slate-900">{t('confirmer_stats.alert_deliv_drop')}</p>
+                            <p className="text-[10px] text-slate-500 font-bold">{t('confirmer_stats.alert_deliv_drop_desc')}</p>
+                        </div>
                         <div className="w-10 h-10 rounded bg-slate-400 text-white flex items-center justify-center shrink-0">
                             <i className="fa-solid fa-chart-line-down"></i>
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-slate-900">انخفاض في جودة التوصيل</p>
-                            <p className="text-[10px] text-slate-500 font-bold">يؤثر هذا الانخفاض مباشرة على عمولاتك المالية.</p>
                         </div>
                     </div>
                 )}
@@ -470,19 +475,19 @@ export const ConfirmerStatsView: React.FC = () => {
             {/* 4. Status Breakdown (Pie Charts) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white border border-slate-200 p-6 rounded-lg shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                        <h4 className="text-sm font-black text-slate-800">تحليل الحالات (التأكيد)</h4>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">نتائج الاتصال</span>
+                    <div className={`flex items-center justify-between border-b border-slate-50 pb-2 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('confirmer_stats.call_results')}</span>
+                        <h4 className="text-sm font-black text-slate-800">{t('confirmer_stats.status_analysis_conf')}</h4>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className={`flex flex-col sm:flex-row items-center gap-6 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <div className="flex-1 space-y-2 w-full">
                             {confirmationStatsRaw.map(s => (
-                                <div key={s.name} className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
-                                        <span className="text-[10px] font-black text-slate-600">{s.name}</span>
-                                    </div>
+                                <div key={s.name} className={`flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                     <span className="text-[11px] font-black" style={{ color: s.color }}>{s.value}%</span>
+                                    <div className={`flex items-center gap-2 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                                        <span className="text-[10px] font-black text-slate-600">{s.name}</span>
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -505,19 +510,19 @@ export const ConfirmerStatsView: React.FC = () => {
                 </div>
 
                 <div className="bg-white border border-slate-200 p-6 rounded-lg shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                        <h4 className="text-sm font-black text-slate-800">حالات التتبع في الميدان</h4>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">معدل التسليم</span>
+                    <div className={`flex items-center justify-between border-b border-slate-50 pb-2 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('confirmer_stats.deliv_rate')}</span>
+                        <h4 className="text-sm font-black text-slate-800">{t('confirmer_stats.field_tracking')}</h4>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className={`flex flex-col sm:flex-row items-center gap-6 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <div className="flex-1 space-y-2 w-full">
                             {deliveryStatsRaw.map(s => (
-                                <div key={s.name} className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
-                                        <span className="text-[10px] font-black text-slate-600">{s.name}</span>
-                                    </div>
+                                <div key={s.name} className={`flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded border border-slate-100 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                     <span className="text-[11px] font-black" style={{ color: s.color }}>{s.value}%</span>
+                                    <div className={`flex items-center gap-2 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                                        <span className="text-[10px] font-black text-slate-600">{s.name}</span>
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }}></span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -542,22 +547,22 @@ export const ConfirmerStatsView: React.FC = () => {
 
             {/* 5. Payments History */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                    <h4 className="text-sm font-black text-slate-800">تاريخ تسوية الفواتير</h4>
+                <div className={`p-5 border-b border-slate-100 flex items-center justify-between ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                     <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-slate-400">الإجمالي المسدد: {invoices.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0).toLocaleString()} دج</span>
+                        <span className="text-[9px] font-bold text-slate-400">{t('confirmer_stats.total_settled', { total: invoices.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0).toLocaleString() })}</span>
                     </div>
+                    <h4 className="text-sm font-black text-slate-800">{t('confirmer_stats.payout_history')}</h4>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right">
+                    <table className={`w-full ${isRtl ? 'text-right' : 'text-left'}`}>
                         <thead>
                             <tr className="bg-slate-50/50">
-                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest">المعرف</th>
-                                <th className="py-3 px-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">التاريخ</th>
-                                <th className="py-3 px-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">المبلغ</th>
-                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">ملاحظة</th>
-                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">الحالة</th>
-                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">طباعة</th>
+                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('confirmer_stats.invoice_id')}</th>
+                                <th className="py-3 px-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">{t('confirmer_stats.invoice_date')}</th>
+                                <th className="py-3 px-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">{t('confirmer_stats.invoice_amount')}</th>
+                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">{t('confirmer_stats.invoice_note')}</th>
+                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">{t('confirmer_stats.invoice_status')}</th>
+                                <th className="py-3 px-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">{t('confirmer_stats.print_receipt')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -568,11 +573,11 @@ export const ConfirmerStatsView: React.FC = () => {
                                     </td>
                                     <td className="py-3.5 px-4 text-center">
                                         <span className="text-[10px] font-bold text-slate-500">
-                                            {inv.date ? new Date(inv.date).toLocaleDateString('ar-DZ') : '-'}
+                                            {inv.date ? new Date(inv.date).toLocaleDateString(isRtl ? 'ar-DZ' : (i18n.language === 'fr' ? 'fr-FR' : 'en-US')) : '-'}
                                         </span>
                                     </td>
                                     <td className="py-3.5 px-4 text-center">
-                                        <span className="text-[11px] font-black text-slate-900">{inv.total?.toLocaleString()} دج</span>
+                                        <span className="text-[11px] font-black text-slate-900">{inv.total?.toLocaleString()} {t('common.curr')}</span>
                                     </td>
                                     <td className="py-3.5 px-6 text-left">
                                         <span className="text-[10px] font-bold text-slate-400 truncate max-w-[150px] block" title={inv.note}>
@@ -581,14 +586,14 @@ export const ConfirmerStatsView: React.FC = () => {
                                     </td>
                                     <td className="py-3.5 px-6 text-left">
                                         <span className="px-2 py-0.5 rounded text-[9px] font-black border bg-emerald-50 text-emerald-600 border-emerald-100">
-                                            مدفوعة
+                                            {t('confirmer_stats.paid')}
                                         </span>
                                     </td>
                                     <td className="py-3.5 px-6 text-center">
                                         <button
                                             onClick={() => handlePrint(inv)}
                                             className="w-8 h-8 flex items-center justify-center rounded-md text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all mx-auto"
-                                            title="طباعة وصل"
+                                            title={t('confirmer_stats.print_receipt')}
                                         >
                                             <Printer className="w-4 h-4" />
                                         </button>
@@ -596,7 +601,7 @@ export const ConfirmerStatsView: React.FC = () => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-[10px] font-bold text-slate-400">لا توجد فواتير سابقة</td>
+                                    <td colSpan={6} className="py-8 text-center text-[10px] font-bold text-slate-400">{t('confirmer_stats.no_invoices')}</td>
                                 </tr>
                             )}
                         </tbody>

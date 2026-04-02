@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, CheckCircle2, ArrowRight, Loader2, ShieldCheck, KeyRound } from 'lucide-react';
 import { useMutation } from '@apollo/client';
@@ -7,6 +8,8 @@ import toast from 'react-hot-toast';
 import logoIcon from '../assets/logo-icon-black.png';
 
 const ForgotPasswordPage: React.FC = () => {
+    const { t, i18n } = useTranslation();
+    const isRtl = i18n.language === 'ar';
     const navigate = useNavigate();
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [email, setEmail] = useState('');
@@ -28,13 +31,13 @@ const ForgotPasswordPage: React.FC = () => {
         try {
             const { data } = await forgetPassword({ variables: { email } });
             if (data?.forgetPassword?.status) {
-                toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+                toast.success(t('auth.forgot_password.toasts.otp_sent'));
                 setStep(2);
             } else {
-                toast.error('لم يتم العثور على هذا البريد الإلكتروني');
+                toast.error(t('auth.forgot_password.toasts.email_not_found'));
             }
         } catch (error: any) {
-            toast.error(error.message || 'حدث خطأ ما');
+            toast.error(error.message || t('auth.forgot_password.toasts.error'));
         } finally {
             setLoading(false);
         }
@@ -48,13 +51,13 @@ const ForgotPasswordPage: React.FC = () => {
         try {
             const { data } = await checkOTP({ variables: { email, code: otp } });
             if (data?.checkOTPPassword?.status) {
-                toast.success('تم التحقق من الرمز بنجاح');
+                toast.success(t('auth.forgot_password.toasts.otp_verified'));
                 setStep(3);
             } else {
-                toast.error('رمز التحقق غير صحيح');
+                toast.error(t('auth.forgot_password.toasts.otp_invalid'));
             }
         } catch (error: any) {
-            toast.error(error.message || 'حدث خطأ ما');
+            toast.error(error.message || t('auth.forgot_password.toasts.error'));
         } finally {
             setLoading(false);
         }
@@ -63,7 +66,7 @@ const ForgotPasswordPage: React.FC = () => {
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!password || password !== confirmPassword) {
-            toast.error('كلمات المرور غير متطابقة');
+            toast.error(t('auth.forgot_password.toasts.passwords_mismatch'));
             return;
         }
         setLoading(true);
@@ -80,20 +83,20 @@ const ForgotPasswordPage: React.FC = () => {
             });
 
             if (data?.changePassword?.status) {
-                toast.success('تم تغيير كلمة المرور بنجاح');
+                toast.success(t('auth.forgot_password.toasts.success'));
                 navigate('/login');
             } else {
-                toast.error('فشل تغيير كلمة المرور');
+                toast.error(t('auth.forgot_password.toasts.failed'));
             }
         } catch (error: any) {
-            toast.error(error.message || 'حدث خطأ ما');
+            toast.error(error.message || t('auth.forgot_password.toasts.error'));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50" dir="rtl">
+        <div className={`min-h-screen flex items-center justify-center p-4 bg-slate-50 ${isRtl ? 'font-arabic' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
             <div className="w-full max-w-md bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden animate-in fade-in zoom-in duration-300">
 
                 {/* Header */}
@@ -101,11 +104,11 @@ const ForgotPasswordPage: React.FC = () => {
                     <div className="w-16 h-16 mx-auto mb-4 bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center justify-center">
                         <img src={logoIcon} alt="Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">استعادة كلمة المرور</h2>
+                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('auth.forgot_password.title')}</h2>
                     <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                        {step === 1 && 'أدخل بريدك الإلكتروني لاستلام رمز التحقق'}
-                        {step === 2 && 'أدخل رمز التحقق المرسل إلى بريدك'}
-                        {step === 3 && 'قم بتعيين كلمة المرور الجديدة'}
+                        {step === 1 && t('auth.forgot_password.step1_subtitle')}
+                        {step === 2 && t('auth.forgot_password.step2_subtitle')}
+                        {step === 3 && t('auth.forgot_password.step3_subtitle')}
                     </p>
                 </div>
 
@@ -120,7 +123,7 @@ const ForgotPasswordPage: React.FC = () => {
                     {step === 1 && (
                         <form onSubmit={handleSendOTP} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البريد الإلكتروني</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('auth.forgot_password.email_label')}</label>
                                 <div className="relative">
                                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -139,7 +142,7 @@ const ForgotPasswordPage: React.FC = () => {
                                 type="submit"
                                 className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>إرسال الرمز <ArrowRight className="w-4 h-4 rotate-180" /></>}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('auth.forgot_password.send_code')} <ArrowRight className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} /></>}
                             </button>
                         </form>
                     )}
@@ -147,7 +150,7 @@ const ForgotPasswordPage: React.FC = () => {
                     {step === 2 && (
                         <form onSubmit={handleVerifyOTP} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رمز التحقق (OTP)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('auth.forgot_password.otp_label')}</label>
                                 <div className="relative">
                                     <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -160,21 +163,21 @@ const ForgotPasswordPage: React.FC = () => {
                                         dir="ltr"
                                     />
                                 </div>
-                                <p className="text-[10px] font-bold text-slate-400 px-1">تم إرسال الرمز إلى {email}</p>
+                                <p className="text-[10px] font-bold text-slate-400 px-1">{t('auth.forgot_password.otp_sent')} {email}</p>
                             </div>
                             <button
                                 disabled={loading}
                                 type="submit"
                                 className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>تحقق <CheckCircle2 className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('auth.forgot_password.verify')} <CheckCircle2 className="w-4 h-4" /></>}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setStep(1)}
                                 className="w-full py-2 text-[10px] font-black text-slate-400 hover:text-indigo-600 transition-colors"
                             >
-                                تغيير البريد الإلكتروني
+                                {t('auth.forgot_password.change_email')}
                             </button>
                         </form>
                     )}
@@ -182,7 +185,7 @@ const ForgotPasswordPage: React.FC = () => {
                     {step === 3 && (
                         <form onSubmit={handleResetPassword} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">كلمة المرور الجديدة</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('auth.forgot_password.new_password')}</label>
                                 <div className="relative">
                                     <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -197,7 +200,7 @@ const ForgotPasswordPage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">تأكيد كلمة المرور</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('auth.forgot_password.confirm_password')}</label>
                                 <div className="relative">
                                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -216,7 +219,7 @@ const ForgotPasswordPage: React.FC = () => {
                                 type="submit"
                                 className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>تغيير كلمة المرور <CheckCircle2 className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('auth.forgot_password.change_password')} <CheckCircle2 className="w-4 h-4" /></>}
                             </button>
                         </form>
                     )}
@@ -225,7 +228,7 @@ const ForgotPasswordPage: React.FC = () => {
                 {/* Footer */}
                 <div className="p-6 bg-slate-50/50 border-t border-slate-100 text-center">
                     <button onClick={() => navigate('/login')} className="text-[11px] font-black text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 mx-auto">
-                        <ArrowRight className="w-3 h-3" /> العودة لتسجيل الدخول
+                        <ArrowRight className={`w-3 h-3 ${isRtl ? '' : 'rotate-180'}`} /> {t('auth.forgot_password.back_to_login')}
                     </button>
                 </div>
             </div>

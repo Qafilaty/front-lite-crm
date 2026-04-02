@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Transaction } from '../types';
 import {
@@ -15,6 +16,7 @@ import TableSkeleton from './common/TableSkeleton';
 import { PaginationControl } from './common';
 
 const FinancesView: React.FC = () => {
+   const { t } = useTranslation();
    const { user } = useAuth();
    const [transactions, setTransactions] = useState<Transaction[]>([]);
    const [loading, setLoading] = useState(true);
@@ -48,15 +50,15 @@ const FinancesView: React.FC = () => {
                amount: t.amount,
                date: t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                note: t.note || '',
-               user: t.createdBy?.name || 'مستخدم'
+               user: t.createdBy?.name || t('common.user_init', 'User')
             }));
             setTransactions(mappedTransactions);
          } else {
-            toast.error('فشل في جلب العمليات المالية');
+            toast.error(t('finances.toast.fetch_failed'));
          }
       } catch (error) {
          console.error(error);
-         toast.error('حدث خطأ غير متوقع');
+         toast.error(t('finances.toast.error_unexpected'));
       } finally {
          setLoading(false);
       }
@@ -83,7 +85,7 @@ const FinancesView: React.FC = () => {
       note: string;
    }>({
       type: 'income',
-      category: 'مبيعات',
+      category: t('finances.modal.categories.sales'),
       amount: 0,
       note: ''
    });
@@ -108,13 +110,13 @@ const FinancesView: React.FC = () => {
       delete newErrors[field];
 
       if (field === 'amount') {
-         if (!value || Number(value) <= 0) newErrors.amount = 'يرجى إدخال مبلغ صحيح (أكبر من 0)';
+         if (!value || Number(value) <= 0) newErrors.amount = t('finances.toast.amount_error');
       }
       else if (field === 'category') {
-         if (!value) newErrors.category = 'يرجى اختيار التصنيف';
+         if (!value) newErrors.category = t('finances.toast.category_error');
       }
       else if (field === 'note') {
-         if (!value) newErrors.note = 'يرجى كتابة ملاحظة توضيحية';
+         if (!value) newErrors.note = t('finances.toast.note_error');
       }
 
       setErrors(newErrors);
@@ -124,18 +126,18 @@ const FinancesView: React.FC = () => {
       const newErrors: Record<string, string> = {};
 
       if (!newTransaction.amount || newTransaction.amount <= 0) {
-         newErrors.amount = 'يرجى إدخال مبلغ صحيح (أكبر من 0)';
+         newErrors.amount = t('finances.toast.amount_error');
       }
       if (!newTransaction.category) {
-         newErrors.category = 'يرجى اختيار التصنيف';
+         newErrors.category = t('finances.toast.category_error');
       }
       if (!newTransaction.note) {
-         newErrors.note = 'يرجى كتابة ملاحظة توضيحية';
+         newErrors.note = t('finances.toast.note_error');
       }
 
       if (Object.keys(newErrors).length > 0) {
          setErrors(newErrors);
-         toast.error('يرجى التحقق من الحقول');
+         toast.error(t('finances.toast.check_fields'));
          return;
       }
 
@@ -144,7 +146,7 @@ const FinancesView: React.FC = () => {
       setIsSubmitting(true);
       try {
          if (!user?.company?.id) {
-            toast.error('لم يتم العثور على بيانات الشركة');
+            toast.error(t('stores.toast.company_not_found', 'No company data found'));
             return;
          }
 
@@ -155,16 +157,16 @@ const FinancesView: React.FC = () => {
          const result = await financialTransactionService.createFinancialTransaction(payload);
 
          if (result.success) {
-            toast.success('تم إضافة العملية بنجاح');
+            toast.success(t('finances.toast.save_success'));
             setIsModalOpen(false);
-            setNewTransaction({ type: 'income', category: 'مبيعات', amount: 0, note: '' });
+            setNewTransaction({ type: 'income', category: t('finances.modal.categories.sales'), amount: 0, note: '' });
             await fetchTransactions(); // Refresh list
          } else {
-            toast.error('فشل حفظ العملية');
+            toast.error(t('finances.toast.save_failed'));
          }
       } catch (error) {
          console.error(error);
-         toast.error('حدث خطأ أثناء الحفظ');
+         toast.error(t('finances.toast.save_failed'));
       } finally {
          setIsSubmitting(false);
       }
@@ -178,15 +180,15 @@ const FinancesView: React.FC = () => {
       try {
          const result = await financialTransactionService.deleteFinancialTransaction(deleteId);
          if (result.success) {
-            toast.success('تم حذف العملية بنجاح');
+            toast.success(t('finances.toast.delete_success'));
             setTransactions(prev => prev.filter(t => t.id !== deleteId));
             setDeleteId(null);
          } else {
-            toast.error('فشل حذف العملية');
+            toast.error(t('finances.toast.delete_failed'));
          }
       } catch (error) {
          console.error(error);
-         toast.error('حدث خطأ أثناء الحذف');
+         toast.error(t('finances.toast.delete_failed'));
       } finally {
          setIsDeleting(false);
       }
@@ -205,11 +207,11 @@ const FinancesView: React.FC = () => {
          {/* Header Section */}
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-               <h2 className="text-2xl font-black text-slate-800 tracking-tight">إدارة العمليات والتدفقات المالية</h2>
-               <p className="text-slate-400 text-[11px] font-bold uppercase mt-1 tracking-widest">تتبع شامل للمداخيل والمصاريف التشغيلية</p>
+               <h2 className="text-2xl font-black text-slate-800 tracking-tight">{t('finances.title')}</h2>
+               <p className="text-slate-400 text-[11px] font-bold uppercase mt-1 tracking-widest">{t('finances.subtitle')}</p>
             </div>
             <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">
-               <PlusCircle className="w-5 h-5" /> إضافة عملية جديدة
+               <PlusCircle className="w-5 h-5" /> {t('finances.add_transaction')}
             </button>
          </div>
 
@@ -220,9 +222,9 @@ const FinancesView: React.FC = () => {
                   <TrendingUp className="w-7 h-7" />
                </div>
                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المداخيل</p>
-                  <h3 className="text-xl font-black text-slate-800 mt-0.5">{financeStats.income.toLocaleString()} <span className="text-[10px]">دج</span></h3>
-                  <p className="text-[9px] font-bold text-emerald-600 mt-1 uppercase tracking-tighter">تدفقات واردة</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('finances.total_income')}</p>
+                  <h3 className="text-xl font-black text-slate-800 mt-0.5">{financeStats.income.toLocaleString()} <span className="text-[10px]">{t('common.currency')}</span></h3>
+                  <p className="text-[9px] font-bold text-emerald-600 mt-1 uppercase tracking-tighter">{t('finances.income_streams')}</p>
                </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-5">
@@ -230,9 +232,9 @@ const FinancesView: React.FC = () => {
                   <TrendingDown className="w-7 h-7" />
                </div>
                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المصروفات</p>
-                  <h3 className="text-xl font-black text-slate-800 mt-0.5">{financeStats.expense.toLocaleString()} <span className="text-[10px]">دج</span></h3>
-                  <p className="text-[9px] font-bold text-rose-600 mt-1 uppercase tracking-tighter">تكاليف تشغيلية</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('finances.total_expenses')}</p>
+                  <h3 className="text-xl font-black text-slate-800 mt-0.5">{financeStats.expense.toLocaleString()} <span className="text-[10px]">{t('common.currency')}</span></h3>
+                  <p className="text-[9px] font-bold text-rose-600 mt-1 uppercase tracking-tighter">{t('finances.operational_costs')}</p>
                </div>
             </div>
             <div className="bg-slate-900 p-6 rounded-2xl shadow-xl text-white flex items-center gap-5">
@@ -240,9 +242,9 @@ const FinancesView: React.FC = () => {
                   <Wallet className="w-7 h-7" />
                </div>
                <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">صافي السيولة</p>
-                  <h3 className="text-xl font-black text-white mt-0.5 font-mono tracking-tighter">{financeStats.balance.toLocaleString()} <span className="text-[10px]">دج</span></h3>
-                  <p className="text-[9px] font-bold text-indigo-400 mt-1 uppercase tracking-tighter">الرصيد المتوفر</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('finances.net_balance')}</p>
+                  <h3 className="text-xl font-black text-white mt-0.5 font-mono tracking-tighter">{financeStats.balance.toLocaleString()} <span className="text-[10px]">{t('common.currency')}</span></h3>
+                  <p className="text-[9px] font-bold text-indigo-400 mt-1 uppercase tracking-tighter">{t('finances.available_balance')}</p>
                </div>
             </div>
          </div>
@@ -257,14 +259,14 @@ const FinancesView: React.FC = () => {
                <>
                   <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
                      <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 w-full lg:w-fit shadow-sm">
-                        <button onClick={() => { setActiveTab('all'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>الكل</button>
-                        <button onClick={() => { setActiveTab('income'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المداخيل</button>
-                        <button onClick={() => { setActiveTab('expense'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>المصروفات</button>
+                        <button onClick={() => { setActiveTab('all'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>{t('finances.all')}</button>
+                        <button onClick={() => { setActiveTab('income'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>{t('finances.income')}</button>
+                        <button onClick={() => { setActiveTab('expense'); setCurrentPage(1); }} className={`flex-1 lg:px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>{t('finances.expense')}</button>
                      </div>
 
                      <div className="relative w-full max-w-md">
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input type="text" placeholder="البحث عن ملاحظة، فئة أو مبلغ..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm" />
+                        <input type="text" placeholder={t('finances.search_placeholder')} value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full pr-12 pl-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm" />
                      </div>
                   </div>
 
@@ -272,11 +274,11 @@ const FinancesView: React.FC = () => {
                      <table className="w-full text-right border-collapse">
                         <thead>
                            <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200">
-                              <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em]">البيان</th>
-                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">تاريخ العملية</th>
-                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">التصنيف</th>
-                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">المبلغ</th>
-                              <th className="px-8 py-5 text-center">إجراء</th>
+                              <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em]">{t('finances.table.description')}</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">{t('finances.table.date')}</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">{t('finances.table.category')}</th>
+                              <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-center">{t('finances.table.amount')}</th>
+                              <th className="px-8 py-5 text-center">{t('finances.table.actions')}</th>
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -289,7 +291,7 @@ const FinancesView: React.FC = () => {
                                        </div>
                                        <div>
                                           <p className="text-sm font-black text-slate-800 leading-none">{trx.note}</p>
-                                          <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-tighter">المرجع: #{trx.id} • {trx.user}</p>
+                                          <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-tighter">{t('finances.table.reference')}: #{trx.id} • {trx.user}</p>
                                        </div>
                                     </div>
                                  </td>
@@ -301,7 +303,7 @@ const FinancesView: React.FC = () => {
                                  </td>
                                  <td className="px-6 py-6 text-center">
                                     <span className={`text-base font-black font-mono tracking-tighter ${trx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                       {trx.type === 'income' ? '+' : '-'} {trx.amount.toLocaleString()} <span className="text-[10px] opacity-40">دج</span>
+                                       {trx.type === 'income' ? '+' : '-'} {trx.amount.toLocaleString()} <span className="text-[10px] opacity-40">{t('common.currency')}</span>
                                     </span>
                                  </td>
                                  <td className="px-8 py-6 text-center">
@@ -313,7 +315,7 @@ const FinancesView: React.FC = () => {
                            ))}
                            {paginatedTransactions.length === 0 && (
                               <tr>
-                                 <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">لابتوجد بيانات لعرضها</td>
+                                 <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">{t('finances.table.no_data')}</td>
                               </tr>
                            )}
                         </tbody>
@@ -338,21 +340,21 @@ const FinancesView: React.FC = () => {
                      <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <div className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white"><Plus className="w-6 h-6" /></div>
-                           <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">إضافة حركة مالية</h3>
+                           <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">{t('finances.modal.title')}</h3>
                         </div>
                         <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-lg transition-all"><X className="w-6 h-6" /></button>
                      </div>
                      <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
                         <div className="flex p-1.5 bg-slate-100 rounded-xl">
                            <button onClick={() => setNewTransaction({ ...newTransaction, type: 'income' })} className={`flex-1 py-3.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>
-                              <PlusCircle className="w-4 h-4" /> مداخيل
+                              <PlusCircle className="w-4 h-4" /> {t('finances.modal.income')}
                            </button>
                            <button onClick={() => setNewTransaction({ ...newTransaction, type: 'expense' })} className={`flex-1 py-3.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${newTransaction.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>
-                              <X className="w-4 h-4" /> مصروفات
+                              <X className="w-4 h-4" /> {t('finances.modal.expense')}
                            </button>
                         </div>
                         <div className="space-y-1.5">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">القيمة (دج)</label>
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('finances.modal.amount_label')}</label>
                            <input
                               type="number"
                               value={newTransaction.amount}
@@ -367,7 +369,7 @@ const FinancesView: React.FC = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">التصنيف</label>
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('finances.modal.category_label')}</label>
                            <div className={errors.category ? "rounded-lg border border-red-500" : ""}>
                               <ModernSelect
                                  value={newTransaction.category}
@@ -376,21 +378,21 @@ const FinancesView: React.FC = () => {
                                     if (errors.category) setErrors({ ...errors, category: '' });
                                  }}
                                  options={newTransaction.type === 'income' ? [
-                                    { value: "مبيعات", label: "مبيعات" },
-                                    { value: "استرداد", label: "استرداد" },
-                                    { value: "أخرى", label: "أخرى" }
+                                    { value: t('finances.modal.categories.sales'), label: t('finances.modal.categories.sales') },
+                                    { value: t('finances.modal.categories.refund'), label: t('finances.modal.categories.refund') },
+                                    { value: t('finances.modal.categories.other'), label: t('finances.modal.categories.other') }
                                  ] : [
-                                    { value: "رواتب", label: "رواتب" },
-                                    { value: "شحن", label: "شحن" },
-                                    { value: "تسويق", label: "تسويق" },
-                                    { value: "أخرى", label: "أخرى" }
+                                    { value: t('finances.modal.categories.salaries'), label: t('finances.modal.categories.salaries') },
+                                    { value: t('finances.modal.categories.shipping'), label: t('finances.modal.categories.shipping') },
+                                    { value: t('finances.modal.categories.marketing'), label: t('finances.modal.categories.marketing') },
+                                    { value: t('finances.modal.categories.other'), label: t('finances.modal.categories.other') }
                                  ]}
                               />
                            </div>
                            {errors.category && <p className="text-red-500 text-[9px] font-bold px-1">{errors.category}</p>}
                         </div>
                         <div className="space-y-1.5">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة</label>
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('finances.modal.note_label')}</label>
                            <textarea
                               value={newTransaction.note}
                               onChange={e => {
@@ -412,7 +414,7 @@ const FinancesView: React.FC = () => {
                            {isSubmitting ? (
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                            ) : (
-                              <>حفظ الحركة <Save className="w-4 h-4" /></>
+                              <> {t('finances.modal.save_button')} <Save className="w-4 h-4" /></>
                            )}
                         </button>
                      </div>
@@ -430,21 +432,20 @@ const FinancesView: React.FC = () => {
                         <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                            <Trash2 className="w-10 h-10" />
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 mb-2">حذف المعاملة؟</h3>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">{t('finances.delete_modal.title')}</h3>
                         <p className="text-xs font-bold text-slate-500 leading-relaxed mb-8">
-                           هل أنت متأكد من حذف هذه المعاملة المالية؟<br />
-                           لا يمكن التراجع عن هذا الإجراء
+                           {t('finances.delete_modal.desc')}
                         </p>
 
                         <div className="flex gap-3">
                            <button disabled={isDeleting} onClick={() => setDeleteId(null)} className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-xl font-black text-[11px] uppercase hover:bg-slate-50 transition-all disabled:opacity-50">
-                              إلغاء
+                              {t('common.cancel')}
                            </button>
                            <button disabled={isDeleting} onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                               {isDeleting ? (
                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                               ) : (
-                                 'نعم، حذف'
+                                 t('finances.delete_modal.confirm')
                               )}
                            </button>
                         </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, X, Clock, AlertCircle, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface PostponedModalProps {
     isOpen: boolean;
@@ -13,13 +14,14 @@ interface PostponedModalProps {
 export const PostponedModal: React.FC<PostponedModalProps> = ({
     isOpen, onClose, onConfirm, currentDate
 }) => {
+    const { t } = useTranslation();
     const [selectedDate, setSelectedDate] = useState<string>(currentDate || '');
 
     if (!isOpen) return null;
 
     const handleSubmit = () => {
         if (!selectedDate) {
-            toast.error('الرجاء تحديد تاريخ التأجيل');
+            toast.error(t('orders.postponed_modal.error_select_date'));
             return;
         }
 
@@ -28,7 +30,7 @@ export const PostponedModal: React.FC<PostponedModalProps> = ({
         today.setHours(0, 0, 0, 0);
         const picked = new Date(selectedDate);
         if (picked < today) {
-            toast.error('لا يمكن تأجيل الطلب لتاريخ سابق');
+            toast.error(t('orders.postponed_modal.error_past_date'));
             return;
         }
 
@@ -48,14 +50,14 @@ export const PostponedModal: React.FC<PostponedModalProps> = ({
                     <div className="w-16 h-16 rounded-2xl bg-white text-amber-500 mx-auto flex items-center justify-center shadow-lg shadow-amber-500/10 mb-3">
                         <Clock className="w-8 h-8" />
                     </div>
-                    <h3 className="text-lg font-black text-amber-950">تأجيل الطلب</h3>
-                    <p className="text-xs font-bold text-amber-600/80 mt-1">متى يريد العميل استلام الطلب؟</p>
+                    <h3 className="text-lg font-black text-amber-950">{t('orders.postponed_modal.title')}</h3>
+                    <p className="text-xs font-bold text-amber-600/80 mt-1">{t('orders.postponed_modal.desc')}</p>
                 </div>
 
                 {/* Body */}
                 <div className="p-6 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">تاريخ التأجيل</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.postponed_modal.date_label')}</label>
                         <div className="relative">
                             <input
                                 type="date"
@@ -68,7 +70,7 @@ export const PostponedModal: React.FC<PostponedModalProps> = ({
                         </div>
                         <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 px-1">
                             <AlertCircle className="w-3 h-3" />
-                            سيتم تذكيرك بهذا الطلب في التاريخ المحدد
+                            {t('orders.postponed_modal.reminder')}
                         </p>
                     </div>
 
@@ -78,7 +80,7 @@ export const PostponedModal: React.FC<PostponedModalProps> = ({
                             disabled={!selectedDate}
                             className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xs shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                         >
-                            <span>تأكيد التأجيل</span>
+                            <span>{t('orders.postponed_modal.confirm')}</span>
                             <ArrowRight className="w-4 h-4 group-hover:-translate-x-1 transition-transform rtl:rotate-180" />
                         </button>
                     </div>

@@ -9,6 +9,11 @@ import LoadingSpinner from './common/LoadingSpinner';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
 import toast from 'react-hot-toast';
 import TableSkeleton from './common/TableSkeleton';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
+import { Loader2 } from 'lucide-react';
+import { formatCurrency } from '../utils/formatters';
+import { statusLabels } from '../constants/statusConstants';
 
 interface OrdersViewProps {
   orders: Order[];
@@ -24,6 +29,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
   onDeleteOrder,
   isLoading = false
 }) => {
+  const { t, i18n } = useTranslation();
   // --- States ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -80,13 +86,9 @@ const OrdersView: React.FC<OrdersViewProps> = ({
   };
 
   const getStatusLabel = (status: Order['status']) => {
-    switch (status) {
-      case 'delivered': return 'تم التوصيل';
-      case 'shipped': return 'تم الشحن';
-      case 'pending': return 'جاري المعالجة';
-      case 'cancelled': return 'تم الإلغاء';
-      default: return status;
-    }
+    if (typeof status === 'object' && status !== null) return getTranslatedName(status, i18n.language);
+    const label = (statusLabels as any)[status as any] || status;
+    return label ? t(label) : t('common.unspecified');
   };
 
   // --- Handlers ---
@@ -117,7 +119,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
 
   const handleSubmitOrder = async () => {
     if (!newOrder.firstName || !newOrder.lastName || !newOrder.phone || newOrder.items.length === 0) {
-      toast.error('يرجى ملء جميع البيانات الإجبارية وإضافة منتج واحد على الأقل');
+      toast.error(t('orders.toast.fill_required'));
       return;
     }
 
@@ -143,17 +145,17 @@ const OrdersView: React.FC<OrdersViewProps> = ({
         // const toastId = toast.loading('جاري إنشاء الطلب...'); // Removed toast loading as button shows it
         const success = await onCreateOrder(orderData);
         if (success) {
-          toast.success('تم إنشاء الطلب بنجاح');
+          toast.success(t('orders.toast.create_success'));
           setIsCreateModalOpen(false);
         } else {
-          toast.error('فشل إنشاء الطلب');
+          toast.error(t('orders.toast.create_error'));
         }
       } else {
-        toast.success('تمت العملية (تجريبي)');
+        toast.success(t('orders.toast.create_success'));
         setIsCreateModalOpen(false);
       }
     } catch (error) {
-      toast.error('حدث خطأ غير متوقع');
+      toast.error(t('common.error_occurred'));
     } finally {
       setIsSubmitting(false);
     }
@@ -170,7 +172,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
     ) : (
       <>
-        <Save className="w-4 h-4" /> إنشاء الطلب
+        <Save className="w-4 h-4" /> {t('orders.create_modal.create')}
       </>
     )}
   </button>
@@ -192,11 +194,11 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     setIsDeleting(false);
 
     if (success) {
-      toast.success('تم حذف الطلب بنجاح');
+      toast.success(t('orders.toast.delete_success'));
       setIsDeleteModalOpen(false);
       setOrderToDelete(null);
     } else {
-      toast.error('فشل حذف الطلب');
+      toast.error(t('orders.toast.delete_error'));
     }
   };
 
@@ -215,7 +217,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
         }
       } catch (err) {
         console.error("Error fetching companies", err);
-        toast.error("فشل تحميل شركات التوصيل");
+        toast.error(t('orders.toast.delivery_companies_error'));
       } finally {
         setLoadingCompanies(false);
       }
@@ -236,26 +238,26 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     if (result.success && result.data?.successOrder?.length > 0) {
       const successOrder = result.data.successOrder[0];
       const tracking = successOrder.deliveryCompany?.trackingCode || 'Unknown';
-      const companyName = deliveryCompanies.find(c => c.id === selectedCompanyId)?.name || 'الشركة';
+      const companyName = deliveryCompanies.find(c => c.id === selectedCompanyId)?.name || t('common.unknown');
 
       setSuccessTrackingCode(tracking);
       setSuccessCompanyName(companyName);
       setIsDeliveryModalOpen(false);
       setIsSuccessModalOpen(true);
 
-      toast.success('تم إرسال الطلب بنجاح');
+      toast.success(t('orders.toast.send_success'));
 
       // Update local order status if needed
       // setOrders(...)
     } else {
-      toast.error('فشل إرسال الطلب. تحقق من البيانات.');
+      toast.error(t('orders.toast.send_error'));
     }
   };
 
   const copyTracking = () => {
     if (successTrackingCode) {
       navigator.clipboard.writeText(successTrackingCode);
-      toast.success('تم نسخ كود التتبع');
+      toast.success(t('orders.toast.tracking_copied'));
     }
   };
 
@@ -263,17 +265,17 @@ const OrdersView: React.FC<OrdersViewProps> = ({
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-lg font-black text-slate-800 tracking-tight">قائمة الطلبات</h2>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">متابعة دقيقة لطلبات العملاء وحالات الشحن</p>
+          <h2 className="text-lg font-black text-slate-800 tracking-tight">{t('orders.title')}</h2>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">{t('orders.subtitle')}</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-all text-[10px] font-black uppercase">
-            <Filter className="w-3.5 h-3.5" /> تصفية
+            <Filter className="w-3.5 h-3.5" /> {t('orders.filter')}
           </button>
           <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase"
             onClick={openCreateModal}
           >
-            <Plus className="w-3.5 h-3.5" /> إضافة طلب
+            <Plus className="w-3.5 h-3.5" /> {t('orders.add_order')}
           </button>
         </div>
       </div>
@@ -285,48 +287,48 @@ const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-right">
+            <table className={`w-full ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المعرف</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">العميل</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">المنتج</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">القيمة</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الحالة</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">التاريخ</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.id')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.customer')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.product')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.value')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.status')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.date')}</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t('orders.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {orders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-all group">
-                    <td className="px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase">
+                    <td className={`px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       <div className="flex items-center gap-2">
                         #{order.id}
                         {order.isLocked && (
                           <div className="group/lock relative">
                             <Lock className="w-3 h-3 text-rose-500" />
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none">
-                              الطلب مقفل (رصيد غير كافٍ)
+                              {t('orders.status.locked')}
                             </div>
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[12px] text-slate-800 font-black">{order.customer}</td>
-                    <td className="px-6 py-4 text-[11px] text-slate-500 font-medium">{order.product}</td>
-                    <td className="px-6 py-4 text-[11px] font-black text-slate-800">{order.amount} د.ج</td>
-                    <td className="px-6 py-4">
+                    <td className={`px-6 py-4 text-[12px] text-slate-800 font-black ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.customer}</td>
+                    <td className={`px-6 py-4 text-[11px] text-slate-500 font-medium ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.product}</td>
+                    <td className={`px-6 py-4 text-[11px] font-black text-slate-800 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{formatCurrency(order.amount)}</td>
+                    <td className={`px-6 py-4 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${getStatusStyle(order.status)}`}>
                         {getStatusLabel(order.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-[10px] text-slate-400 font-bold">{order.date}</td>
+                    <td className={`px-6 py-4 text-[10px] text-slate-400 font-bold ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.date}</td>
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => openDeliveryModal(order.id)}
                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        title="إرسال للتوصيل"
+                        title={t('orders.actions.send_delivery')}
                       >
                         <Truck className="w-4 h-4" />
                       </button>
@@ -341,7 +343,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                 ))}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-400 text-xs font-bold">لا توجد طلبات لعرضها</td>
+                    <td colSpan={7} className="text-center py-10 text-slate-400 text-xs font-bold">{t('orders.empty')}</td>
                   </tr>
                 )}
               </tbody>
@@ -365,8 +367,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                       <ShoppingBag className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">إضافة طلب جديد</h4>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">أدخل بيانات العميل والمنتجات لإنشاء طلب</p>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.create_modal.title')}</h4>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('orders.create_modal.desc')}</p>
                     </div>
                   </div>
                   <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X className="w-6 h-6" /></button>
@@ -378,31 +380,31 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                       <User className="w-4 h-4 text-indigo-500" />
-                      <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">بيانات العميل</h5>
+                      <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">{t('orders.create_modal.customer_info')}</h5>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم الأول *</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.first_name')} *</label>
                         <input
                           type="text"
                           value={newOrder.firstName}
                           onChange={e => setNewOrder({ ...newOrder, firstName: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          placeholder="الاسم الأول..."
+                          placeholder={`${t('orders.create_modal.first_name')}...`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ي. الاسم العائلي *</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.last_name')} *</label>
                         <input
                           type="text"
                           value={newOrder.lastName}
                           onChange={e => setNewOrder({ ...newOrder, lastName: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          placeholder="اللقب..."
+                          placeholder={`${t('orders.create_modal.last_name')}...`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رقم الهاتف *</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.phone')} *</label>
                         <div className="relative">
                           <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                           <input
@@ -421,37 +423,37 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                       <MapPin className="w-4 h-4 text-indigo-500" />
-                      <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">العنوان والشحن</h5>
+                      <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">{t('orders.create_modal.location_info')}</h5>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.wilaya')}</label>
                         <input
                           type="text"
                           value={newOrder.state}
                           onChange={e => setNewOrder({ ...newOrder, state: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          placeholder="اختر الولاية..."
+                          placeholder={`${t('orders.create_modal.wilaya')}...`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.commune')}</label>
                         <input
                           type="text"
                           value={newOrder.city}
                           onChange={e => setNewOrder({ ...newOrder, city: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          placeholder="البلدية..."
+                          placeholder={`${t('orders.create_modal.commune')}...`}
                         />
                       </div>
                       <div className="md:col-span-2 space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.address')}</label>
                         <input
                           type="text"
                           value={newOrder.address}
                           onChange={e => setNewOrder({ ...newOrder, address: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                          placeholder="الحي، رقم المنزل..."
+                          placeholder={t('orders.create_modal.address_placeholder')}
                         />
                       </div>
                     </div>
@@ -464,7 +466,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                         className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'}`}
                       >
                         <Home className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase">توصيل للمنزل</span>
+                        <span className="text-[10px] font-black uppercase">{t('orders.create_modal.home_delivery')}</span>
                       </button>
                       <button
                         type="button"
@@ -472,7 +474,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                         className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${newOrder.deliveryType === 'stopdesk' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'}`}
                       >
                         <Building2 className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase">استلام من المكتب (StopDesk)</span>
+                        <span className="text-[10px] font-black uppercase">{t('orders.create_modal.stop_desk')}</span>
                       </button>
                     </div>
                   </div>
@@ -482,20 +484,20 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
                         <Package className="w-4 h-4 text-indigo-500" />
-                        <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">المنتجات *</h5>
+                        <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">{t('orders.create_modal.products')} *</h5>
                       </div>
                       <button
                         onClick={handleAddItem}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
                       >
-                        <Plus className="w-3.5 h-3.5" /> إضافة منتج
+                        <Plus className="w-3.5 h-3.5" /> {t('orders.create_modal.add_product')}
                       </button>
                     </div>
 
                     {newOrder.items.length === 0 ? (
                       <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                        <p className="text-slate-400 text-xs font-bold">لم تتم إضافة أي منتجات بعد</p>
-                        <button onClick={handleAddItem} className="mt-2 text-indigo-600 text-xs font-black hover:underline">إضافة منتج الآن</button>
+                        <p className="text-slate-400 text-xs font-bold">{t('orders.create_modal.no_products')}</p>
+                        <button onClick={handleAddItem} className="mt-2 text-indigo-600 text-xs font-black hover:underline">{t('orders.create_modal.add_product')}</button>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -503,7 +505,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                           <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 relative group animate-in slide-in-from-right-2">
                             <div className="md:col-span-4">
                               <input
-                                placeholder="اسم المنتج"
+                                placeholder={t('orders.create_modal.product_name')}
                                 value={item.name}
                                 onChange={e => updateItem(idx, 'name', e.target.value)}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 transition-all"
@@ -511,7 +513,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                             </div>
                             <div className="md:col-span-3">
                               <input
-                                placeholder="SKU / المتغير"
+                                placeholder={t('orders.create_modal.variant')}
                                 value={item.variant}
                                 onChange={e => updateItem(idx, 'variant', e.target.value)}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 transition-all"
@@ -520,7 +522,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                             <div className="md:col-span-2">
                               <input
                                 type="number"
-                                placeholder="الكمية"
+                                placeholder={t('orders.create_modal.qty')}
                                 value={item.quantity}
                                 onChange={e => updateItem(idx, 'quantity', Number(e.target.value))}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 transition-all text-center"
@@ -529,7 +531,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                             <div className="md:col-span-2">
                               <input
                                 type="number"
-                                placeholder="السعر"
+                                placeholder={t('orders.create_modal.price')}
                                 value={item.price}
                                 onChange={e => updateItem(idx, 'price', Number(e.target.value))}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 transition-all text-center text-indigo-600"
@@ -551,12 +553,12 @@ const OrdersView: React.FC<OrdersViewProps> = ({
 
                   {/* Note */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظات إضافية</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.create_modal.notes')}</label>
                     <textarea
                       value={newOrder.note}
                       onChange={e => setNewOrder({ ...newOrder, note: e.target.value })}
                       className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none transition-all resize-none"
-                      placeholder="أي تفاصيل أخرى..."
+                      placeholder={t('orders.create_modal.notes_placeholder')}
                     />
                   </div>
 
@@ -568,7 +570,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                     onClick={() => setIsCreateModalOpen(false)}
                     className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-100 transition-all"
                   >
-                    إلغاء
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSubmitOrder}
@@ -576,10 +578,10 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                     className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <Save className="w-4 h-4" /> إنشاء الطلب
+                        <Save className="w-4 h-4" /> {t('orders.create_modal.create')}
                       </>
                     )}
                   </button>
@@ -597,8 +599,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={executeDelete}
-        title="حذف الطلب"
-        description="هل أنت متأكد من أنك تريد حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
+        title={t('orders.delete_modal.title')}
+        description={t('orders.delete_modal.desc')}
         isDeleting={isDeleting}
       />
 
@@ -613,8 +615,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">إرسال للتوصيل</h4>
-                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">اختر شركة التوصيل لإسناد الطلب</p>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.delivery_modal.title')}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('orders.delivery_modal.desc')}</p>
                 </div>
               </div>
               <button onClick={() => setIsDeliveryModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X className="w-5 h-5" /></button>
@@ -628,7 +630,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
               ) : deliveryCompanies.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-slate-500">لا توجد شركات توصيل متاحة</p>
+                  <p className="text-xs font-bold text-slate-500">{t('orders.delivery_modal.no_companies')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -655,13 +657,13 @@ const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
 
             <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-100 transition-all">إلغاء</button>
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-100 transition-all">{t('common.cancel')}</button>
               <button
                 onClick={handleSendToDelivery}
                 disabled={!selectedCompanyId || isSendingToDelivery}
                 className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSendingToDelivery ? <LoadingSpinner size="sm" color="white" /> : <><Truck className="w-4 h-4" /> إرسال الطلب</>}
+                {isSendingToDelivery ? <LoadingSpinner size="sm" color="white" /> : <><Truck className="w-4 h-4" /> {t('orders.actions.send_delivery')}</>}
               </button>
             </div>
           </div>
@@ -678,13 +680,13 @@ const OrdersView: React.FC<OrdersViewProps> = ({
               <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 ring-4 ring-white/10">
                 <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-white font-black text-xl tracking-tight">تم الإرسال بنجاح!</h3>
-              <p className="text-emerald-100 text-[11px] font-bold mt-1 uppercase tracking-widest">تم إسناد الطلب لشركة {successCompanyName}</p>
+              <h3 className="text-white font-black text-xl tracking-tight">{t('orders.delivery_modal.success_title')}</h3>
+              <p className="text-emerald-100 text-[11px] font-bold mt-1 uppercase tracking-widest">{t('orders.delivery_modal.success_desc', { company: successCompanyName })}</p>
             </div>
 
             <div className="p-8">
               <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center group relative hover:border-indigo-300 transition-colors">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">كود التتبع / Tracking Code</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('orders.delivery_modal.tracking_code')}</p>
                 <div className="flex items-center justify-center gap-2">
                   <h2 className="text-2xl font-black text-slate-800 tracking-wider font-mono select-all" onClick={copyTracking}>{successTrackingCode}</h2>
                   <button onClick={copyTracking} className="text-slate-400 hover:text-indigo-600 transition-colors p-1"><Copy className="w-5 h-5" /></button>
@@ -695,7 +697,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                 onClick={() => setIsSuccessModalOpen(false)}
                 className="w-full mt-6 py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
               >
-                موافق
+                {t('orders.delivery_modal.ok')}
               </button>
             </div>
           </div>

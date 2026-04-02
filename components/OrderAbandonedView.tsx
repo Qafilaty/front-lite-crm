@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../utils/formatters';
 import { Order } from '../types';
 import {
     Search, Filter, Eye, ChevronLeft, ChevronRight, LayoutList, MapPin, AlertTriangle, Home, Building2, User, UserCheck,
@@ -13,18 +15,19 @@ import { GET_ALL_ABANDONED_ORDERS } from '../graphql/queries/orderQueries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
-import { ModernSelect, PaginationControl } from './common';
-import { statusLabels, statusColors } from '../constants/statusConstants';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import { AssignConfirmerModal } from './AssignConfirmerModal';
+import { getTranslatedName } from '../utils/i18nUtils';
+import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
+import { statusLabels, statusColors } from '../constants/statusConstants';
 
 interface OrderAbandonedViewProps {
     orders?: Order[];
 }
 
 const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
-    // Use GET_CURRENT_USER for reliable company ID & role
+    const { t, i18n } = useTranslation();
     const { data: userData } = useQuery(GET_CURRENT_USER);
     const user = userData?.currentUser;
 
@@ -72,6 +75,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     const [stateFilter, setStateFilter] = useState('all');
     const [confirmerFilter, setConfirmerFilter] = useState('all');
     const [storeFilter, setStoreFilter] = useState('all');
+    const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null, key: 'all' });
 
     const [currentPage, setCurrentPage] = useState(1);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -164,6 +168,12 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
         if (confirmerFilter !== 'all') filter.idConfirmed = confirmerFilter;
         if (storeFilter !== 'all') filter["store.idStore"] = storeFilter;
 
+        if (dateRange.startDate || dateRange.endDate) {
+            filter.createdAt = {};
+            if (dateRange.startDate) filter.createdAt.$gte = dateRange.startDate;
+            if (dateRange.endDate) filter.createdAt.$lte = dateRange.endDate;
+        }
+
         if (searchTerm) {
             const regex = { $regex: searchTerm, $options: 'i' };
             filter.$or = [
@@ -174,7 +184,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
         }
 
         return filter;
-    }, [statusFilter, productFilter, stateFilter, searchTerm, confirmationStatuses, storeFilter, confirmerFilter]);
+    }, [statusFilter, productFilter, stateFilter, searchTerm, confirmationStatuses, storeFilter, confirmerFilter, dateRange]);
 
     // 4. Fetch Orders
     const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ABANDONED_ORDERS, {
@@ -209,16 +219,17 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
     };
 
     const getStatusLabel = (s: any): string => {
-        if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'غير محدد';
-        return statusLabels[s] || s || 'غير محدد';
+        if (typeof s === 'object' && s !== null) return getTranslatedName(s, i18n.language);
+        const label = statusLabels[s] || s;
+        return label ? t(label) : t('common.not_specified');
     };
 
     return (
         <div className="space-y-6 pb-20 animate-in fade-in duration-500">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div className="animate-in slide-in-from-right duration-500">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">الطلبات المتروكة</h2>
-                    <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">متابعة الطلبات غير المكتملة</p>
+                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('abandoned_orders.title')}</h2>
+                    <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('abandoned_orders.subtitle')}</p>
                 </div>
                 {selectedOrderIds.length > 0 && (user?.role === 'admin' || user?.role === 'owner') && (
                     <div className="flex items-center gap-3 w-full lg:w-auto animate-in fade-in zoom-in">
@@ -226,20 +237,20 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                             onClick={() => setIsAssignModalOpen(true)}
                             className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none"
                         >
-                            <UserCheck className="w-4 h-4" /> إسناد ({selectedOrderIds.length})
+                            <UserCheck className="w-4 h-4" /> {t('abandoned_orders.assign')} ({selectedOrderIds.length})
                         </button>
                     </div>
                 )}
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4 relative z-[20]">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1">
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
                             <input
                                 type="text"
-                                placeholder="بحث سريع... (الاسم، الهاتف، المبلغ)"
+                                placeholder={t('abandoned_orders.search_placeholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
@@ -251,7 +262,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                             className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
                         >
                             <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
-                            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
+                            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('common.filter')}</span>
                         </button>
 
                         <div className="relative">
@@ -260,24 +271,24 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                 className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
                             >
                                 <LayoutList className="w-4 h-4" />
-                                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+                                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('common.columns')}</span>
                             </button>
 
                             {isColumnsMenuOpen && (
                                 <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in">
-                                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('common.show_columns')}</p>
                                     <div className="space-y-1">
                                         {Object.keys(visibleColumns).map(key => {
                                             if (key === 'actions') return null;
                                             const labels: any = {
-                                                customerInfo: 'العميل',
-                                                locationInfo: 'الموقع',
-                                                source: 'المصدر',
-                                                orderSummary: 'الطلبية',
-                                                financials: 'المالية والشحن',
-                                                status: 'الحالة',
-                                                confirmerInfo: 'مؤكد الطلب',
-                                                communication: 'التواصل'
+                                                customerInfo: t('orders.table.customer'),
+                                                locationInfo: t('common.location'),
+                                                source: t('common.source'),
+                                                orderSummary: t('common.order'),
+                                                financials: t('common.financials'),
+                                                status: t('common.status'),
+                                                confirmerInfo: t('common.confirmer'),
+                                                communication: t('abandoned_orders.communication', 'Communication')
                                             };
                                             return (
                                                 <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
@@ -298,46 +309,54 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                     </div>
 
                     {isFiltersOpen && (
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
                             <div className="space-y-1">
-                                <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
+                                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.date')}</span>
+                            <DateRangeSelector
+                                value={dateRange}
+                                onChange={setDateRange}
+                                className="w-full"
+                            />
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.store')}</span>
                                 <ModernSelect
                                     value={storeFilter}
                                     onChange={setStoreFilter}
-                                    options={[{ value: 'all', label: 'جميع المتاجر' }, ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])]}
+                                    options={[{ value: 'all', label: t('orders.all_stores') }, ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])]}
                                     className="w-full"
                                     onOpen={() => getStores()}
                                     isLoading={storesLoading}
                                 />
                             </div>
                             <div className="space-y-1">
-                                <span className="text-[9px] font-black text-slate-400 px-2">المنتج</span>
+                                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.product')}</span>
                                 <ModernSelect
                                     value={productFilter}
                                     onChange={setProductFilter}
-                                    options={[{ value: 'all', label: 'جميع المنتجات' }, ...(productsData?.allProduct?.data?.map((p: any) => ({ value: p.id, label: p.name })) || [])]}
+                                    options={[{ value: 'all', label: t('orders.all_products') }, ...(productsData?.allProduct?.data?.map((p: any) => ({ value: p.id, label: p.name })) || [])]}
                                     className="w-full"
                                     onOpen={() => getProducts()}
                                     isLoading={productsLoading}
                                 />
                             </div>
                             <div className="space-y-1">
-                                <span className="text-[9px] font-black text-slate-400 px-2">المؤكد</span>
+                                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.confirmer')}</span>
                                 <ModernSelect
                                     value={confirmerFilter}
                                     onChange={setConfirmerFilter}
-                                    options={[{ value: 'all', label: 'جميع المؤكدين' }, ...(usersData?.allUser?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation').map((u: any) => ({ value: u.id, label: u.name })) || [])]}
+                                    options={[{ value: 'all', label: t('orders.all_confirmers') }, ...(usersData?.allUser?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation').map((u: any) => ({ value: u.id, label: u.name })) || [])]}
                                     className="w-full"
                                     onOpen={() => getUsers()}
                                     isLoading={usersLoading}
                                 />
                             </div>
                             <div className="space-y-1">
-                                <span className="text-[9px] font-black text-slate-400 px-2">الولاية</span>
+                                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.wilaya')}</span>
                                 <ModernSelect
                                     value={stateFilter}
                                     onChange={setStateFilter}
-                                    options={[{ value: 'all', label: 'جميع الولايات' }, ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])]}
+                                    options={[{ value: 'all', label: t('common.all_wilayas') }, ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])]}
                                     className="w-full"
                                     onOpen={() => getWilayas()}
                                     isLoading={wilayasLoading}
@@ -365,7 +384,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                     className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all border uppercase tracking-widest flex items-center gap-2 flex-shrink-0 ${statusFilter === 'all' ? `bg-slate-800 text-white border-transparent shadow-lg scale-105` : `bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100 shadow-sm`}`}
                                 >
                                     <div className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'all' ? 'bg-white' : 'bg-slate-400'}`} />
-                                    الكل
+                                    {t('common.all')}
                                 </button>
                                 {confirmationStatuses.map((s: any) => {
                                     if (!s) return null;
@@ -379,7 +398,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                             style={!isActive && style ? { backgroundColor: style.backgroundColor, color: style.color, borderColor: style.borderColor } : (isActive && style ? { backgroundColor: style.color, color: '#fff', borderColor: style.color } : {})}
                                         >
                                             {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />}
-                                            {s.nameAR || s.nameEN}
+                                            {getTranslatedName(s, i18n.language)}
                                         </button>
                                     );
                                 })}
@@ -394,21 +413,21 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                     <div className="p-6"><TableSkeleton columns={7} rows={8} /></div>
                 ) : (
                     <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-right border-collapse min-w-[1100px]">
+                        <table className={`w-full border-collapse min-w-[1100px] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                             <thead>
                                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
                                     <th className="px-6 py-4 w-12 text-center animate-in slide-in-from-right-4 fade-in">
                                         <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" checked={selectedOrderIds.length > 0 && selectedOrderIds.length === orders.length} onChange={toggleAll} />
                                     </th>
-                                    {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
-                                    {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">التواصل</th>}
-                                    {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
-                                    {(visibleColumns as any).source && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المصدر</th>}
-                                    {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
-                                    {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية والشحن</th>}
-                                    {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
-                                    {(visibleColumns as any).confirmerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
+                                    {(visibleColumns as any).customerInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.customer')}</th>}
+                                    {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">{t('abandoned_orders.communication', 'Communication')}</th>}
+                                    {(visibleColumns as any).locationInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.location')}</th>}
+                                    {(visibleColumns as any).source && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.source')}</th>}
+                                    {(visibleColumns as any).orderSummary && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.order')}</th>}
+                                    {(visibleColumns as any).financials && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.financials')}</th>}
+                                    {(visibleColumns as any).status && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.status')}</th>}
+                                    {(visibleColumns as any).confirmerInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('common.confirmer')}</th>}
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">{t('orders.table.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -442,7 +461,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" checked={isSelected} onChange={() => toggleSelection(order.id)} />
                                             </td>
 
-                                            {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
+                                            {(visibleColumns as any).customerInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm shrink-0 uppercase transition-transform group-hover:scale-110 duration-300 ${(() => {
                                                         const name = order.fullName || order.customer || '?';
@@ -452,8 +471,8 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                     })()}`}>
                                                         <span className="font-black drop-shadow-sm">{(order.fullName || order.customer || '?').charAt(0)}</span>
                                                     </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">{order.fullName || order.customer || 'زائر'}</p>
+                                                    <div className="flex flex-col gap-1 text-inherit">
+                                                        <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">{order.fullName || order.customer || t('common.visitor')}</p>
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[10px] font-bold font-mono tracking-tight text-slate-400 dir-ltr">{order.phone}</span>
                                                         </div>
@@ -461,47 +480,53 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).communication && <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                                            {(visibleColumns as any).communication && <td className="px-4 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    <button onClick={() => { navigator.clipboard.writeText(order.phone); toast.success('تم نسخ الرقم!'); }} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100" title="نسخ الرقم"><Copy size={14} /></button>
-                                                    <a href={`sms:${order.phone.replace(/\s/g, '')}`} className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100" title="إرسال SMS"><MessageSquare size={14} /></a>
+                                                    <button onClick={() => { navigator.clipboard.writeText(order.phone); toast.success(t('orders.confirmation.toast.number_copied')); }} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100" title={t('orders.confirmation.copy_number')}><Copy size={14} /></button>
+                                                    <a href={`sms:${order.phone.replace(/\s/g, '')}`} className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100" title={t('orders.confirmation.send_sms')}><MessageSquare size={14} /></a>
                                                     <button onClick={() => {
                                                         const phone = order.phone.replace(/\s/g, '');
-                                                        const name = order.fullName || order.customer || 'عميلنا العزيز';
-                                                        const storeName = order.store?.store?.name || 'متجرنا';
+                                                        const name = order.fullName || order.customer || t('common.dear_customer');
+                                                        const storeName = order.store?.store?.name || t('common.our_store');
                                                         const products = (order.products || order.items || []).map((p: any) => p.product?.name || p.name).join(', ');
                                                         const total = order.totalPrice || order.amount || 0;
-                                                        const message = `السلام عليكم ${name}، معك ${storeName}. لاحظنا أنك بدأت في طلب المنتج (${products})${products ? '' : 'من متجرنا'} ولكن لم تكمله. هل واجهت أي مشكلة؟ يمكننا مساعدتك لإتـمام الطلب بقيمة ${total} دج.`;
+                                                        const message = t('abandoned_orders.whatsapp_template', {
+                                                            name,
+                                                            store: storeName,
+                                                            products: products || t('common.order'),
+                                                            total,
+                                                            currency: t('common.currency')
+                                                        });
                                                         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-                                                    }} className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" title="واتساب"><MessageCircle size={14} className="fill-current" /></button>
+                                                    }} className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" title={t('orders.confirmation.whatsapp')}><MessageCircle size={14} className="fill-current" /></button>
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
+                                            {(visibleColumns as any).locationInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-1.5 "><MapPin className="w-3 h-3 text-slate-300" /><span className="text-[10px] font-bold text-slate-700">{order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}{order.city && ` - ${order.city}`}</span></div>
-                                                    {order.address && <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>{order.address}</p>}
+                                                    {order.address && <p className={`text-[9px] text-slate-400 font-bold truncate max-w-[150px] ${i18n.dir() === 'rtl' ? 'pr-5' : 'pl-5'}`} title={order.address}>{order.address}</p>}
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).source && <td className="px-6 py-5">
-                                                <div className="flex flex-col gap-1 border-r-2 border-slate-100 pr-3">
+                                            {(visibleColumns as any).source && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                                                <div className={`flex flex-col gap-1 border-slate-100 ${i18n.dir() === 'rtl' ? 'border-r-2 pr-3' : 'border-l-2 pl-3'}`}>
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-500"><Store className="w-3.5 h-3.5" /></div>
-                                                        <span className="text-[11px] font-black text-slate-700">{order.store?.store?.name || 'محل محلي'}</span>
+                                                        <span className="text-[11px] font-black text-slate-700">{order.store?.store?.name || t('common.local_shop')}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                                                        <span className="text-[9px] font-bold text-slate-400">فانل: {order.store?.landingPage?.name || 'بيع مباشر'}</span>
+                                                        <span className="text-[9px] font-bold text-slate-400">{t('common.funnel', 'Funnel')}: {order.store?.landingPage?.name || t('common.direct_sale', 'Direct Sale')}</span>
                                                     </div>
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).orderSummary && <td className="px-6 py-5">
+                                            {(visibleColumns as any).orderSummary && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600"><ShoppingBag className="w-3.5 h-3.5" /></div>
-                                                        <span className="text-[11px] font-black text-slate-700">طلب رقم: {order.numberOrder}</span>
+                                                        <span className="text-[11px] font-black text-slate-700">{t('common.order')} #: {order.numberOrder}</span>
                                                     </div>
                                                     <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
                                                         {displayItems.map((item: any, i: number) => (
@@ -513,19 +538,19 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).financials && <td className="px-6 py-5">
+                                            {(visibleColumns as any).financials && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex flex-col gap-1.5 items-start">
-                                                    <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
+                                                    <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{formatCurrency(order.totalPrice || order.amount)}</span>
                                                     <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                                                         {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
-                                                        <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
+                                                        <span className="text-[9px] font-bold text-slate-500">{formatCurrency(order.shippingCost || order.deliveryPrice || 0)}</span>
                                                     </div>
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).status && <td className="px-6 py-5">
+                                            {(visibleColumns as any).status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex flex-col gap-1 items-start">
-                                                    {order.isAbandoned && <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" /> متروك</span>}
+                                                    {order.isAbandoned && <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" /> {t('common.abandoned')}</span>}
                                                     <span className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center gap-2 ${!statusStyle ? `${statusColors.default.bg} ${statusColors.default.text} ${statusColors.default.border}` : ''}`} style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}>
                                                         {(() => {
                                                             const statusKey = typeof order?.status === 'string' ? order?.status : (order?.status as any)?.nameEN?.toLowerCase();
@@ -546,7 +571,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 </div>
                                             </td>}
 
-                                            {(visibleColumns as any).confirmerInfo && <td className="px-6 py-5">
+                                            {(visibleColumns as any).confirmerInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 {order.confirmed ? (
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-[9px] font-black">{order.confirmed.name.charAt(0)}</div>
@@ -556,7 +581,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                             </td>}
 
                                             <td className="px-6 py-5 text-center">
-                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">مراجعة <Eye className="w-3.5 h-3.5" /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">{t('common.review')} <Eye className="w-3.5 h-3.5" /></button>
                                             </td>
                                         </tr>
                                     );

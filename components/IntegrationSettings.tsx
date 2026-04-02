@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import { GET_ALL_GOOGLE_SHEETS, GET_ALL_SHEETS_SPREADSHEET, GET_FIRST_ROW_SHEETS, GET_ALL_ROWS_SHEETS_WITH_FIRST_ROW } from '../graphql/queries';
@@ -41,7 +42,9 @@ interface ColumnSelectProps {
     placeholder?: string;
 }
 
-const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, color, placeholder = "اختر العمود..." }) => {
+const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, color, placeholder }) => {
+    const { t } = useTranslation();
+    const displayPlaceholder = placeholder || t('google_sheets.fields.select_column');
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -132,7 +135,7 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
                     }`}
             >
                 <span className={`text-[11px] font-black truncate block flex-1 text-right ${value ? activeTextClass : 'text-slate-500'}`}>
-                    {selectedOption ? selectedOption.label : placeholder}
+                    {selectedOption ? selectedOption.label : displayPlaceholder}
                 </span>
                 <div className="flex items-center justify-center w-4 h-4 shrink-0">
                     {value ? (
@@ -154,7 +157,7 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
                             onClick={() => { onChange(''); setIsOpen(false); }}
                             className="px-3 py-2 rounded-md text-[10px] font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 cursor-pointer transition-colors flex items-center justify-between"
                         >
-                            <span>(إلغاء التحديد)</span>
+                            <span>{t('google_sheets.fields.unselect')}</span>
                         </div>
                         {options.map((option) => (
                             <div
@@ -176,6 +179,8 @@ const ColumnSelect: React.FC<ColumnSelectProps> = ({ value, onChange, options, c
 
 
 export const IntegrationSettings: React.FC = () => {
+    const { t, i18n } = useTranslation();
+    const isRtl = i18n.language === 'ar';
     const { user } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [isLinking, setIsLinking] = useState(false);
@@ -371,7 +376,7 @@ export const IntegrationSettings: React.FC = () => {
         onCompleted: (data) => {
             if (data?.deleteGoogleSheets?.status) {
                 setShowDisconnectModal(false);
-                setLastActionMessage({ type: 'success', text: 'تم فك الارتباط بنجاح.' });
+                setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.disconnect_success') });
 
                 // Reset local state
                 setCurrentStep(1);
@@ -392,7 +397,7 @@ export const IntegrationSettings: React.FC = () => {
             }
         },
         onError: (error) => {
-            setLastActionMessage({ type: 'warning', text: `فشل فك الارتباط: ${error.message}` });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.disconnect_failed', { error: error.message }) });
             setShowDisconnectModal(false);
         }
     });
@@ -404,12 +409,12 @@ export const IntegrationSettings: React.FC = () => {
         onCompleted: (data) => {
             const res = data?.createSpreadsheetFile;
             if (res?.id) {
-                setLastActionMessage({ type: 'success', text: `تم إنشاء الملف "${res.name}" بنجاح!` });
+                setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.file_created', { name: res.name }) });
 
                 // Auto fill inputs with new ID
                 setConfigs(prev => ({
-                    new: { ...prev.new, id: res.id, name: 'الطلبات الجديدة' },
-                    abandoned: { ...prev.abandoned, id: res.id, name: 'الطلبات المتروكة' }
+                    new: { ...prev.new, id: res.id, name: t('google_sheets.tabs.new_orders') },
+                    abandoned: { ...prev.abandoned, id: res.id, name: t('google_sheets.tabs.abandoned_orders') }
                 }));
 
                 // Trigger validation immediately for both to populate dropdowns (and verify it works)
@@ -418,7 +423,7 @@ export const IntegrationSettings: React.FC = () => {
             }
         },
         onError: (error) => {
-            setLastActionMessage({ type: 'warning', text: `فشل إنشاء الملف: ${error.message}` });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.file_create_failed', { error: error.message }) });
         }
     });
 
@@ -443,12 +448,12 @@ export const IntegrationSettings: React.FC = () => {
     const [deleteSheet, { loading: isDeletingSheet }] = useMutation(DELETE_SHEETS_FROM_GOOGLE_SHEETS, {
         onCompleted: (data) => {
             if (data?.deleteSheetsFromGoogleSheets?.status) {
-                setLastActionMessage({ type: 'success', text: 'تم حذف الورقة بنجاح.' });
+                setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.delete_sheet_success') });
                 refetchSheets();
             }
         },
         onError: (error) => {
-            setLastActionMessage({ type: 'warning', text: 'فشل حذف الورقة.' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.delete_sheet_failed') });
         }
     });
 
@@ -458,7 +463,7 @@ export const IntegrationSettings: React.FC = () => {
         const config = configs[type];
         if (!config.dbId || !googleAccount?.id) return;
 
-        if (confirm(`هل أنت متأكد من حذف إعدادات ورقة "${type === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'}"؟`)) {
+        if (confirm(i18n.language === 'ar' ? `هل أنت متأكد من حذف إعدادات ورقة "${type === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'}"؟` : `Are you sure you want to delete ${type === 'new' ? 'New Orders' : 'Abandoned Orders'} settings?`)) {
             // Optimistically clear dbId to update UI immediately
             setConfigs(prev => ({
                 ...prev,
@@ -475,23 +480,23 @@ export const IntegrationSettings: React.FC = () => {
     };
 
     const fields = [
-        { id: 'fullName', label: 'اسم الزبون', Icon: User, required: false },
-        { id: 'phone', label: 'رقم الهاتف', Icon: Phone, required: true },
-        { id: 'address', label: 'العنوان الكامل', Icon: MapPin, required: false },
-        { id: 'state', label: 'الولاية', Icon: Map, required: false },
-        { id: 'city', label: 'البلدية', Icon: Map, required: false },
-        { id: 'products.name', label: 'اسم المنتج', Icon: Box, required: false },
-        { id: 'products.sku', label: 'كود المنتج (SKU)', Icon: Box, required: false },
-        { id: 'products.quantity', label: 'الكمية', Icon: Box, required: false },
-        { id: 'products.price', label: 'السعر', Icon: Box, required: false },
-        { id: 'totalPrice', label: 'السعر الإجمالي', Icon: Box, required: false },
-        { id: 'deliveryType', label: 'نوع التوصيل', Icon: Box, required: false },
-        { id: 'note', label: 'ملاحظة', Icon: Box, required: false },
+        { id: 'fullName', label: t('google_sheets.mapping.fullname'), Icon: User, required: false },
+        { id: 'phone', label: t('google_sheets.mapping.phone'), Icon: Phone, required: true },
+        { id: 'address', label: t('google_sheets.mapping.address'), Icon: MapPin, required: false },
+        { id: 'state', label: t('google_sheets.mapping.state'), Icon: Map, required: false },
+        { id: 'city', label: t('google_sheets.mapping.city'), Icon: Map, required: false },
+        { id: 'products.name', label: t('google_sheets.mapping.product_name'), Icon: Box, required: false },
+        { id: 'products.sku', label: t('google_sheets.mapping.product_sku'), Icon: Box, required: false },
+        { id: 'products.quantity', label: t('google_sheets.mapping.quantity'), Icon: Box, required: false },
+        { id: 'products.price', label: t('google_sheets.mapping.price'), Icon: Box, required: false },
+        { id: 'totalPrice', label: t('google_sheets.mapping.total_price'), Icon: Box, required: false },
+        { id: 'deliveryType', label: t('google_sheets.mapping.delivery_type'), Icon: Box, required: false },
+        { id: 'note', label: t('google_sheets.mapping.note'), Icon: Box, required: false },
     ];
 
     const handleLinkAccount = () => {
         if (!user?.company?.id) {
-            setLastActionMessage({ type: 'warning', text: 'عذراً، لم يتم العثور على معرف الشركة.' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.config_not_saved') });
             return;
         }
 
@@ -515,7 +520,7 @@ export const IntegrationSettings: React.FC = () => {
                 if (authWindow) authWindow.close();
 
                 refetchSheets().then(() => {
-                    setLastActionMessage({ type: 'success', text: 'تم ربط الحساب بنجاح!' });
+                    setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.auth_success') });
                     setIsLinking(false);
                 });
             }
@@ -596,13 +601,13 @@ export const IntegrationSettings: React.FC = () => {
                 }
             });
 
-            setLastActionMessage({ type: 'success', text: newState ? 'تم تفعيل المزامنة التلقائية.' : 'تم إيقاف المزامنة التلقائية.' });
+            setLastActionMessage({ type: 'success', text: newState ? t('google_sheets.toasts.auto_sync_on') : t('google_sheets.toasts.auto_sync_off') });
 
         } catch (error: any) {
             console.error("Auto Sync Toggle Error", error);
             // Revert
             setIsAutoSyncActive(prev => ({ ...prev, [type]: !newState }));
-            setLastActionMessage({ type: 'warning', text: 'فشل تغيير حالة المزامنة.' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.sync_failed') });
         }
     };
 
@@ -614,17 +619,17 @@ export const IntegrationSettings: React.FC = () => {
 
         // 1. Basic Validation
         if (!sheetId) {
-            setLastActionMessage({ type: 'warning', text: 'يرجى إدخال معرف ورقة العمل (Spreadsheet ID).' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.enter_id') });
             return;
         }
 
         if (sheetValidation[type].status === 'error') {
-            setLastActionMessage({ type: 'warning', text: 'يرجى تصحيح معرف الملف قبل الحفظ.' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.correct_id') });
             return;
         }
 
         if (!sheetName) {
-            setLastActionMessage({ type: 'warning', text: 'يرجى اختيار ورقة العمل.' });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.select_sheet') });
             return;
         }
 
@@ -633,7 +638,7 @@ export const IntegrationSettings: React.FC = () => {
         if (missing.length > 0) {
             setLastActionMessage({
                 type: 'warning',
-                text: `يرجى مطابقة: ${missing.map(f => f.label).join('، ')}`
+                text: t('google_sheets.toasts.map_missing', { fields: missing.map(f => f.label).join('، ') })
             });
             return;
         }
@@ -674,13 +679,13 @@ export const IntegrationSettings: React.FC = () => {
             await refetchSheets();
 
             setIsConnecting(false);
-            setLastActionMessage({ type: 'success', text: `تم حفظ إعدادات ${type === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'} بنجاح.` });
+            setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.save_success', { type: type === 'new' ? t('google_sheets.tabs.new_orders') : t('google_sheets.tabs.abandoned_orders') }) });
             setCurrentStep(3);
 
         } catch (error: any) {
             console.error("Save error:", error);
             setIsConnecting(false);
-            setLastActionMessage({ type: 'warning', text: `حدث خطأ أثناء الحفظ: ${error.message}` });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.save_error', { error: error.message }) });
         }
     };
 
@@ -703,14 +708,14 @@ export const IntegrationSettings: React.FC = () => {
             if (data?.allRowsSheetsWithFirstRow && Array.isArray(data.allRowsSheetsWithFirstRow) && data.allRowsSheetsWithFirstRow.length > 1) {
                 // The result is [Headers, Row1, Row2...]
                 setStagedData(prev => ({ ...prev, [activeView]: data.allRowsSheetsWithFirstRow }));
-                setLastActionMessage({ type: 'success', text: `تم جلب ${data.allRowsSheetsWithFirstRow.length - 1} سجل بنجاح.` });
+                setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.fetch_success', { count: data.allRowsSheetsWithFirstRow.length - 1 }) });
             } else {
                 setStagedData(prev => ({ ...prev, [activeView]: [] }));
-                setLastActionMessage({ type: 'warning', text: 'لم يتم العثور على بيانات جديدة.' });
+                setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.no_new_data') });
             }
         } catch (err) {
             console.error(err);
-            setLastActionMessage({ type: 'error', text: 'حدث خطأ أثناء جلب البيانات.' });
+            setLastActionMessage({ type: 'error', text: t('google_sheets.toasts.fetch_error') });
         } finally {
             setIsSyncing(false);
         }
@@ -722,7 +727,7 @@ export const IntegrationSettings: React.FC = () => {
         try {
             const config = configs[activeView];
             if (!config.dbId || !googleAccount?.id) {
-                setLastActionMessage({ type: 'warning', text: 'الإعدادات غير محفوظة أو حساب Google غير متصل.' });
+                setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.config_not_saved') });
                 setIsAddingToDb(false);
                 return;
             }
@@ -736,7 +741,7 @@ export const IntegrationSettings: React.FC = () => {
             });
 
             if (data?.createMultiOrderFromSheets?.status) {
-                setLastActionMessage({ type: 'success', text: `تم حفظ ${stagedData[activeView].length} طلب بنجاح.` });
+                setLastActionMessage({ type: 'success', text: t('google_sheets.toasts.add_success', { count: stagedData[activeView].length }) });
 
                 // Clear staged data as it is now processed
                 setStagedData(prev => ({ ...prev, [activeView]: [] }));
@@ -744,12 +749,12 @@ export const IntegrationSettings: React.FC = () => {
                 // Refetch to get updated startRow/lastSyncedRow
                 await refetchSheets();
             } else {
-                setLastActionMessage({ type: 'warning', text: 'فشلت عملية الحفظ. يرجى المحاولة مرة أخرى.' });
+                setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.add_failed') });
             }
 
         } catch (error: any) {
             console.error("Batch save error:", error);
-            setLastActionMessage({ type: 'warning', text: `حدث خطأ أثناء الحفظ: ${error.message}` });
+            setLastActionMessage({ type: 'warning', text: t('google_sheets.toasts.save_error', { error: error.message }) });
         } finally {
             setIsAddingToDb(false);
         }
@@ -795,14 +800,14 @@ export const IntegrationSettings: React.FC = () => {
             <div className="space-y-4">
                 <div className="space-y-1 relative">
                     <div className="flex justify-between">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Spreadsheet ID</label>
-                        {sheetValidation[type].status === 'loading' && <span className="text-[9px] font-bold text-indigo-500 animate-pulse flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> جاري البحث...</span>}
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('google_sheets.fields.spreadsheet_id')}</label>
+                        {sheetValidation[type].status === 'loading' && <span className="text-[9px] font-bold text-indigo-500 animate-pulse flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> {t('google_sheets.actions.searching')}</span>}
                     </div>
                     <input
                         type="text"
                         value={configs[type].id}
                         onChange={(e) => updateConfig(type, 'id', e.target.value)}
-                        placeholder="مثال: 1BxiMvs0XRA5..."
+                        placeholder="Ex: 1BxiMvs0XRA5..."
                         className={inputClass}
                     />
                     {sheetValidation[type].status === 'error' && (
@@ -813,7 +818,7 @@ export const IntegrationSettings: React.FC = () => {
                     )}
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">اسم الورقة</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('google_sheets.fields.sheet_name')}</label>
                     {sheetValidation[type].status === 'success' && sheetValidation[type].sheets.length > 0 ? (
                         <div className="relative">
                             <select
@@ -821,7 +826,7 @@ export const IntegrationSettings: React.FC = () => {
                                 onChange={(e) => updateConfig(type, 'name', e.target.value)}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pr-3.5 pl-8 text-xs font-bold focus:border-indigo-500/50 outline-none transition-all shadow-none appearance-none cursor-pointer"
                             >
-                                <option value="">اختر الورقة...</option>
+                                <option value="">{t('google_sheets.fields.select_column')}</option>
                                 {sheetValidation[type].sheets.map(sheet => (
                                     <option key={sheet.id || sheet.name} value={sheet.name}>{sheet.name}</option>
                                 ))}
@@ -847,16 +852,16 @@ export const IntegrationSettings: React.FC = () => {
         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 pb-12 max-w-5xl mx-auto">
             {/* Header & Progress Steps */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="text-right">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">إعدادات الربط</h2>
-                    <p className="text-[10px] text-slate-400 font-bold">إدارة ربط Google Sheets</p>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">{t('google_sheets.title')}</h2>
+                    <p className="text-[10px] text-slate-400 font-bold">{t('google_sheets.subtitle')}</p>
                 </div>
 
                 <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
                     {[
-                        { n: 1, l: 'الحساب', Icon: UserCog },
-                        { n: 2, l: 'الإعدادات', Icon: Sliders },
-                        { n: 3, l: 'التشغيل', Icon: Play }
+                        { n: 1, l: t('google_sheets.steps.link_account'), Icon: UserCog },
+                        { n: 2, l: t('google_sheets.steps.configure_sheets'), Icon: Sliders },
+                        { n: 3, l: t('google_sheets.steps.sync_data'), Icon: Play }
                     ].map((s) => {
                         const isStep2Enabled = isConnected;
                         const isStep3Enabled = isConnected && (configs.new.dbId || configs.abandoned.dbId);
@@ -898,7 +903,7 @@ export const IntegrationSettings: React.FC = () => {
             {loadingSheets ? (
                 <div className="py-20 flex flex-col items-center justify-center space-y-4">
                     <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <p className="text-xs font-bold text-slate-400 animate-pulse">جاري التحقق من حالة الربط...</p>
+                    <p className="text-xs font-bold text-slate-400 animate-pulse">{t('google_sheets.actions.syncing')}</p>
                 </div>
             ) : (
                 <>
@@ -924,12 +929,12 @@ export const IntegrationSettings: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="text-center md:text-right flex-1 space-y-2">
+                                            <div className={`text-center ${isRtl ? 'md:text-right' : 'md:text-left'} flex-1 space-y-2`}>
                                                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[10px] font-black text-indigo-600">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
-                                                    Google Sheets متصل
+                                                    {t('google_sheets.file_ready')}
                                                 </div>
-                                                <h3 className="text-2xl font-black text-slate-900">{googleAccount.name || 'مستخدم Google'}</h3>
+                                                <h3 className="text-2xl font-black text-slate-900">{googleAccount.name || t('google_sheets.fields.google_user')}</h3>
                                                 <p className="text-sm font-bold text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-md inline-block ltr">{googleAccount.email}</p>
                                             </div>
 
@@ -949,7 +954,7 @@ export const IntegrationSettings: React.FC = () => {
                                         <div className="col-span-1 md:col-span-2">
                                             <h4 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2">
                                                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                                                الملفات المربوطة
+                                                {t('google_sheets.tabs.new_orders')} / {t('google_sheets.tabs.abandoned_orders')}
                                             </h4>
                                         </div>
 
@@ -961,14 +966,14 @@ export const IntegrationSettings: React.FC = () => {
                                                             <Table className="w-4 h-4" />
                                                         </div>
                                                         <span className={`px-2 py-1 rounded-md text-[9px] font-black ${sheet.typeOrder === 'new' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
-                                                            {sheet.typeOrder === 'new' ? 'طلبات جديدة' : 'طلبات متروكة'}
+                                                            {sheet.typeOrder === 'new' ? t('google_sheets.tabs.new_orders') : t('google_sheets.tabs.abandoned_orders')}
                                                         </span>
                                                     </div>
                                                     <h5 className="font-black text-slate-900 text-sm truncate" title={sheet.nameSheet}>{sheet.nameSheet}</h5>
                                                     <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 opacity-60 truncate">ID: {sheet.idFile}</p>
 
                                                     <div className="mt-4 pt-3 border-t border-slate-50 flex items-center justify-between">
-                                                        <p className="text-[9px] text-slate-400 font-bold">آخر قراءة: السطر {sheet.lastRowSynced || '-'}</p>
+                                                        <p className="text-[9px] text-slate-400 font-bold">{t('google_sheets.fields.start_row')}: {sheet.lastRowSynced || '-'}</p>
                                                         <a href={`https://docs.google.com/spreadsheets/d/${sheet.idFile}`} target="_blank" rel="noreferrer" className="text-indigo-500 hover:text-indigo-700 transition-colors">
                                                             <ExternalLink className="w-3 h-3" />
                                                         </a>
@@ -977,7 +982,7 @@ export const IntegrationSettings: React.FC = () => {
                                             ))
                                         ) : (
                                             <div className="col-span-1 md:col-span-2 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center">
-                                                <p className="text-xs font-bold text-slate-400">لم يتم إعداد أي أوراق عمل بعد.</p>
+                                                <p className="text-xs font-bold text-slate-400">{t('google_sheets.toasts.no_new_data')}</p>
                                             </div>
                                         )}
                                     </div>
@@ -987,8 +992,8 @@ export const IntegrationSettings: React.FC = () => {
                                             onClick={() => setCurrentStep(2)}
                                             className="bg-slate-900 text-white px-12 py-4 rounded-xl font-black hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-3 group"
                                         >
-                                            <span>متابعة الإعدادات</span>
-                                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                                            <span>{t('google_sheets.actions.save_config')}</span>
+                                            {isRtl ? <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> : <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                                         </button>
                                     </div>
                                 </div>
@@ -998,7 +1003,6 @@ export const IntegrationSettings: React.FC = () => {
                                     <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50/30 rounded-full -mr-20 -mt-20 blur-3xl"></div>
                                     <div className="relative inline-block">
                                         <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center text-3xl shadow-inner mx-auto group-hover:scale-105 transition-transform duration-500 border border-slate-100/50">
-                                            {/* Google Icon SVG */}
                                             <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -1006,16 +1010,13 @@ export const IntegrationSettings: React.FC = () => {
                                                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                                             </svg>
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-white animate-bounce shadow-sm">
-                                            <Plus className="w-4 h-4" />
-                                        </div>
                                     </div>
                                     <div className="space-y-2 relative z-10">
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">ربط الحساب</h3>
-                                        <p className="text-[11px] text-slate-500 font-bold max-w-xs mx-auto leading-relaxed">اربط متجرك بجداول بيانات Google للأتمتة الكاملة للطلبات.</p>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('google_sheets.steps.link_account')}</h3>
+                                        <p className="text-[11px] text-slate-500 font-bold max-w-xs mx-auto leading-relaxed">{t('google_sheets.subtitle')}</p>
                                     </div>
                                     <button onClick={handleLinkAccount} disabled={isLinking} className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-slate-900 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-600 transition-all shadow-lg">
-                                        {isLinking ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Plug className="w-5 h-5" /> ربط الحساب الآن</>}
+                                        {isLinking ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Plug className="w-5 h-5" /> {t('google_sheets.connect_account')}</>}
                                     </button>
                                 </div>
                             )}
@@ -1034,13 +1035,13 @@ export const IntegrationSettings: React.FC = () => {
                                             className="w-8 h-8 rounded-full border border-slate-200"
                                         />
                                         <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">الحساب المتصل</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{t('google_sheets.steps.link_account')}</p>
                                             <p className="text-xs font-black text-indigo-600 mt-1">{googleAccount.email}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => setShowDisconnectModal(true)} className="bg-rose-50 text-rose-500 px-3 py-1.5 rounded-lg text-[9px] font-black hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-1.5">
                                         <Unlink className="w-3 h-3" />
-                                        فصل
+                                        {t('google_sheets.disconnect_account')}
                                     </button>
                                 </div>
                             )}
@@ -1057,7 +1058,7 @@ export const IntegrationSettings: React.FC = () => {
                                         }`}
                                 >
                                     <ShoppingCart className="w-4 h-4" />
-                                    الطلبات الجديدة
+                                    {t('google_sheets.tabs.new_orders')}
                                     {activeMappingTab === 'new' && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>}
                                 </button>
                                 <button
@@ -1068,7 +1069,7 @@ export const IntegrationSettings: React.FC = () => {
                                         }`}
                                 >
                                     <Hourglass className="w-4 h-4" />
-                                    الطلبات المتروكة
+                                    {t('google_sheets.tabs.abandoned_orders')}
                                     {activeMappingTab === 'abandoned' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                                 </button>
                             </div>
@@ -1084,16 +1085,16 @@ export const IntegrationSettings: React.FC = () => {
                                             </div>
                                             <div>
                                                 <h3 className={`text-sm font-black ${activeMappingTab === 'new' ? 'text-indigo-900' : 'text-amber-900'}`}>
-                                                    إعدادات {activeMappingTab === 'new' ? 'الطلبات الجديدة' : 'الطلبات المتروكة'}
+                                                    {t('google_sheets.fields.sheet_name')} - {activeMappingTab === 'new' ? t('google_sheets.tabs.new_orders') : t('google_sheets.tabs.abandoned_orders')}
                                                 </h3>
-                                                <p className="text-[10px] text-slate-400 font-bold mt-1">قم بتحديد الملف والورقة لجلب البيانات منها</p>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-1">{t('google_sheets.subtitle')}</p>
                                             </div>
                                         </div>
                                         {configs[activeMappingTab].dbId && (
                                             <button
                                                 onClick={() => handleDeleteSheet(activeMappingTab)}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors border border-rose-100"
-                                                title="حذف الإعدادات"
+                                                title={t('common.delete') as any}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -1111,9 +1112,9 @@ export const IntegrationSettings: React.FC = () => {
                                         <div>
                                             <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
                                                 <Columns className="w-4 h-4 text-slate-400" />
-                                                مطابقة الأعمدة
+                                                {t('google_sheets.steps.map_columns')}
                                             </h3>
-                                            <p className="text-[10px] text-slate-400 font-bold mt-1">اختر العمود المناسب لكل حقل من حقول النظام</p>
+                                            <p className="text-[10px] text-slate-400 font-bold mt-1">{t('google_sheets.subtitle')}</p>
                                         </div>
                                     </div>
 
@@ -1153,7 +1154,7 @@ export const IntegrationSettings: React.FC = () => {
                                                             ) : (
                                                                 ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'].map(col => ({
                                                                     value: col,
-                                                                    label: `العمود ${col}`
+                                                                    label: isRtl ? `العمود ${col}` : `Column ${col}`
                                                                 }))
                                                             )}
                                                         />
@@ -1167,12 +1168,12 @@ export const IntegrationSettings: React.FC = () => {
 
                             <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
                                 <button onClick={() => setCurrentStep(1)} className="px-6 py-2.5 rounded-lg text-slate-400 font-black hover:text-slate-600 text-xs transition-all flex items-center gap-2">
-                                    <ArrowRight className="w-4 h-4" />
-                                    رجوع
+                                    {isRtl ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+                                    {t('common.back')}
                                 </button>
                                 <button onClick={handleSaveConfigs} disabled={isConnecting} className="bg-slate-900 text-white px-8 py-3 rounded-lg font-black hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100">
                                     {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    <span className="text-sm">حفظ الإعدادات</span>
+                                    <span className="text-sm">{t('google_sheets.actions.save_config')}</span>
                                 </button>
                             </div>
                         </div>
@@ -1186,7 +1187,7 @@ export const IntegrationSettings: React.FC = () => {
                                     className={`flex-1 py-3 rounded-lg font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'new' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
                                 >
                                     <ShoppingCart className="w-4 h-4" />
-                                    الطلبات الجديدة
+                                    {t('google_sheets.tabs.new_orders')}
                                     {isAutoSyncActive.new && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
                                 </button>
                                 <button
@@ -1194,7 +1195,7 @@ export const IntegrationSettings: React.FC = () => {
                                     className={`flex-1 py-3 rounded-lg font-black text-xs transition-all flex items-center justify-center gap-2 relative overflow-hidden ${activeView === 'abandoned' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
                                 >
                                     <Hourglass className="w-4 h-4" />
-                                    الطلبات المتروكة
+                                    {t('google_sheets.tabs.abandoned_orders')}
                                     {isAutoSyncActive.abandoned && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
                                 </button>
                             </div>
@@ -1202,10 +1203,10 @@ export const IntegrationSettings: React.FC = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                                 <div className="lg:col-span-1 space-y-5">
                                     <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-6">
-                                        <div className="text-right flex items-center justify-between">
+                                        <div className={`${isRtl ? 'text-right' : 'text-left'} flex items-center justify-between`}>
                                             <div>
-                                                <h4 className="text-base font-black text-slate-900">المزامنة</h4>
-                                                <p className="text-[9px] text-slate-400 font-bold mt-1">التحكم في سطر القراءة</p>
+                                                <h4 className="text-base font-black text-slate-900">{t('google_sheets.steps.sync_data')}</h4>
+                                                <p className="text-[9px] text-slate-400 font-bold mt-1">{t('google_sheets.fields.start_row')}</p>
                                             </div>
                                             <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                                                 <Sliders className="w-4 h-4" />
@@ -1214,7 +1215,7 @@ export const IntegrationSettings: React.FC = () => {
 
                                         <div className="space-y-5">
                                             <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 text-center space-y-2.5">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">السطر الحالي</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('google_sheets.fields.start_row')}</p>
                                                 <div className="text-5xl font-black text-indigo-600 tracking-tighter leading-none">{configs[activeView].startRow}</div>
                                                 <div className="flex items-center justify-center gap-2.5 mt-3">
                                                     <button onClick={() => updateConfig(activeView, 'startRow', Math.max(2, configs[activeView].startRow - 1))} className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all flex items-center justify-center shadow-none"><Minus className="w-3 h-3" /></button>
@@ -1229,7 +1230,7 @@ export const IntegrationSettings: React.FC = () => {
                                                     className="w-full py-4 rounded-xl bg-slate-900 text-white font-black shadow-none hover:bg-slate-800 disabled:opacity-30 transition-all flex items-center justify-center gap-2.5"
                                                 >
                                                     {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                                                    <span className="text-sm">سحب دفعة</span>
+                                                    <span className="text-sm">{t('google_sheets.actions.fetch_data')}</span>
                                                 </button>
 
                                                 {stagedData[activeView].length > 0 && (
@@ -1239,7 +1240,7 @@ export const IntegrationSettings: React.FC = () => {
                                                         className="w-full py-4 rounded-xl bg-emerald-500 text-white font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-2.5 animate-bounce shadow-sm"
                                                     >
                                                         {isAddingToDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
-                                                        <span className="text-sm">تأكيد الإضافة</span>
+                                                        <span className="text-sm">{t('google_sheets.actions.add_to_db')}</span>
                                                     </button>
                                                 )}
 
@@ -1249,7 +1250,7 @@ export const IntegrationSettings: React.FC = () => {
                                                         className="w-full py-3.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-black hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-200 transition-all flex items-center justify-center gap-2 text-xs"
                                                     >
                                                         <Bot className="w-4 h-4" />
-                                                        تشغيل آلي
+                                                        {t('google_sheets.fields.auto_sync')}
                                                     </button>
                                                 )}
                                             </div>
@@ -1258,11 +1259,11 @@ export const IntegrationSettings: React.FC = () => {
                                         <div className="pt-5 border-t border-slate-50 space-y-2">
                                             <button onClick={() => setCurrentStep(2)} className="w-full text-[9px] font-black text-slate-400 hover:text-indigo-600 transition-all py-1.5 flex items-center justify-center gap-2">
                                                 <Settings className="w-3 h-3" />
-                                                تعديل الإعدادات
+                                                {t('google_sheets.actions.edit_settings')}
                                             </button>
                                             <button onClick={() => setShowDisconnectModal(true)} className="w-full text-[9px] font-black text-rose-400 hover:text-rose-600 transition-all py-1.5 flex items-center justify-center gap-2">
                                                 <Unlink className="w-3 h-3" />
-                                                فصل الحساب
+                                                {t('google_sheets.disconnect_account')}
                                             </button>
                                         </div>
                                     </div>
@@ -1277,16 +1278,18 @@ export const IntegrationSettings: React.FC = () => {
                                                     <span className="w-2 h-2 rounded-full bg-slate-300"></span>
                                                 )}
                                                 <p className={`text-[10px] font-black uppercase tracking-widest ${isAutoSyncActive[activeView] ? 'text-indigo-300' : 'text-slate-400'}`}>
-                                                    {isAutoSyncActive[activeView] ? 'أتمتة WILO نشطة' : 'أتمتة WILO متوقفة'}
+                                                    {isAutoSyncActive[activeView]
+                                                        ? `${t('google_sheets.fields.auto_sync')} ${t('google_sheets.fields.status_active')}`
+                                                        : `${t('google_sheets.fields.auto_sync')} ${t('google_sheets.fields.status_inactive')}`}
                                                 </p>
                                             </div>
 
                                             <div className="space-y-0.5">
                                                 <p className={`text-base font-black tracking-tight ${isAutoSyncActive[activeView] ? 'text-white' : 'text-slate-900'}`}>
-                                                    المزامنة التلقائية
+                                                    {t('google_sheets.fields.auto_sync')}
                                                 </p>
                                                 <p className={`text-[10px] font-bold ${isAutoSyncActive[activeView] ? 'text-slate-400' : 'text-slate-400'}`}>
-                                                    فحص دوري كل 5 دقائق
+                                                    {t('google_sheets.fields.check_interval')}
                                                 </p>
                                             </div>
 
@@ -1299,12 +1302,12 @@ export const IntegrationSettings: React.FC = () => {
                                                 {isAutoSyncActive[activeView] ? (
                                                     <>
                                                         <Minus className="w-3 h-3" />
-                                                        إيقاف المزامنة
+                                                        {t('google_sheets.actions.auto_sync_off')}
                                                     </>
                                                 ) : (
                                                     <>
                                                         <Bot className="w-3 h-3" />
-                                                        تفعيل المزامنة
+                                                        {t('google_sheets.actions.auto_sync_on')}
                                                     </>
                                                 )}
                                             </button>
@@ -1317,15 +1320,15 @@ export const IntegrationSettings: React.FC = () => {
                                         <div className="flex items-center justify-between mb-6">
                                             <div>
                                                 <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                                                    مراجعة بيانات {activeView === 'new' ? 'الجديدة' : 'المتروكة'}
+                                                    {t('google_sheets.steps.sync_data')} - {activeView === 'new' ? t('google_sheets.tabs.new_orders') : t('google_sheets.tabs.abandoned_orders')}
                                                 </h3>
-                                                <p className="text-[10px] text-slate-400 font-bold mt-1">تأكد من مطابقة السجلات قبل الترحيل</p>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-1">{t('google_sheets.subtitle')}</p>
                                             </div>
                                         </div>
 
                                         {stagedData[activeView].length > 0 ? (
                                             <div className="flex-1 overflow-x-auto">
-                                                <table className="w-full text-right border-separate border-spacing-y-2">
+                                                <table className={`w-full ${isRtl ? 'text-right' : 'text-left'} border-separate border-spacing-y-2`}>
                                                     <thead>
                                                         <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                                             <th className="pb-2 px-3">#</th>
@@ -1337,7 +1340,7 @@ export const IntegrationSettings: React.FC = () => {
                                                     <tbody>
                                                         {stagedData[activeView].slice(1).map((row: any[], i) => (
                                                             <tr key={i} className="hover:bg-slate-50 transition-all group bg-slate-50/30">
-                                                                <td className="py-3 px-3 rounded-r-lg">
+                                                                <td className={`py-3 px-3 ${isRtl ? 'rounded-r-lg' : 'rounded-l-lg'}`}>
                                                                     <span className="text-[10px] font-black text-slate-300">#{configs[activeView].startRow + i}</span>
                                                                 </td>
                                                                 {row.map((cell: any, j: number) => (
@@ -1366,7 +1369,9 @@ export const IntegrationSettings: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <h4 className="text-base font-black text-slate-900 tracking-tight">{isSyncing ? 'جاري السحب...' : (isAutoSyncActive[activeView] ? 'المزاينة الآلية نشطة' : 'لا توجد بيانات بانتظار المراجعة')}</h4>
+                                                <h4 className="text-base font-black text-slate-900 tracking-tight">
+                                                  {isSyncing ? t('google_sheets.actions.syncing') : (isAutoSyncActive[activeView] ? `${t('google_sheets.fields.auto_sync')} ${t('google_sheets.fields.status_active')}` : t('google_sheets.toasts.no_new_data'))}
+                                                </h4>
                                             </div>
                                         )}
 
@@ -1377,8 +1382,8 @@ export const IntegrationSettings: React.FC = () => {
                                                         <Database className="w-6 h-6 text-emerald-500" />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <h4 className="text-lg font-black text-slate-900">جاري الترحيل...</h4>
-                                                        <p className="text-[10px] font-bold text-slate-400">يتم الآن نقل البيانات لنظام WILO وتحديث السطر.</p>
+                                                        <h4 className="text-lg font-black text-slate-900">{t('google_sheets.actions.migrating')}</h4>
+                                                        <p className="text-[10px] font-bold text-slate-400">{t('google_sheets.actions.migrating_desc')}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1399,11 +1404,9 @@ export const IntegrationSettings: React.FC = () => {
                             <AlertTriangle className="w-8 h-8 text-rose-500" />
                         </div>
                         <div className="text-center space-y-2 mb-6">
-                            <h3 className="text-xl font-black text-slate-900">فصل الحساب؟</h3>
+                            <h3 className="text-xl font-black text-slate-900">{t('google_sheets.disconnect_confirm_title')}</h3>
                             <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                                هل أنت متأكد من رغبتك في فصل حساب Google Sheets؟
-                                <br />
-                                <span className="text-rose-500">سيتم فقدان جميع إعدادات الربط الحالية.</span>
+                                {t('google_sheets.disconnect_confirm_desc')}
                             </p>
                         </div>
                         <div className="flex gap-3">
@@ -1411,7 +1414,7 @@ export const IntegrationSettings: React.FC = () => {
                                 onClick={() => setShowDisconnectModal(false)}
                                 className="flex-1 py-3 rounded-lg bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
                             >
-                                إلغاء
+                                {t('google_sheets.modal.cancel')}
                             </button>
                             <button
                                 onClick={confirmDisconnect}
@@ -1419,7 +1422,7 @@ export const IntegrationSettings: React.FC = () => {
                                 className="flex-1 py-3 rounded-lg bg-rose-500 text-white font-black hover:bg-rose-600 transition-colors flex items-center justify-center gap-2"
                             >
                                 {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                <span>تأكيد الفصل</span>
+                                <span>{t('google_sheets.disconnect_account')}</span>
                             </button>
                         </div>
                     </div>
@@ -1434,20 +1437,20 @@ export const IntegrationSettings: React.FC = () => {
                             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
                                 <FileSpreadsheet className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-black text-slate-900">إنشاء ملف جديد</h3>
+                            <h3 className="text-xl font-black text-slate-900">{t('google_sheets.create_new_file')}</h3>
                             <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                                أدخل اسم الملف الجديد الذي سيتم إنشاؤه في حساب Google Sheets الخاص بك.
+                                {t('google_sheets.fields.file_name_desc')}
                             </p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم الملف</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('google_sheets.fields.file_name')}</label>
                                 <input
                                     type="text"
                                     value={newFileName}
                                     onChange={(e) => setNewFileName(e.target.value)}
-                                    placeholder="مثال: LiteCRM Orders"
+                                    placeholder="Ex: LiteCRM Orders"
                                     className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:border-indigo-500/50 outline-none transition-all"
                                     autoFocus
                                 />
@@ -1458,7 +1461,7 @@ export const IntegrationSettings: React.FC = () => {
                                     onClick={() => setIsCreateModalOpen(false)}
                                     className="flex-1 py-3 rounded-lg bg-slate-50 text-slate-600 font-black hover:bg-slate-100 transition-colors"
                                 >
-                                    إلغاء
+                                    {t('google_sheets.modal.cancel')}
                                 </button>
                                 <button
                                     onClick={handleConfirmCreate}
@@ -1466,7 +1469,7 @@ export const IntegrationSettings: React.FC = () => {
                                     className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isCreatingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                    <span>إنشاء</span>
+                                    <span>{t('google_sheets.actions.create')}</span>
                                 </button>
                             </div>
                         </div>

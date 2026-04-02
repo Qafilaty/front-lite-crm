@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // --- Input Field ---
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -8,17 +9,20 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input: React.FC<InputProps> = ({ label, error, icon, className, ...props }) => {
+    const { i18n } = useTranslation();
+    const isRtl = i18n.dir() === 'rtl';
+
     return (
         <div className="w-full">
             {label && <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>}
             <div className="relative">
                 {icon && (
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                    <div className={`absolute inset-y-0 ${isRtl ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none text-slate-400`}>
                         {icon}
                     </div>
                 )}
                 <input
-                    className={`block w-full rounded-lg border-gray-300 border bg-white py-2.5 ${icon ? 'pr-10 pl-3' : 'px-3'} text-sm text-slate-900 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 transition-colors disabled:bg-gray-100 disabled:text-gray-500 ${className}`}
+                    className={`block w-full rounded-lg border-gray-300 border bg-white py-2.5 ${icon ? (isRtl ? 'pr-10 pl-3' : 'pl-10 pr-3') : 'px-3'} text-sm text-slate-900 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 transition-colors disabled:bg-gray-100 disabled:text-gray-500 ${className}`}
                     {...props}
                 />
             </div>
@@ -44,7 +48,6 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, className, ...props }
     );
 };
 
-// --- Toggle Switch ---
 interface ToggleProps {
     checked: boolean;
     onChange: (checked: boolean) => void;
@@ -52,15 +55,22 @@ interface ToggleProps {
 }
 
 export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label }) => {
+    const { i18n } = useTranslation();
+    const isRtl = i18n.dir() === 'rtl';
+
     return (
-        <div className="flex items-center cursor-pointer" onClick={() => onChange(!checked)}>
-            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${checked ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+        <div className={`flex items-center cursor-pointer group ${isRtl ? 'flex-row-reverse' : 'flex-row'}`} onClick={() => onChange(!checked)}>
+            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${checked ? 'bg-indigo-600' : 'bg-slate-200'}`}>
                 <span
                     aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? '-translate-x-5' : 'translate-x-0'}`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${checked ? (isRtl ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'}`}
                 />
             </div>
-            {label && <span className="mr-3 text-sm font-medium text-slate-700">{label}</span>}
+            {label && (
+                <span className={`${isRtl ? 'mr-3' : 'ml-3'} text-sm font-semibold text-slate-700 select-none group-hover:text-slate-900 transition-colors`}>
+                    {label}
+                </span>
+            )}
         </div>
     );
 };

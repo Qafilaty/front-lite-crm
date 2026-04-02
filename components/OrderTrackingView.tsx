@@ -19,7 +19,10 @@ import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
-import { ModernSelect, PaginationControl } from './common';
+import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
+import { formatCurrency } from '../utils/formatters';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
 
 interface OrderTrackingViewProps {
   orders?: Order[];
@@ -27,6 +30,7 @@ interface OrderTrackingViewProps {
 }
 
 const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOrders = [], setOrders: setParentOrders }) => {
+  const { t, i18n } = useTranslation();
   // Use GET_CURRENT_USER for reliable company ID
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const user = userData?.currentUser;
@@ -77,6 +81,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const [stateFilter, setStateFilter] = useState('all');
   const [confirmerFilter, setConfirmerFilter] = useState('all');
   const [isAbandonedFilter, setIsAbandonedFilter] = useState(false); // New Filter State
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null, key: 'all' });
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // New state for collapsible filters
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -187,6 +192,13 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
       filter.idConfirmed = confirmerFilter;
     }
 
+    // Date Range Filter
+    if (dateRange.startDate || dateRange.endDate) {
+      filter.createdAt = {};
+      if (dateRange.startDate) filter.createdAt.$gte = dateRange.startDate;
+      if (dateRange.endDate) filter.createdAt.$lte = dateRange.endDate;
+    }
+
     // Search Term
     if (searchTerm) {
       const regex = { $regex: searchTerm, $options: 'i' };
@@ -199,7 +211,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     }
 
     return filter;
-  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, trackingStatuses, isAbandonedFilter, confirmerFilter]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, searchTerm, trackingStatuses, isAbandonedFilter, confirmerFilter, dateRange]);
 
   // 4. Fetch Orders
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
@@ -231,16 +243,22 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     return null;
   };
 
+  const getStatusLabel = (s: any): string => {
+    if (typeof s === 'object' && s !== null) return getTranslatedName(s, i18n.language);
+    const label = statusLabels[s] || s;
+    return label ? t(label) : t('common.not_specified');
+  };
+
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="animate-in slide-in-from-right duration-500">
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">تتبع الطرود (Logistics)</h2>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">تحديث مسارات الشحن والتسليم</p>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('tracking.title')}</h2>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('tracking.subtitle')}</p>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4 relative z-[20]">
         <div className="flex flex-col gap-4">
           {/* Top Row: Search + Filter Toggle */}
           <div className="flex items-center gap-3">
@@ -248,7 +266,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
               <input
                 type="text"
-                placeholder="بحث سريع... (الكود، الاسم، الهاتف)"
+                placeholder={t('tracking.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
@@ -262,7 +280,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               title="عرض الطلبات المتروكة فقط"
             >
               <AlertTriangle className={`w-4 h-4 ${isAbandonedFilter ? 'fill-rose-600' : ''}`} />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">المتروكة</span>
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('tracking.abandoned_only')}</span>
             </button>
 
             <button
@@ -270,7 +288,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
             >
               <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('tracking.filter')}</span>
               {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all' || confirmerFilter !== 'all') && (
                 <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
                   {[storeFilter, stateFilter, productFilter, confirmerFilter].filter(f => f !== 'all').length}
@@ -288,7 +306,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
               >
                 <LayoutList className="w-4 h-4" />
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('tracking.columns')}</span>
               </button>
 
               {isColumnsMenuOpen && (
@@ -296,19 +314,19 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   onClick={(e) => e.stopPropagation()}
                   className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
                 >
-                  <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                  <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('tracking.columns_toggle.show')}</p>
                   <div className="space-y-1">
                     {Object.keys(visibleColumns).map(key => {
                       if (key === 'actions') return null;
                       const labels: any = {
-                        customerInfo: 'العميل',
-                        locationInfo: 'الموقع',
-                        orderSummary: 'الطلبية',
-                        trackingInfo: 'كود التتبع',
-                        confirmedBy: 'مؤكد الطلب',
-                        financials: 'المالية',
-                        status: 'الحالة',
-                        communication: 'التواصل'
+                        customerInfo: t('tracking.columns_toggle.customerInfo'),
+                        locationInfo: t('tracking.columns_toggle.locationInfo'),
+                        orderSummary: t('tracking.columns_toggle.orderSummary'),
+                        trackingInfo: t('tracking.columns_toggle.trackingInfo'),
+                        confirmedBy: t('tracking.columns_toggle.confirmedBy'),
+                        financials: t('tracking.columns_toggle.financials'),
+                        status: t('tracking.columns_toggle.status'),
+                        communication: t('tracking.columns_toggle.communication')
                       };
                       return (
                         <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
@@ -330,14 +348,22 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
           {/* Collapsible Filters Area */}
           {isFiltersOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 px-2">المؤكد</span>
+                <span className="text-[9px] font-black text-slate-400 px-2">{t('common.date')}</span>
+                <DateRangeSelector
+                  value={dateRange}
+                  onChange={setDateRange}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-slate-400 px-2">{t('tracking.confirmer')}</span>
                 <ModernSelect
                   value={confirmerFilter}
                   onChange={setConfirmerFilter}
                   options={[
-                    { value: 'all', label: 'جميع المؤكدين' },
+                    { value: 'all', label: t('tracking.all_confirmers') },
                     ...(usersData?.allUser
                       ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation')
                       ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
@@ -348,12 +374,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
+                <span className="text-[9px] font-black text-slate-400 px-2">{t('tracking.store')}</span>
                 <ModernSelect
                   value={storeFilter}
                   onChange={setStoreFilter}
                   options={[
-                    { value: 'all', label: 'جميع المتاجر' },
+                    { value: 'all', label: t('tracking.all_stores') },
                     ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
                   ]}
                   className="w-full"
@@ -362,12 +388,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 px-2">المنتج</span>
+                <span className="text-[9px] font-black text-slate-400 px-2">{t('tracking.product')}</span>
                 <ModernSelect
                   value={productFilter}
                   onChange={setProductFilter}
                   options={[
-                    { value: 'all', label: 'جميع المنتجات' },
+                    { value: 'all', label: t('tracking.all_products') },
                     ...(productsData?.allProduct?.data?.map((p: any) => ({ value: p.id, label: p.name })) || [])
                   ]}
                   className="w-full"
@@ -376,12 +402,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 px-2">الولاية</span>
+                <span className="text-[9px] font-black text-slate-400 px-2">{t('tracking.wilaya')}</span>
                 <ModernSelect
                   value={stateFilter}
                   onChange={setStateFilter}
                   options={[
-                    { value: 'all', label: 'جميع الولايات' },
+                    { value: 'all', label: t('tracking.all_wilayas') },
                     ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
                   ]}
                   className="w-full"
@@ -427,7 +453,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                       : `bg-white text-slate-500 border-transparent hover:bg-slate-50 shadow-sm`}`}
                 >
                   <div className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'all' ? 'bg-white' : 'bg-slate-300'}`} />
-                  الكل
+                  {t('tracking.all_statuses')}
                 </button>
                 {trackingStatuses.map((s: any) => {
                   if (!s) return null;
@@ -450,7 +476,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                       } : {})}
                     >
                       {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />}
-                      {s.nameAR || s.nameEN}
+                      {getTranslatedName(s, i18n.language)}
                     </button>
                   );
                 })}
@@ -467,30 +493,29 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-right border-collapse min-w-[1100px]">
+            <table className={`w-full border-collapse min-w-[1100px] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
-                  {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">التواصل</th>}
-                  {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
-                  {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
-                  {(visibleColumns as any).trackingInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">كود التتبع</th>}
-                  {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
-                  {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية</th>}
-                  {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
+                  {(visibleColumns as any).customerInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.customer')}</th>}
+                  {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">{t('tracking.table.communication')}</th>}
+                  {(visibleColumns as any).locationInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.location')}</th>}
+                  {(visibleColumns as any).orderSummary && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.order')}</th>}
+                  {(visibleColumns as any).trackingInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.tracking_code')}</th>}
+                  {(visibleColumns as any).confirmedBy && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.confirmed_by')}</th>}
+                  {(visibleColumns as any).financials && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.financials')}</th>}
+                  {(visibleColumns as any).status && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.status')}</th>}
+                  <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.date')}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">{t('tracking.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {orders.map((order) => {
                   const statusStyle = getStatusStyle(order.status);
-                  const statusName = typeof order.status === 'object' && order.status ? ((order.status as any).nameAR || (order.status as any).nameEN) : order.status;
+                  const statusLabel = getStatusLabel(order.status);
                   const trackingCode = order.deliveryCompany?.trackingCode || '-';
                   const displayItems = order.products || order.items || [];
 
-                  // Row Coloring Logic
-                  let hexColor = '#64748b'; // Default
+                  let hexColor = '#64748b';
                   if (typeof order.status === 'string') {
                     const hexMap: Record<string, string> = {
                       confirmed: '#4f46e5', delivered: '#10b981', pending: '#64748b', cancelled: '#e11d48',
@@ -511,10 +536,8 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                       style={{ backgroundColor: `${hexColor}08` }}
                     >
 
-                      {/* Customer Info */}
-                      {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
+                      {(visibleColumns as any).customerInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex items-center gap-4">
-                          {/* Avatar */}
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shadow-sm shrink-0 uppercase transition-transform group-hover:scale-110 duration-300 ring-2 ring-offset-2 ring-offset-white
                               ${(() => {
                               const name = order.fullName || order.customer || '?';
@@ -537,10 +560,9 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                             </span>
                           </div>
 
-                          {/* Info */}
                           <div className="flex flex-col gap-1">
                             <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                              {order.fullName || order.customer || 'زائر'}
+                              {order.fullName || order.customer || t('tracking.labels.visitor')}
                             </p>
                             <div className="flex items-center gap-2">
                               <span className={`text-[10px] font-bold font-mono tracking-tight text-slate-400 dir-ltr`}>
@@ -553,7 +575,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                                     setSearchTerm(order.phone);
                                   }}
                                   className="px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
-                                  title={`${order.duplicatePhone} طلبات لهذا الرقم`}
+                                  title={`${order.duplicatePhone} ${t('tracking.labels.orders_count')}`}
                                 >
                                   <span className="text-[9px] font-black">{order.duplicatePhone}</span>
                                   <RefreshCw className="w-2.5 h-2.5" />
@@ -564,17 +586,16 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         </div>
                       </td>}
 
-                        {/* Communication Buttons */}
                         {(visibleColumns as any).communication && (
-                          <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-4 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(order.phone);
-                                  toast.success('تم نسخ الرقم!');
+                                  toast.success(t('tracking.labels.copied'));
                                 }}
                                 className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100"
-                                title="نسخ الرقم"
+                                title={t('tracking.labels.copy_phone')}
                               >
                                 <Copy size={14} />
                               </button>
@@ -582,7 +603,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                               <a
                                 href={`sms:${order.phone.replace(/\s/g, '')}`}
                                 className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100"
-                                title="إرسال SMS"
+                                title={t('tracking.labels.send_sms')}
                               >
                                 <MessageSquare size={14} />
                               </a>
@@ -590,17 +611,24 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                               <button
                                 onClick={() => {
                                   const phone = order.phone.replace(/\s/g, '');
-                                  const name = order.fullName || order.customer || 'عميلنا العزيز';
-                                  const storeName = order.store?.store?.name || 'متجرنا';
+                                  const name = order.fullName || order.customer || t('tracking.labels.visitor');
+                                  const storeName = order.store?.store?.name || '';
                                   const products = (order.products || order.items || []).map((p: any) => p.product?.name || p.name).join(', ');
                                   const total = order.totalPrice || order.amount || 0;
-                                  const trCode = order.deliveryCompany?.trackingCode || 'غير متوفر حاليا';
+                                  const trCode = order.deliveryCompany?.trackingCode || '-';
                                   
-                                  const message = `السلام عليكم ${name}، معك ${storeName}. بخصوص طلبك رقم #${order.numberOrder}${products ? ` (${products})` : ''}. يسعدنا إبلاغك بأن الطلبية قيد التوصيل بقيمة ${total} دج. رقم التتبع الخاص بك هو: ${trCode}`;
+                                  const message = t('tracking.labels.whatsapp_msg', {
+                                    name,
+                                    storeName,
+                                    orderNumber: order.numberOrder || '',
+                                    products,
+                                    total: formatCurrency(total),
+                                    trackingCode: trCode
+                                  });
                                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                 }}
                                 className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100"
-                                title="واتساب"
+                                title={t('tracking.labels.whatsapp')}
                               >
                                 <MessageCircle size={14} className="fill-current" />
                               </button>
@@ -608,8 +636,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                           </td>
                         )}
 
-                      {/* Location Info */}
-                      {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
+                      {(visibleColumns as any).locationInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5 ">
                             <MapPin className="w-3 h-3 text-slate-300" />
@@ -621,16 +648,15 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         </div>
                       </td>}
 
-                      {/* Order Summary (Products) */}
-                      {(visibleColumns as any).orderSummary && <td className="px-6 py-5">
+                      {(visibleColumns as any).orderSummary && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1 max-w-[200px]">
                           {displayItems && displayItems.length > 0 ? displayItems.slice(0, 2).map((item: any, idx: number) => {
                             const isProductMissing = !item.product;
                             return (
                               <span
                                 key={idx}
-                                className={`text-[9px] font-bold truncate block text-right ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
-                                title={isProductMissing ? 'هذا المنتج غير متوفر في المخزون (محذوف)' : item.name}
+                                className={`text-[9px] font-bold truncate block ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
+                                title={isProductMissing ? t('tracking.labels.missing_product') : item.name}
                               >
                                 {item?.product?.name || item.name} {(item.variantsProduct?.name || item.variant) ? `(${item.variantsProduct?.name || item.variant})` : ''}
                                 {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
@@ -639,16 +665,14 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                             );
                           }) : <span className="text-[9px] text-slate-300 font-bold">-</span>}
                           {displayItems && displayItems.length > 2 && (
-                            <span className="text-[8px] text-indigo-500 font-black">+ {displayItems.length - 2} المزيد</span>
+                            <span className="text-[8px] text-indigo-500 font-black">{t('tracking.labels.more_items', { count: displayItems.length - 2 })}</span>
                           )}
                         </div>
                       </td>}
 
-                      {/* Tracking Info */}
-                      {(visibleColumns as any).trackingInfo && <td className="px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{trackingCode}</td>}
+                      {(visibleColumns as any).trackingInfo && <td className={`px-6 py-5 font-black text-indigo-600 text-[11px] font-mono tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>#{trackingCode}</td>}
 
-                      {/* Confirmed By */}
-                      {(visibleColumns as any).confirmedBy && <td className="px-6 py-5">
+                      {(visibleColumns as any).confirmedBy && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         {order.confirmationTimeLine && order.confirmationTimeLine.length > 0 ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
@@ -663,24 +687,22 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         )}
                       </td>}
 
-                      {/* Financials */}
-                      {(visibleColumns as any).financials && <td className="px-6 py-5">
+                      {(visibleColumns as any).financials && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1.5 items-start">
-                          <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
+                          <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{formatCurrency(order.totalPrice || order.amount)}</span>
                           <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                             {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
-                            <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
+                            <span className="text-[9px] font-bold text-slate-500">{formatCurrency(order.shippingCost || order.deliveryPrice || 0)}</span>
                           </div>
                         </div>
                       </td>}
 
-                      {/* Status */}
-                      {(visibleColumns as any).status && <td className="px-6 py-5">
+                      {(visibleColumns as any).status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1 items-start">
                           {order.isAbandoned && (
                             <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1">
                               <AlertTriangle className="w-2.5 h-2.5" />
-                              متروك
+                              {t('tracking.labels.abandoned_badge')}
                             </span>
                           )}
                           <span className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center gap-2`}
@@ -707,26 +729,25 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
                               return <Icon className="w-3.5 h-3.5" />;
                             })()}
-                            {statusName}
+                            {statusLabel}
                           </span>
                         </div>
                       </td>}
 
-                      <td className="px-6 py-5">
+                      <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[10px] font-bold text-slate-700">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar') : '-'}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString(i18n.language) : '-'}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : ''}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                       </td>
 
-                      {/* Actions */}
                       <td className="px-6 py-5 text-center">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/tracking/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white transition-all mx-auto">
-                          تتبع <Eye className="w-3.5 h-3.5" />
+                          {t('tracking.labels.track_btn')} <Eye className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -734,7 +755,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">لا توجد شحنات تطابق معايير البحث</td>
+                    <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">{t('tracking.labels.empty_state')}</td>
                   </tr>
                 )}
               </tbody>

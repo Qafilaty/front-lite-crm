@@ -1,4 +1,5 @@
 import React from 'react';
+import './i18n'; // Import i18n configuration
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apolloClient';
@@ -78,6 +79,7 @@ const AppRoutes: React.FC = () => {
         <Route path="profit-simulator" element={<RequirePermission allowedView={View.PROFIT_SIMULATOR}><ProfitSimulatorPage /></RequirePermission>} />
         <Route path="integration-settings" element={<RequirePermission allowedView={View.INTEGRATION_SETTINGS}><IntegrationSettingsPage /></RequirePermission>} />
       </Route>
+
 
       {/* Catch all - redirect to dashboard */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

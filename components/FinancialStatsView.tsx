@@ -11,6 +11,7 @@ import {
    ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/formatters';
 
 interface FinancialStatsViewProps {
    transactions: Transaction[];
@@ -73,7 +74,7 @@ const FinancialStatsView: React.FC<FinancialStatsViewProps> = ({ transactions })
                </div>
                <div className="relative z-10">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المداخيل</p>
-                  <h3 className="text-2xl font-black text-slate-800 mt-1 font-mono tracking-tighter">{totals.income.toLocaleString()} <span className="text-xs opacity-40">دج</span></h3>
+                  <h3 className="text-2xl font-black text-slate-800 mt-1 font-mono tracking-tighter">{formatCurrency(totals.income)}</h3>
                </div>
             </div>
 
@@ -85,7 +86,7 @@ const FinancialStatsView: React.FC<FinancialStatsViewProps> = ({ transactions })
                </div>
                <div className="relative z-10">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المصروفات</p>
-                  <h3 className="text-2xl font-black text-slate-800 mt-1 font-mono tracking-tighter">{totals.expense.toLocaleString()} <span className="text-xs opacity-40">دج</span></h3>
+                  <h3 className="text-2xl font-black text-slate-800 mt-1 font-mono tracking-tighter">{formatCurrency(totals.expense)}</h3>
                </div>
             </div>
 
@@ -97,7 +98,7 @@ const FinancialStatsView: React.FC<FinancialStatsViewProps> = ({ transactions })
                </div>
                <div className="relative z-10">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">صافي السيولة النقدية</p>
-                  <h3 className="text-3xl font-black text-white mt-1 font-mono tracking-tighter">{totals.balance.toLocaleString()} <span className="text-xs opacity-40">دج</span></h3>
+                  <h3 className="text-3xl font-black text-white mt-1 font-mono tracking-tighter">{formatCurrency(totals.balance)}</h3>
                </div>
             </div>
          </div>
@@ -183,7 +184,7 @@ const FinancialStatsView: React.FC<FinancialStatsViewProps> = ({ transactions })
 
                <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي المنصرف</span>
-                  <span className="text-lg font-black text-rose-600 font-mono tracking-tighter">{totals.expense.toLocaleString()} دج</span>
+                  <span className="text-lg font-black text-rose-600 font-mono tracking-tighter">{formatCurrency(totals.expense)}</span>
                </div>
             </div>
          </div>

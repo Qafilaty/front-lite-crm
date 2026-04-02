@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Stats, Order, Product, OrderStatus, SubscriptionTier } from '../types';
 import {
   TrendingUp, Truck, Package, CheckCircle2,
@@ -13,7 +14,7 @@ import {
 
 import { statusLabels } from '../constants/statusConstants';
 import { StatsCard } from './StatsCard';
-import { ModernSelect, StatsSkeleton } from './common';
+import { ModernSelect, StatsSkeleton, DateRangeSelector, DateRange } from './common';
 
 interface DashboardViewProps {
   stats: Stats;
@@ -22,16 +23,13 @@ interface DashboardViewProps {
   subscriptionTier: SubscriptionTier;
   onUpgrade: () => void;
   isLoading?: boolean;
-  backendStats?: any; // Add backendStats prop
+  backendStats?: any;
+  dateRange: DateRange;
+  onDateRangeChange: (range: DateRange) => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, backendStats }) => {
-  if (isLoading) {
-    return <StatsSkeleton />;
-  }
-
-
-  const [dateRange, setDateRange] = useState('7days');
+const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, backendStats, dateRange, onDateRangeChange }) => {
+  const { t } = useTranslation();
 
   // 1. Calculate Metrics (Prefer backendStats if available)
   const metrics = useMemo(() => {
@@ -71,7 +69,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       return backendStats.salesGrowth;
     }
 
-    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const days = [
+      t('common.days.sun'),
+      t('common.days.mon'),
+      t('common.days.tue'),
+      t('common.days.wed'),
+      t('common.days.thu'),
+      t('common.days.fri'),
+      t('common.days.sat')
+    ];
     const today = new Date();
     const result = [];
     for (let i = 6; i >= 0; i--) {
@@ -87,7 +93,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         return created.toISOString().startsWith(dateStr);
       }).length;
 
-      result.push({ name: dayName, total: count });
+      result.push({ name: d.getDate().toString(), total: count });
     }
     return result;
   }, [orders, backendStats]);
@@ -121,7 +127,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       .slice(0, 7);
   }, [orders, backendStats]);
 
-
+  if (isLoading) {
+    return <StatsSkeleton />;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -130,16 +138,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       <section className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></span>
-          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">مباشر الآن</span>
+          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">{t('dashboard.live_now')}</span>
         </div>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">نظرة عامة</h1>
-          <button
-            className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
-          >
-            <HelpCircle className="w-5 h-5" />
-            كيف يعمل؟
-          </button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-20">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{t('dashboard.overview')}</h1>
+          <div className="flex items-center gap-3">
+             <DateRangeSelector 
+              value={dateRange}
+              onChange={onDateRangeChange}
+            />
+            <button
+              className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">{t('dashboard.how_it_works')}</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -150,14 +164,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
           {/* Left Side: Performance Stats & Recommendations */}
           <div className="flex-1 w-full space-y-8 order-2 lg:order-1">
             <div className="text-right">
-              <h2 className="text-2xl font-black text-slate-900">تحليل الأداء اللحظي</h2>
-              <p className="text-xs text-slate-400 font-bold mt-1">إحصائيات المبيعات والتوصيل المباشرة</p>
+              <h2 className="text-2xl font-black text-slate-900">{t('dashboard.realtime_performance')}</h2>
+              <p className="text-xs text-slate-400 font-bold mt-1">{t('dashboard.live_stats_desc')}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-400">معدل التأكيد</span>
+                  <span className="text-sm font-bold text-slate-400">{t('dashboard.conf_rate')}</span>
                   <span className="text-2xl font-black text-slate-900">{metrics.confRate}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -166,7 +180,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-400">معدل التوصيل</span>
+                  <span className="text-sm font-bold text-slate-400">{t('dashboard.deliv_rate')}</span>
                   <span className="text-2xl font-black text-slate-900">{metrics.delivRate}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -180,24 +194,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               {/* Confirmation Rate Alert */}
               {(() => {
                 const conf = parseFloat(metrics.confRate);
-                let message = 'معدل تأكيد جيد، حافظ عليه.';
+                let message = t('dashboard.messages.conf_good');
                 let Icon = CheckCircle2;
                 let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-100';
 
                 if (conf < 30) {
-                  message = 'معدل التأكيد منخفض جداً، يرجى مراجعة الاستراتيجية.';
+                  message = t('dashboard.messages.conf_low');
                   Icon = AlertTriangle;
                   colorClass = 'text-rose-600 bg-rose-50 border-rose-100';
                 } else if (conf >= 30 && conf < 50) {
-                  message = 'معدل التأكيد غير مستقر، يحتاج تحسين.';
+                  message = t('dashboard.messages.conf_unstable');
                   Icon = AlertTriangle;
                   colorClass = 'text-amber-600 bg-amber-50 border-amber-100';
                 } else if (conf >= 50 && conf < 70) {
-                  message = 'معدل تأكيد مستقر، جيد نسبياً.';
+                  message = t('dashboard.messages.conf_stable');
                   Icon = CheckCircle2;
                   colorClass = 'text-blue-600 bg-blue-50 border-blue-100';
                 } else {
-                  message = 'معدل تأكيد جيد، أداء ممتاز.';
+                  message = t('dashboard.messages.conf_excellent');
                 }
 
                 return (
@@ -206,7 +220,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">تنبيه التأكيد</p>
+                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">{t('dashboard.conf_alert')}</p>
                       <p className="text-xs font-bold leading-relaxed">{message}</p>
                     </div>
                   </div>
@@ -216,24 +230,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               {/* Delivery Rate Alert */}
               {(() => {
                 const deliv = parseFloat(metrics.delivRate);
-                let message = 'معدل توصيل جيد.';
+                let message = t('dashboard.messages.deliv_good');
                 let Icon = Truck;
                 let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-100';
 
                 if (deliv < 30) {
-                  message = 'معدل التوصيل منخفض جداً، راجع شركات التوصيل.';
+                  message = t('dashboard.messages.deliv_low');
                   Icon = AlertTriangle;
                   colorClass = 'text-rose-600 bg-rose-50 border-rose-100';
                 } else if (deliv >= 30 && deliv < 50) {
-                  message = 'معدل التوصيل غير مستقر.';
+                  message = t('dashboard.messages.deliv_unstable');
                   Icon = AlertTriangle;
                   colorClass = 'text-amber-600 bg-amber-50 border-amber-100';
                 } else if (deliv >= 50 && deliv < 70) {
-                  message = 'معدل توصيل مستقر.';
+                  message = t('dashboard.messages.deliv_stable');
                   Icon = CheckCircle2;
                   colorClass = 'text-blue-600 bg-blue-50 border-blue-100';
                 } else {
-                  message = 'معدل توصيل جيد، عمليات الشحن ممتازة.';
+                  message = t('dashboard.messages.deliv_excellent');
                 }
 
                 return (
@@ -242,7 +256,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">تنبيه التوصيل</p>
+                      <p className="text-[10px] font-black opacity-70 uppercase tracking-wider mb-0.5">{t('dashboard.deliv_alert')}</p>
                       <p className="text-xs font-bold leading-relaxed">{message}</p>
                     </div>
                   </div>
@@ -268,10 +282,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                 </div>
 
                 <div className="text-center space-y-2">
-                  <p className="text-xs font-bold text-indigo-100/80 tracking-widest uppercase">إجمالي المبيعات المحققة</p>
+                  <p className="text-xs font-bold text-indigo-100/80 tracking-widest uppercase">{t('dashboard.total_revenue')}</p>
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-4xl lg:text-5xl font-black tracking-tighter">{stats.revenue.toLocaleString()}</span>
-                    <span className="text-base font-bold text-indigo-200">دج</span>
+                    <span className="text-base font-bold text-indigo-200">{t('common.currency')}</span>
                   </div>
                 </div>
 
@@ -281,7 +295,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
                   </div>
                   <div className="flex items-center gap-2 bg-emerald-500/90 text-white px-3 py-1.5 rounded-lg text-[10px] font-black">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                    LIVE UPDATES
+                    {t('dashboard.live_updates')}
                   </div>
                 </div>
               </div>
@@ -297,16 +311,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
       {/* Quick Stats Grid */}
       <section id="stats-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          label="المبيعات الإجمالية"
+          label={t('dashboard.revenue_growth')}
           value={stats.revenue.toLocaleString()}
           change={`${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth}%`}
           changeType={metrics.revenueGrowth >= 0 ? "positive" : "negative"}
           icon={Banknote}
           iconBg="bg-amber-50 text-amber-500"
-          unit="دج"
+          unit={t('common.currency')}
         />
         <StatsCard
-          label="معدل التوصيل"
+          label={t('dashboard.deliv_rate')}
           value={`${metrics.delivRate}%`}
           change={`${metrics.deliveryRateGrowth > 0 ? '+' : ''}${metrics.deliveryRateGrowth}%`}
           changeType={metrics.deliveryRateGrowth >= 0 ? "positive" : "negative"}
@@ -314,7 +328,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
           iconBg="bg-blue-50 text-blue-500"
         />
         <StatsCard
-          label="معدل التأكيد"
+          label={t('dashboard.conf_rate')}
           value={`${metrics.confRate}%`}
           change={`${metrics.confirmationRateGrowth > 0 ? '+' : ''}${metrics.confirmationRateGrowth}%`}
           changeType={metrics.confirmationRateGrowth >= 0 ? "positive" : "negative"}
@@ -322,7 +336,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
           iconBg="bg-emerald-50 text-emerald-500"
         />
         <StatsCard
-          label="إجمالي الطلبيات"
+          label={t('dashboard.orders_growth')}
           value={orders.length > 0 ? orders.length : (backendStats?.totalOrders || 0)} // Use backend totalOrders if available
           change={`${metrics.ordersGrowth > 0 ? '+' : ''}${metrics.ordersGrowth}%`}
           changeType={metrics.ordersGrowth >= 0 ? "positive" : "negative"}
@@ -336,17 +350,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
-              <h3 className="text-xl font-black text-slate-900">نمو الطلبيات</h3>
-              <p className="text-xs text-slate-400 font-bold">تتبع الأداء الأسبوعي</p>
+              <h3 className="text-xl font-black text-slate-900">{t('dashboard.orders_chart')}</h3>
+              <p className="text-xs text-slate-400 font-bold">{t('dashboard.weekly_performance')}</p>
             </div>
-            {/* Dynamic filtering could be added here */}
-            <div className="w-40">
-              <ModernSelect
-                value={dateRange}
-                onChange={setDateRange}
-                options={[{ value: '7days', label: 'آخر 7 أيام' }]}
-              />
-            </div>
+            {/* Date range is controlled globally by the selector in the header */}
           </div>
           <div className="h-72" style={{ minHeight: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -373,8 +380,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
-              <h3 className="text-xl font-black text-slate-900">حالات التوصيل</h3>
-              <p className="text-xs text-slate-400 font-bold">توزيع الطلبات حسب الحالة</p>
+              <h3 className="text-xl font-black text-slate-900">{t('dashboard.delivery_status_chart')}</h3>
+              <p className="text-xs text-slate-400 font-bold">{t('dashboard.status_distribution')}</p>
             </div>
             <div className="flex gap-2">
               <button className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">

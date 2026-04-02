@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM, { createPortal } from 'react-dom';
+import { useQuery, useMutation } from '@apollo/client';
+import { formatDate, formatCurrency } from '../utils/formatters';
 import { User } from '../types';
-import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, UserCog, Search, ChevronRight, ChevronLeft, Coins, ShoppingBag, AlertTriangle, CheckCircle2, Copy } from 'lucide-react';
+import { UserPlus, Shield, Lock, Unlock, Mail, Clock, Trash2, Edit2, Check, X, UserCog, Search, ChevronRight, ChevronLeft, Coins, ShoppingBag, AlertTriangle, CheckCircle2, Copy, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TableSkeleton from './common/TableSkeleton';
 import DeleteConfirmationModal from './common/DeleteConfirmationModal';
-import { PaginationControl } from './common';
+import { PaginationControl, LoadingSpinner } from './common';
+import { GET_ALL_STAFF_QUEUE } from '../graphql/queries/staffQueueQueries';
+import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
+import { UPDATE_PRODUCT_ASSIGNMENTS_STAFF_QUEUE } from '../graphql/mutations/staffQueueMutations';
+import { useTranslation } from 'react-i18next';
 
 interface UsersViewProps {
   users: User[];
@@ -26,6 +32,7 @@ const UsersView: React.FC<UsersViewProps> = ({
   onToggleActivation,
   isLoading = false
 }) => {
+  const { t, i18n } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +59,20 @@ const UsersView: React.FC<UsersViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  // Assignment Modal States
+  const [assignmentUser, setAssignmentUser] = useState<User | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('');
+  const [isSavingAssignments, setIsSavingAssignments] = useState(false);
+
+  // Queries & Mutations
+  const { data: queueData, refetch: refetchQueue } = useQuery(GET_ALL_STAFF_QUEUE);
+  const { data: productsData } = useQuery(GET_ALL_PRODUCTS);
+  const [updateAssignments] = useMutation(UPDATE_PRODUCT_ASSIGNMENTS_STAFF_QUEUE);
+
+  const staffQueue = queueData?.allStaffQueue || {};
+  const allProducts = productsData?.allProduct?.data || [];
+
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -64,25 +85,25 @@ const UsersView: React.FC<UsersViewProps> = ({
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (!newUser.name) newErrors.name = 'الاسم مطلوب';
-    if (!newUser.email) newErrors.email = 'البريد مطلوب';
-    if (!newUser.phone) newErrors.phone = 'الهاتف مطلوب';
+    if (!newUser.name) newErrors.name = t('users.errors.name_required');
+    if (!newUser.email) newErrors.email = t('users.errors.email_required');
+    if (!newUser.phone) newErrors.phone = t('users.errors.phone_required');
 
     // Basic Email Validation
     if (newUser.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
-      newErrors.email = 'بريد إلكتروني غير صالح';
+      newErrors.email = t('users.errors.email_invalid');
     }
     // Basic Phone Validation
     if (newUser.phone && !/^(0)(5|6|7)[0-9]{8}$/.test(newUser.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+      newErrors.phone = t('users.errors.phone_invalid');
     }
     if (!newUser.password || newUser.password.length < 6) {
-      newErrors.password = 'كلمة المرور قصيرة (6 أحرف على الأقل)';
+      newErrors.password = t('users.errors.password_short');
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error('يرجى التحقق من الحقول');
+      toast.error(t('users.toasts.validation_error'));
       return;
     }
 
@@ -101,9 +122,9 @@ const UsersView: React.FC<UsersViewProps> = ({
       if (success) {
         setShowModal(false);
         setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0 });
-        toast.success('تم إضافة المستخدم بنجاح!');
+        toast.success(t('users.toasts.add_success'));
       } else {
-        toast.error('فشلت عملية الإضافة');
+        toast.error(t('users.toasts.add_failed'));
       }
     } finally {
       setIsSubmitting(false);
@@ -116,18 +137,18 @@ const UsersView: React.FC<UsersViewProps> = ({
     delete newErrors[field];
 
     if (field === 'name') {
-      if (!value) newErrors.name = 'الاسم مطلوب';
+      if (!value) newErrors.name = t('users.errors.name_required');
     }
     else if (field === 'email') {
-      if (!value) newErrors.email = 'البريد مطلوب';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) newErrors.email = 'بريد إلكتروني غير صالح';
+      if (!value) newErrors.email = t('users.errors.email_required');
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) newErrors.email = t('users.errors.email_invalid');
     }
     else if (field === 'phone') {
-      if (!value) newErrors.phone = 'الهاتف مطلوب';
-      else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+      if (!value) newErrors.phone = t('users.errors.phone_required');
+      else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = t('users.errors.phone_invalid');
     }
     else if (field === 'password' && modalMode === 'add') {
-      if (!value || value.length < 6) newErrors.password = 'كلمة المرور قصيرة (6 أحرف على الأقل)';
+      if (!value || value.length < 6) newErrors.password = t('users.errors.password_short');
     }
 
     setErrors(newErrors);
@@ -139,22 +160,22 @@ const UsersView: React.FC<UsersViewProps> = ({
 
     const newErrors: Record<string, string> = {};
 
-    if (!editingUser.name) newErrors.name = 'الاسم مطلوب';
-    if (!editingUser.email) newErrors.email = 'البريد مطلوب';
-    if (!editingUser.phone) newErrors.phone = 'الهاتف مطلوب';
+    if (!editingUser.name) newErrors.name = t('users.errors.name_required');
+    if (!editingUser.email) newErrors.email = t('users.errors.email_required');
+    if (!editingUser.phone) newErrors.phone = t('users.errors.phone_required');
 
     // Basic Email Validation
     if (editingUser.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingUser.email)) {
-      newErrors.email = 'بريد إلكتروني غير صالح';
+      newErrors.email = t('users.errors.email_invalid');
     }
     // Basic Phone Validation
     if (editingUser.phone && !/^(0)(5|6|7)[0-9]{8}$/.test(editingUser.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'رقم الهاتف غير صالح (10 أرقام)';
+      newErrors.phone = t('users.errors.phone_invalid');
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error('يرجى التحقق من الحقول');
+      toast.error(t('users.toasts.validation_error'));
       return;
     }
 
@@ -179,9 +200,9 @@ const UsersView: React.FC<UsersViewProps> = ({
       if (success) {
         setShowModal(false);
         setEditingUser(null);
-        toast.success('تم تحديث المستخدم بنجاح!');
+        toast.success(t('users.toasts.update_success'));
       } else {
-        toast.error('فشلت عملية التحديث');
+        toast.error(t('users.toasts.update_failed'));
       }
     } finally {
       setIsSubmitting(false);
@@ -222,9 +243,9 @@ const UsersView: React.FC<UsersViewProps> = ({
     if (success) {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      toast.success('تم حذف المستخدم بنجاح');
+      toast.success(t('users.toasts.delete_success'));
     } else {
-      toast.error('فشلت عملية الحذف');
+      toast.error(t('users.toasts.delete_failed'));
     }
   };
 
@@ -233,7 +254,7 @@ const UsersView: React.FC<UsersViewProps> = ({
     try {
       const success = await onToggleActivation(userId, !currentActivation);
       if (!success) {
-        toast.error('فشلت عملية تغيير الحالة');
+        toast.error(t('users.toasts.status_failed'));
       }
     } finally {
       setTogglingId(null);
@@ -242,20 +263,76 @@ const UsersView: React.FC<UsersViewProps> = ({
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText('https://app.wilo.site/login');
-    toast.success('تم نسخ الرابط بنجاح');
+    toast.success(t('users.toasts.link_copied'));
+  };
+
+  // Assignment Logic
+  const openAssignmentModal = (user: User) => {
+    setAssignmentUser(user);
+    const existing = staffQueue.productAssignments
+      ?.filter((a: any) => a.user.id === user.id)
+      ?.map((a: any) => a.product.id) || [];
+    setSelectedProductIds(existing);
+    setAssignmentSearchTerm('');
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!assignmentUser) return;
+    setIsSavingAssignments(true);
+
+    try {
+      // 1. Get assignments for OTHER users (Don't filter out products anymore)
+      const otherUserAssignments = staffQueue.productAssignments
+        ?.filter((a: any) => a.user.id !== assignmentUser.id)
+        ?.map((a: any) => ({
+          idProduct: a.product.id,
+          idUser: a.user.id
+        })) || [];
+
+      // 2. Add NEW assignments for THIS user
+      const currentUserAssignments = selectedProductIds.map(id => ({
+        idProduct: id,
+        idUser: assignmentUser.id
+      }));
+
+      // 3. Combine them (We allow a product to appear multiple times for different users)
+      const finalAssignments = [
+        ...otherUserAssignments,
+        ...currentUserAssignments
+      ];
+
+      const { data } = await updateAssignments({
+        variables: {
+          content: finalAssignments
+        }
+      });
+
+      if (data?.updateProductAssignmentsStaffQueue?.status) {
+        toast.success(t('users.toasts.assign_success', { name: assignmentUser.name }));
+        setAssignmentUser(null);
+        await refetchQueue();
+      } else {
+        toast.error(t('users.toasts.assign_error'));
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(t('users.toasts.assign_error'));
+    } finally {
+      setIsSavingAssignments(false);
+    }
   };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-lg font-black text-slate-800 tracking-tight">إدارة المستخدمين</h2>
+          <h2 className="text-lg font-black text-slate-800 tracking-tight">{t('sidebar.items.users')}</h2>
           <div className="flex items-center gap-3 mt-1">
-            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">التحكم في أعضاء الفريق والصلاحيات</p>
+            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tighter">{t('users.subtitle')}</p>
             <button
               onClick={handleCopyLink}
               className="flex items-center gap-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-md text-[10px] font-bold transition-colors border border-slate-200 hover:border-indigo-100"
-              title="نسخ رابط الدخول"
+              title={t('users.copy_link')}
             >
               <Copy className="w-3 h-3" />
               <span className="font-mono">app.wilo.site/login</span>
@@ -267,7 +344,7 @@ const UsersView: React.FC<UsersViewProps> = ({
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="بحث بالاسم أو البريد..."
+              placeholder={t('users.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pr-9 pl-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -278,7 +355,7 @@ const UsersView: React.FC<UsersViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md text-[11px] font-black uppercase whitespace-nowrap"
           >
             <UserPlus className="w-4 h-4" />
-            إضافة عضو
+            {t('users.add_user')}
           </button>
         </div>
       </div>
@@ -290,23 +367,23 @@ const UsersView: React.FC<UsersViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-right">
+            <table className={`w-full ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">العضو</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الصلاحية</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">عمولة التأكيد</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">الطلبات لم تدفع</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">كل الطلبات الموكدة</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">حالة العمل</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">التاريخ</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.member')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.role')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.commission')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.unpaid')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.all_confirmed')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.status')}</th>
+                  <th className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('users.table.date')}</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-all group">
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xs shadow-sm ${user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-emerald-100 text-emerald-600'
                           }`}>
@@ -318,22 +395,22 @@ const UsersView: React.FC<UsersViewProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-widest ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                        {user.role === 'admin' ? 'مدير' : 'مؤكد'}
+                        {user.role === 'admin' ? t('users.roles.admin') : t('users.roles.confirmed')}
                       </span>
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <Coins className="w-3.5 h-3.5 text-amber-500" />
-                          <span>{user.orderPrice || 0} د.ج</span>
+                          <span>{formatCurrency(user.orderPrice || 0)}</span>
                         </div>
                       ) : (
                         <span className="text-slate-300 text-[10px]">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <ShoppingBag className="w-3.5 h-3.5 text-amber-500" />
@@ -343,7 +420,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                         <span className="text-slate-300 text-[10px]">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
@@ -353,7 +430,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                         <span className="text-slate-300 text-[10px]">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       {user.role === 'confirmed' ? (
                         <button
                           onClick={() => toggleOrderLock(user.id, user.activation || false)}
@@ -364,18 +441,27 @@ const UsersView: React.FC<UsersViewProps> = ({
                           {togglingId === user.id ? (
                             <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                           ) : (
-                            user.activation === false ? 'مغلقة' : 'مفتوحة'
+                            user.activation === false ? t('users.status.closed') : t('users.status.open')
                           )}
                         </button>
                       ) : (
                         <span className="text-[9px] text-slate-300 font-bold uppercase">N/A</span>
                       )}
                     </td>
-                    <td className="px-6 py-3.5 text-[10px] text-slate-500 font-bold">
+                    <td className={`px-6 py-3.5 text-[10px] text-slate-500 font-bold ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       {user.joinedDate}
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center justify-center gap-2">
+                        {user.role === 'confirmed' && (
+                          <button
+                            onClick={() => openAssignmentModal(user)}
+                            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            title={t('users.modal.assignment_title', { name: user.name })}
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button onClick={() => openEditModal(user)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
                         <button onClick={() => confirmDelete(user.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
@@ -404,7 +490,7 @@ const UsersView: React.FC<UsersViewProps> = ({
               <div className="relative z-10 bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                    {modalMode === 'add' ? 'إضافة مستخدم' : 'تعديل مستخدم'}
+                    {modalMode === 'add' ? t('users.modal.add_title') : t('users.modal.edit_title')}
                   </h3>
                   <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
                 </div>
@@ -412,7 +498,7 @@ const UsersView: React.FC<UsersViewProps> = ({
 
                   {/* Row 1: Name and Phone */}
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.name')}</label>
                     <input
                       value={modalMode === 'add' ? newUser.name : editingUser?.name || ''}
                       onChange={(e) => {
@@ -422,13 +508,13 @@ const UsersView: React.FC<UsersViewProps> = ({
                       }}
                       onBlur={(e) => handleBlur('name', e.target.value)}
                       className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
-                      placeholder="أحمد..."
+                      placeholder={t('users.modal.name_placeholder')}
                     />
                     {errors.name && <p className="text-red-500 text-[9px] font-bold px-1">{errors.name}</p>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">الهاتف</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.phone')}</label>
                     <input
                       type="tel"
                       value={modalMode === 'add' ? newUser.phone : editingUser?.phone || ''}
@@ -446,7 +532,7 @@ const UsersView: React.FC<UsersViewProps> = ({
 
                   {/* Row 2: Email and Password */}
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">البريد</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.email')}</label>
                     <input
                       type="email"
                       value={modalMode === 'add' ? newUser.email : editingUser?.email || ''}
@@ -463,7 +549,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{modalMode === 'add' ? 'كلمة المرور' : 'تغيير كلمة المرور'}</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{modalMode === 'add' ? t('users.modal.password') : t('users.modal.password_change')}</label>
                     <input
                       type="password"
                       value={modalMode === 'add' ? newUser.password : editingUser?.password || ''}
@@ -474,28 +560,28 @@ const UsersView: React.FC<UsersViewProps> = ({
                       }}
                       onBlur={(e) => handleBlur('password', e.target.value)}
                       className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg text-xs font-bold transition-colors ${errors.password ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
-                      placeholder={modalMode === 'add' ? "كلمة المرور..." : "اتركها فارغة للإبقاء على الحالية"}
+                      placeholder={modalMode === 'add' ? t('users.modal.password') + "..." : t('users.modal.password_placeholder')}
                     />
                     {errors.password && <p className="text-red-500 text-[9px] font-bold px-1">{errors.password}</p>}
                   </div>
 
                   {/* Row 3: Role (Enabled for both Add and Edit) */}
                   <div className="space-y-1.5 col-span-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">النوع</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.type')}</label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'confirmed' }) : setEditingUser({ ...editingUser, role: 'confirmed' })}
                         className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'confirmed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
                       >
-                        مؤكد
+                        {t('users.roles.confirmed')}
                       </button>
                       <button
                         type="button"
                         onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'admin' }) : setEditingUser({ ...editingUser, role: 'admin' })}
                         className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
                       >
-                        أدمن
+                        {t('users.roles.admin')}
                       </button>
                     </div>
                   </div>
@@ -504,7 +590,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                   {((modalMode === 'add' && newUser.role === 'confirmed') || (modalMode === 'edit' && editingUser?.role === 'confirmed')) && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 col-span-2">
                       <label className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-1 flex items-center gap-1">
-                        <Coins className="w-3 h-3" /> عمولة التأكيد (د.ج)
+                        <Coins className="w-3 h-3" /> {t('users.modal.commission_label')}
                       </label>
                       <input
                         type="number"
@@ -527,7 +613,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                     {isSubmitting && (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     )}
-                    {modalMode === 'add' ? 'إنشاء الحساب' : 'حفظ التغييرات'}
+                    {modalMode === 'add' ? t('common.add') : t('common.save')}
                   </button>
                 </form>
               </div>
@@ -541,10 +627,114 @@ const UsersView: React.FC<UsersViewProps> = ({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={executeDelete}
-        title="حذف المستخدم"
-        description="هل أنت متأكد من أنك تريد حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء."
+        title={t('users.modal.delete_title')}
+        description={t('users.modal.delete_desc')}
         isDeleting={isDeleting}
       />
+
+      {/* Assignment Modal */}
+      {assignmentUser && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setAssignmentUser(null)}></div>
+          <div className="relative z-10 bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center font-black text-sm">
+                  {assignmentUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('users.modal.assignment_title', { name: assignmentUser.name })}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('users.modal.assignment_subtitle')}</p>
+                </div>
+              </div>
+              <button onClick={() => setAssignmentUser(null)} className="text-slate-400 hover:text-rose-500"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-6 space-y-4 flex-1 flex flex-col overflow-hidden">
+               <div className="relative">
+                  <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder={t('users.modal.product_search')} 
+                    value={assignmentSearchTerm}
+                    onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+                    className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                  />
+               </div>
+
+               <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+                  {allProducts
+                    .filter(p => p.name.toLowerCase().includes(assignmentSearchTerm.toLowerCase()) || p.sku?.toLowerCase()?.includes(assignmentSearchTerm.toLowerCase()))
+                    .map(product => {
+                      const isSelected = selectedProductIds.includes(product.id);
+                      // Find all other users assigned to this product
+                      const otherAssignments = staffQueue.productAssignments?.filter(
+                        (a: any) => a.product.id === product.id && a.user.id !== assignmentUser.id
+                      ) || [];
+                      const otherNames = otherAssignments.map((a: any) => a.user.name).join('، ');
+
+                      return (
+                        <div 
+                          key={product.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedProductIds(prev => prev.filter(id => id !== product.id));
+                            } else {
+                              setSelectedProductIds(prev => [...prev, product.id]);
+                            }
+                          }}
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer group flex items-center justify-between ${isSelected 
+                            ? 'bg-indigo-50/50 border-indigo-200 shadow-sm' 
+                            : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-transparent border border-slate-200 group-hover:border-indigo-300'}`}>
+                              <Check className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="text-[11px] font-black text-slate-800 leading-tight">{product.name}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-bold text-slate-400">SKU: {product.sku}</span>
+                                {otherNames && (
+                                  <span className="text-[8px] font-black bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100/50">{t('users.modal.assigned_to', { names: otherNames })}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Package className={`w-4 h-4 transition-colors ${isSelected ? 'text-indigo-600' : 'text-slate-200 group-hover:text-slate-400'}`} />
+                        </div>
+                      );
+                    })
+                  }
+               </div>
+
+               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    <p className="text-[10px] font-bold text-slate-500">{t('users.modal.assignment_save_warning')}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setAssignmentUser(null)}
+                      className="px-5 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black hover:bg-slate-200 transition-all uppercase tracking-widest"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button 
+                      onClick={handleSaveAssignments}
+                      disabled={isSavingAssignments}
+                      className="px-8 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black shadow-md hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSavingAssignments ? <LoadingSpinner size="14" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {t('common.save')}
+                    </button>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

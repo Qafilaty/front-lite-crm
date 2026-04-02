@@ -8,10 +8,13 @@ import {
   Home, Building2, Save, Search, Zap, CheckCircle2, DollarSign, MapPin,
 } from 'lucide-react';
 import TableSkeleton from './common/TableSkeleton';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
 
 // Initial static list removed in favor of API fetching
 
 const ShippingPricingView: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +40,8 @@ const ShippingPricingView: React.FC = () => {
         if (existingData.prices && existingData.prices.length > 0) {
           const mappedPricings = existingData.prices.map((p: any) => ({
             id: Number(p.code),
-            name: p.name,
+            name: p.name, // Keep the name from DB for payload but use getTranslatedName for display
+            arName: p.arName,
             homePrice: p.home || 0,
             officePrice: p.desk || 0
           }));
@@ -57,7 +61,7 @@ const ShippingPricingView: React.FC = () => {
 
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('حدث خطأ أثناء تحميل البيانات');
+      toast.error(t('shipping.pricing.toast.load_error'));
     } finally {
       setLoading(false);
     }
@@ -72,14 +76,15 @@ const ShippingPricingView: React.FC = () => {
 
       const defaultPricings = allWilayas.map((wilaya) => ({
         id: Number(wilaya.code),
-        name: wilaya.arName || wilaya.name,
+        name: wilaya.name,
+        arName: wilaya.arName,
         homePrice: 0,
         officePrice: 0
       }));
       setPricings(defaultPricings);
       setPricingId(null);
     } else {
-      toast.error('فشل تحميل قائمة الولايات');
+      toast.error(t('shipping.pricing.toast.wilayas_load_error'));
     }
   };
 
@@ -99,14 +104,14 @@ const ShippingPricingView: React.FC = () => {
     if (globalHomePrice === '') return;
     setPricings(prev => prev.map(p => ({ ...p, homePrice: Number(globalHomePrice) })));
     setIsDirty(true);
-    toast.success('تم تطبيق السعر على كافة الولايات (للمنزل)');
+    toast.success(t('shipping.pricing.toast.success'));
   };
 
   const applyToAllOffice = () => {
     if (globalOfficePrice === '') return;
     setPricings(prev => prev.map(p => ({ ...p, officePrice: Number(globalOfficePrice) })));
     setIsDirty(true);
-    toast.success('تم تطبيق السعر على كافة الولايات (للمكتب)');
+    toast.success(t('shipping.pricing.toast.success'));
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +133,7 @@ const ShippingPricingView: React.FC = () => {
     }));
 
     const payload = {
-      name: 'Standard Pricing', // You can make this editable if needed
+      name: t('common.standard'), // Standard Pricing
       isDefault: true,
       prices: pricesPayload
     };
@@ -144,7 +149,7 @@ const ShippingPricingView: React.FC = () => {
       }
 
       if (result.success) {
-        toast.success('تم حفظ الأسعار بنجاح');
+        toast.success(t('shipping.pricing.toast.save_success'));
         setIsDirty(false);
         if (!pricingId && result.deliveryPrice) {
           setPricingId(result.deliveryPrice.id);
@@ -152,11 +157,11 @@ const ShippingPricingView: React.FC = () => {
         // Reload to ensure sync - REMOVED to prevent reverting to stale data
         // loadData();
       } else {
-        toast.error('فشل حفظ الأسعار');
+        toast.error(t('shipping.pricing.toast.save_error'));
       }
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('حدث خطأ أثناء الحفظ');
+      toast.error(t('shipping.pricing.toast.save_error_unexpected'));
     } finally {
       setIsSubmitting(false);
     }
@@ -170,8 +175,8 @@ const ShippingPricingView: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">تسعير التوصيل</h2>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة تكاليف الشحن حسب الولايات ونوع التوصيل</p>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('sidebar.items.shipping_pricing')}</h2>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('shipping.pricing.subtitle')}</p>
         </div>
         {isDirty && canEdit && !loading && (
           <button
@@ -183,7 +188,7 @@ const ShippingPricingView: React.FC = () => {
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <>
-                <Save className="w-4 h-4" /> حفظ التغييرات
+                <Save className="w-4 h-4" /> {t('common.save')}
               </>
             )}
           </button>
@@ -200,12 +205,12 @@ const ShippingPricingView: React.FC = () => {
           <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Zap className="w-4 h-4 text-amber-500" />
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">التطبيق الجماعي السريع</h3>
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('shipping.apply_to_all')}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className="text-[11px] font-black text-slate-700 flex items-center gap-2">
-                  <Home className="w-4 h-4 text-indigo-500" /> سعر التوصيل للمنزل (الكل)
+                  <Home className="w-4 h-4 text-indigo-500" /> {t('shipping.home_price_all')}
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -215,7 +220,7 @@ const ShippingPricingView: React.FC = () => {
                       disabled={!canEdit}
                       value={globalHomePrice}
                       onChange={(e) => setGlobalHomePrice(e.target.value)}
-                      placeholder="مثال: 500"
+                      placeholder={t('shipping.pricing.placeholder_example', { val: 500 })}
                       className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all disabled:opacity-60"
                     />
                   </div>
@@ -224,14 +229,14 @@ const ShippingPricingView: React.FC = () => {
                     disabled={!canEdit}
                     className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    تطبيق
+                    {t('subscriptions.apply')}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[11px] font-black text-slate-700 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-indigo-500" /> سعر التوصيل للمكتب (الكل)
+                  <Building2 className="w-4 h-4 text-indigo-500" /> {t('shipping.office_price_all')}
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -241,7 +246,7 @@ const ShippingPricingView: React.FC = () => {
                       disabled={!canEdit}
                       value={globalOfficePrice}
                       onChange={(e) => setGlobalOfficePrice(e.target.value)}
-                      placeholder="مثال: 300"
+                      placeholder={t('shipping.pricing.placeholder_example', { val: 300 })}
                       className="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all disabled:opacity-60"
                     />
                   </div>
@@ -250,7 +255,7 @@ const ShippingPricingView: React.FC = () => {
                     disabled={!canEdit}
                     className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    تطبيق
+                    {t('subscriptions.apply')}
                   </button>
                 </div>
               </div>
@@ -262,13 +267,13 @@ const ShippingPricingView: React.FC = () => {
             <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-indigo-500" />
-                <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">قائمة الولايات (58 ولاية)</h3>
+                <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{t('shipping.pricing.wilayas_list')}</h3>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="ابحث عن ولاية..."
+                  placeholder={t('shipping.pricing.search_wilaya')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pr-9 pl-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
@@ -280,10 +285,10 @@ const ShippingPricingView: React.FC = () => {
               <table className="w-full text-right border-collapse">
                 <thead>
                   <tr className="bg-white text-slate-400 border-b border-slate-100">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">الولاية</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمنزل (د.ج)</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">توصيل للمكتب (د.ج)</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">الحالة</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">{t('shipping.pricing.table.state')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">{t('shipping.pricing.table.home')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">{t('shipping.pricing.table.office')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">{t('shipping.pricing.table.status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -291,10 +296,10 @@ const ShippingPricingView: React.FC = () => {
                     <tr key={state.id} className="hover:bg-slate-50/80 transition-all">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
+                          <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 font-mono">
                             {state.id}
                           </div>
-                          <span className="text-[13px] font-black text-slate-800">{state.name}</span>
+                          <span className="text-[13px] font-black text-slate-800">{t(`wilayas.${state.id}`, getTranslatedName(state, i18n.language))}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

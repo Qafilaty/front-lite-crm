@@ -26,6 +26,8 @@ import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
 import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
 import { ModernSelect } from './common';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
 
 interface OrderDetailsViewProps {
   order: Order;
@@ -39,6 +41,7 @@ interface OrderDetailsViewProps {
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   order, onBack, onUpdate, onDelete, readOnly = false, trackingMode = false
 }) => {
+  const { t, i18n } = useTranslation();
   const [editedOrder, setEditedOrder] = useState<Order>(() => ({
     ...order,
     customer: order.customer || order.fullName || '',
@@ -190,7 +193,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     const map: Record<string, string> = {};
     statusData.allStatusCompany.forEach((group: any) => {
       group.listStatus.forEach((s: any) => {
-        map[s.nameEN] = s.nameAR;
+        map[s.nameEN] = getTranslatedName(s, i18n.language);
       });
     });
     return { ...statusLabels, ...map };
@@ -274,11 +277,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         }
       });
 
-      toast.success('تم حفظ التغييرات بنجاح');
-      onUpdate({ ...editedOrder, updatedAt: new Date().toLocaleString('ar') });
+      toast.success(t('orders.details.save_success'));
+      onUpdate({ ...editedOrder, updatedAt: new Date().toISOString() });
     } catch (error: any) {
       console.error(error);
-      toast.error('حدث خطأ أثناء الحفظ');
+      toast.error(t('orders.details.save_error'));
     }
   };
 
@@ -300,7 +303,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     if (isPostponed) {
       // Validate date is provided
       if (!newLog.postponeDate) {
-        toast.error('الرجاء تحديد تاريخ التأجيل');
+        toast.error(t('orders.details.postpone_date_required'));
         return;
       }
 
@@ -309,7 +312,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       today.setHours(0, 0, 0, 0);
       const picked = new Date(newLog.postponeDate);
       if (picked < today) {
-        toast.error('لا يمكن تأجيل الطلب لتاريخ سابق');
+        toast.error(t('orders.details.postpone_date_invalid'));
         return;
       }
 
@@ -319,7 +322,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             id: order.id,
             content: {
               status: statusValue,
-              note: newLog.note || `تم التأجيل إلى ${newLog.postponeDate}`,
+              note: newLog.note || t('orders.details.postponed_to', { date: newLog.postponeDate }),
               idUser: idUser,
               requiredFields: [
                 { key: 'postponementDate', value: newLog.postponeDate, type: 'date' }
@@ -328,15 +331,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           }
         });
 
-        toast.success(`تم تأجيل الطلب إلى ${new Date(newLog.postponeDate).toLocaleDateString('ar-DZ')}`);
+        toast.success(t('orders.details.postpone_success', { date: new Date(newLog.postponeDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'en-GB') }));
 
         // Optimistic update
         const now = new Date().toLocaleString('en-GB');
         const log: OrderLog = {
           status: newLog.status,
           date: now,
-          note: newLog.note || `تم التأجيل إلى ${newLog.postponeDate}`,
-          user: userData?.currentUser?.name || 'مستخدم'
+          note: newLog.note || t('orders.details.postponed_to', { date: newLog.postponeDate }),
+          user: userData?.currentUser?.name || t('orders.details.user')
         };
 
         const updated = {
@@ -357,7 +360,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
       } catch (error) {
         console.error("Postpone Error", error);
-        toast.error('حدث خطأ أثناء تأجيل الطلب');
+        toast.error(t('orders.details.postpone_error'));
         return;
       }
     }
@@ -374,15 +377,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         }
       });
 
-      toast.success('تم تحديث الحالة بنجاح');
+      toast.success(t('orders.details.status_update_success'));
 
       // Optimistic update
       const now = new Date().toLocaleString('en-GB'); // Standard numerals
       const log: OrderLog = {
         status: newLog.status,
         date: now,
-        note: newLog.note || `تغيير الحالة`,
-        user: userData?.currentUser?.name || 'مستخدم'
+        note: newLog.note || t('orders.details.status_change'),
+        user: userData?.currentUser?.name || t('orders.details.user')
       };
 
       // Update local state, keeping the structure consistent
@@ -409,7 +412,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
     } catch (error: any) {
       console.error(error);
-      toast.error('حدث خطأ أثناء تحديث الحالة');
+      toast.error(t('orders.details.status_update_error'));
     }
   };
 
@@ -433,15 +436,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         }
       });
 
-      toast.success(`تم تأجيل الطلب إلى ${new Date(date).toLocaleDateString('ar-DZ')}`);
+      toast.success(t('orders.details.postpone_success', { date: new Date(date).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'en-GB') }));
 
       // Optimistic update
       const now = new Date().toLocaleString('en-GB');
       const log: OrderLog = {
         status: pendingStatusChange.status, // Should be 'postponed'
         date: now,
-        note: pendingStatusChange.note || `تم التأجيل إلى ${date}`,
-        user: userData?.currentUser?.name || 'مستخدم'
+        note: pendingStatusChange.note || t('orders.details.postponed_to', { date: date }),
+        user: userData?.currentUser?.name || t('orders.details.user')
       };
 
       const updated = {
@@ -461,7 +464,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
     } catch (error) {
       console.error("Postpone Error", error);
-      toast.error('حدث خطأ أثناء تأجيل الطلب');
+      toast.error(t('orders.details.postpone_error'));
     }
   };
 
@@ -472,10 +475,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setIsDeleting(false);
 
     if (success) {
-      toast.success('تم حذف الطلب بنجاح');
+      toast.success(t('orders.details.delete_success'));
       onBack(); // Go back to list
     } else {
-      toast.error('فشل حذف الطلب');
+      toast.error(t('orders.details.delete_error'));
       setIsDeleteModalOpen(false);
     }
   };
@@ -510,13 +513,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   // Helper to extract status key (nameEN or string)
   const getStatusKey = (s: any): string => {
     if (typeof s === 'object' && s !== null) return s.nameEN || 'pending';
-    return s || 'pending';
+    if (!s) return 'pending';
+    const label = statusLabels[s];
+    return label ? s : 'pending';
   };
 
   // Helper to extract status label (nameAR or mapped string)
   const getStatusLabel = (s: any): string => {
-    if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'pending';
-    return statusMap[s] || s || 'pending';
+    if (typeof s === 'object' && s !== null) return getTranslatedName(s, i18n.language);
+    const label = statusMap[s] || s;
+    return label ? t(label) : t('common.unspecified');
   };
 
   // Helper to get status color (dynamic or fallback)
@@ -558,7 +564,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         }
       } catch (err) {
         console.error("Error fetching companies", err);
-        toast.error("فشل تحميل شركات التوصيل");
+        toast.error(t('orders.toast.delivery_companies_error'));
       } finally {
         setLoadingCompanies(false);
       }
@@ -585,14 +591,14 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       // If we auto-sent, deliveryCompanies might be empty, so we might not have the name immediately available 
       // unless we fetch it or it's in the order data.
       const companyName = deliveryCompanies.find(c => c.id === companyId)?.name ||
-        (order.deliveryCompany?.deliveryCompany?.id === companyId ? order.deliveryCompany?.deliveryCompany?.name : 'الشركة');
+        (order.deliveryCompany?.deliveryCompany?.id === companyId ? order.deliveryCompany?.deliveryCompany?.name : t('orders.details.delivery_company'));
 
       setSuccessTrackingCode(tracking);
       setSuccessCompanyName(companyName);
       setIsDeliveryModalOpen(false);
       setIsSuccessModalOpen(true);
 
-      toast.success('تم إرسال الطلب بنجاح');
+      toast.success(t('orders.details.send_success'));
     } else if (result.data?.failedOrder?.length > 0) {
       // Handle Failure
       const failures = result.data.failedOrder.map((fail: any) => {
@@ -609,16 +615,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       setDeliveryErrors(failures);
       setIsDeliveryModalOpen(false); // Close selection modal
       setIsErrorModalOpen(true);     // Open error display modal
-      toast.error('فشل إرسال الطلب، يرجى مراجعة الأخطاء');
+      toast.error(t('orders.details.send_error_validation'));
     } else {
-      toast.error('فشل إرسال الطلب');
+      toast.error(t('orders.details.send_error'));
     }
   };
 
   const copyTracking = () => {
     if (successTrackingCode) {
       navigator.clipboard.writeText(successTrackingCode);
-      toast.success('تم نسخ كود التتبع');
+      toast.success(t('orders.details.tracking_copied'));
     }
   };
 
@@ -628,13 +634,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       {/* Header Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button onClick={onBack} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 hover:bg-slate-100">
+          <button onClick={onBack} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 hover:bg-slate-100 ${i18n.language === 'ar' ? '' : 'rotate-180'}`}>
             <ArrowRight className="w-5 h-5 " />
           </button>
 
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-800">الطلب <span className="font-mono text-indigo-600 text-base">#{order.numberOrder || order.id?.slice(-8)}</span></h2>
+              <h2 className="text-lg font-black text-slate-800">{t('orders.details.order_title')} <span className="font-mono text-indigo-600 text-base">#{order.numberOrder || order.id?.slice(-8)}</span></h2>
               <span
                 className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
                 style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
@@ -653,7 +659,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           {!readOnly && onDelete && (
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              title="حذف الطلب"
+              title={t('orders.details.delete_order')}
               className="w-9 h-9 flex-shrink-0 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center"
             >
               <Trash2 className="w-4 h-4" />
@@ -667,7 +673,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               className={`h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-[10px] transition-all uppercase flex items-center gap-2 whitespace-nowrap ${!isDirty || isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'}`}
             >
               {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              {isUpdating ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+              {isUpdating ? t('orders.details.saving') : t('orders.details.save_changes')}
             </button>
           )}
 
@@ -676,7 +682,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             className="h-9 px-4 bg-indigo-600 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
           >
             <RefreshCcw className="w-3.5 h-3.5" />
-            <span>تحديث الحالة</span>
+            <span>{t('orders.details.update_status')}</span>
           </button>
 
           {!readOnly && !order.deliveryCompany?.trackingCode && getStatusKey(editedOrder.status) === 'confirmed' && (
@@ -685,7 +691,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               className="h-9 px-4 bg-slate-900 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
             >
               <Truck className="w-3.5 h-3.5" />
-              <span>إرسال</span>
+              <span>{t('orders.details.send')}</span>
             </button>
           )}
         </div>
@@ -706,21 +712,21 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               )}
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">يتم التوصيل عبر</p>
-              <h3 className="text-xl font-black text-slate-800">{order.deliveryCompany?.deliveryCompany?.name || 'شركة التوصيل'}</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('orders.details.delivered_by')}</p>
+              <h3 className="text-xl font-black text-slate-800">{order.deliveryCompany?.deliveryCompany?.name || t('orders.details.delivery_company')}</h3>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${order.deliveryCompany.status ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-600'}`}>
-                  {order.deliveryCompany.status || 'جاري التوصيل'}
+                  {order.deliveryCompany.status || t('orders.bulk_delivery.steps.processing')}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">كود التتبع</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.tracking_code')}</p>
             <div onClick={() => {
               navigator.clipboard.writeText(order.deliveryCompany?.trackingCode || '');
-              toast.success('تم نسخ كود التتبع');
+              toast.success(t('orders.details.tracking_copied'));
             }} className="group cursor-pointer flex items-center gap-4 bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-slate-100 transition-all pr-5 pl-2 py-3 rounded-2xl w-full md:min-w-[300px] justify-between">
               <span className="font-mono text-lg font-bold text-slate-700 tracking-wider">{order.deliveryCompany?.trackingCode}</span>
               <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
@@ -737,12 +743,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-5">
               <User className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">معلومات العميل والشحن</h3>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.details.customer_shipping_info')}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">اسم العميل</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.customer_name')}</label>
                 <input
                   disabled={readOnly}
                   value={editedOrder.customer}
@@ -751,7 +757,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رقم الهاتف</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.phone_number')}</label>
                 <div className="relative">
                   <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                   <input
@@ -763,7 +769,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.wilaya')}</label>
                 <ModernSelect
                   disabled={readOnly}
                   value={(() => {
@@ -782,17 +788,17 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     setEditedOrder({ ...editedOrder, state: val, city: '', shippingCost: newShippingCost });
                   }}
                   options={[
-                    { value: '', label: 'اختر الولاية' },
+                    { value: '', label: t('orders.details.select_wilaya') },
                     ...(wilayasData?.allWilayas?.map((w: any) => ({
                       value: w.name,
-                      label: `${w.code} - ${w.name} / ${w.arName || w.name}`
+                      label: `${w.code} - ${getTranslatedName(w, i18n.language)}`
                     })) || [])
                   ]}
-                  placeholder="اختر الولاية"
+                  placeholder={t('orders.details.select_wilaya')}
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.commune')}</label>
                 <ModernSelect
                   disabled={readOnly || !editedOrder.state}
                   value={(() => {
@@ -822,7 +828,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   })()}
                   onChange={(val) => setEditedOrder({ ...editedOrder, city: val })}
                   options={[
-                    { value: '', label: 'اختر البلدية' },
+                    { value: '', label: t('orders.details.select_commune') },
                     ...(() => {
                       const currentStateName = typeof editedOrder.state === 'object' && editedOrder.state !== null
                         ? (editedOrder.state as any).name
@@ -837,15 +843,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                       return wilaya?.communes?.map((c: any) => ({
                         value: c.name,
-                        label: c.name + (c.arName ? ` - ${c.arName}` : '')
+                        label: getTranslatedName(c, i18n.language)
                       })) || [];
                     })()
                   ]}
-                  placeholder="اختر البلدية"
+                  placeholder={t('orders.details.select_commune')}
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.address')}</label>
                 <textarea
                   disabled={readOnly}
                   value={editedOrder.address}
@@ -870,11 +876,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-center gap-2">
                     <Home className="w-5 h-5" />
-                    <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمنزل</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">{t('orders.details.shipping_home')}</span>
                   </div>
                   {editedOrder.state && (
                     <span className="text-[10px] font-bold">
-                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).home} دج
+                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).home} {t('common.currency')}
                     </span>
                   )}
                 </div>
@@ -893,11 +899,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-5 h-5" />
-                    <span className="text-[11px] font-black uppercase tracking-widest">توصيل للمكتب</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">{t('orders.details.shipping_desk')}</span>
                   </div>
                   {editedOrder.state && (
                     <span className="text-[10px] font-bold">
-                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).desk} دج
+                      {getDeliveryPriceForState(typeof editedOrder.state === 'object' ? (editedOrder.state as any).name : editedOrder.state).desk} {t('common.currency')}
                     </span>
                   )}
                 </div>
@@ -907,35 +913,35 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             {editedOrder.deliveryType === "inDesk" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 mt-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_company')}</label>
                   <ModernSelect
                     disabled={readOnly}
                     value={editedOrder.deliveryCompanyId}
                     onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
                     options={[
-                      { value: '', label: 'اختر الشركة...' },
+                      { value: '', label: t('orders.details.select_company') },
                       ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
                         value: c.id,
                         label: c.name
                       })) || [])
                     ]}
-                    placeholder="اختر شركة التوصيل..."
+                    placeholder={t('orders.details.select_company')}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مركز التوصيل</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_center')}</label>
                   <ModernSelect
                     disabled={readOnly || !editedOrder.deliveryCompanyId || loadingCenters}
                     value={editedOrder.deliveryCenterId}
                     onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCenterId: val })}
                     options={[
-                      { value: '', label: loadingCenters ? 'جاري التحميل...' : 'اختر المركز...' },
+                      { value: '', label: loadingCenters ? t('orders.create_modal.loading') : t('orders.details.select_center') },
                       ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
                         value: c.id,
                         label: `${c.name} (${c.commune || c.communeAr})`
                       })) || [])
                     ]}
-                    placeholder="اختر المركز..."
+                    placeholder={t('orders.details.select_center')}
                   />
                 </div>
               </div>
@@ -950,9 +956,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <ShoppingBag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">سلة المشتريات</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.details.order_items')}</h3>
                   <p className="text-[10px] font-bold text-slate-400 mt-1">
-                    {editedOrder.items?.length || 0} منتجات في الطلب
+                    {t('orders.details.items_count', { count: editedOrder.items?.length || 0 })}
                   </p>
                 </div>
               </div>
@@ -962,7 +968,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   className="group flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>إضافة منتج</span>
+                  <span>{t('orders.details.add_item')}</span>
                 </button>
               )}
             </div>
@@ -984,20 +990,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <div className="w-full">
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[9px] font-black text-slate-400 uppercase">المنتج</label>
+                        <label className="text-[9px] font-black text-slate-400 uppercase">{t('orders.details.product')}</label>
                         {!readOnly && (
                           <div className="flex bg-slate-100 rounded-lg p-0.5">
                             <button
                               onClick={() => setItemModes(prev => ({ ...prev, [idx]: 'select' }))}
                               className={`px-2 py-1 text-[8px] font-black rounded-md transition-all ${(!itemModes[idx] || itemModes[idx] === 'select') ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                              قائمة
+                              {t('orders.details.list')}
                             </button>
                             <button
                               onClick={() => setItemModes(prev => ({ ...prev, [idx]: 'manual' }))}
                               className={`px-2 py-1 text-[8px] font-black rounded-md transition-all ${itemModes[idx] === 'manual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                              يدوي
+                              {t('orders.details.manual')}
                             </button>
                           </div>
                         )}
@@ -1022,7 +1028,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                               disabled={readOnly}
                               value={item.name}
                               onChange={e => updateItem(idx, 'name', e.target.value)}
-                              placeholder="بحث عن منتج..."
+                              placeholder={t('orders.details.search_product_placeholder')}
                               className="flex-1 bg-transparent border-none p-0 text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:ring-0 focus:outline-none"
                               autoComplete="off"
                               onFocus={(e) => e.target.select()}
@@ -1080,7 +1086,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                                 if (flattenedSuggestions.length === 0) return (
                                   <div className="p-4 text-center">
-                                    <p className="text-[10px] text-slate-400 font-bold">لا توجد منتجات مطابقة</p>
+                                    <p className="text-[10px] text-slate-400 font-bold">{t('orders.details.no_products_found')}</p>
                                     <button
                                       onMouseDown={(e) => {
                                         e.preventDefault();
@@ -1089,7 +1095,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                       }}
                                       className="text-[10px] text-indigo-600 font-black mt-1 hover:underline"
                                     >
-                                      إدخال يدوي؟
+                                      {t('orders.details.manual_input_prompt')}
                                     </button>
                                   </div>
                                 );
@@ -1125,11 +1131,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <span className="text-[9px] text-slate-400">{suggestion.sku || 'No SKU'}</span>
-                                          {suggestion.isVariant && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded">Option</span>}
+                                          {suggestion.isVariant && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded">{t('orders.details.variant_option')}</span>}
                                         </div>
                                       </div>
                                       <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                                        {suggestion.price?.toLocaleString()} دج
+                                        {suggestion.price?.toLocaleString()} {t('common.currency')}
                                       </span>
                                     </button>
                                   )
@@ -1145,12 +1151,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                             disabled={readOnly}
                             value={item.name}
                             onChange={e => updateItem(idx, 'name', e.target.value)}
-                            placeholder="اسم المنتج..."
+                            placeholder={t('orders.details.manual')}
                             className="w-full bg-amber-50 border-2 border-amber-200 border-dashed px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 placeholder:text-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-200/50 outline-none transition-all"
                           />
                           <p className="text-[8px] text-amber-500 font-bold flex items-center gap-1 px-1">
                             <AlertCircle className="w-3 h-3" />
-                            منتج مدخل يدوياً - غير موجود في المخزون
+                            {t('orders.details.manual_item_warning')}
                           </p>
                         </div>
                       )}
@@ -1161,7 +1167,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <div className="grid grid-cols-3 gap-3">
                     {/* Quantity */}
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">الكمية</label>
+                      <label className="text-[9px] font-black text-slate-400 uppercase">{t('common.quantity')}</label>
                       <input
                         disabled={readOnly}
                         type="number"
@@ -1174,7 +1180,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                     {/* Price */}
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">السعر</label>
+                      <label className="text-[9px] font-black text-slate-400 uppercase">{t('orders.details.price')}</label>
                       <div className="relative">
                         <input
                           disabled={readOnly}
@@ -1184,16 +1190,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
                           className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all pl-8"
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold">دج</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold">{t('common.currency')}</span>
                       </div>
                     </div>
 
                     {/* Total */}
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase">الإجمالي</label>
+                      <label className="text-[9px] font-black text-slate-400 uppercase">{t('orders.details.total_price')}</label>
                       <div className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl flex items-center justify-between">
                         <span className="text-xs font-black text-slate-700 font-mono">{(item.price * item.quantity).toLocaleString()}</span>
-                        <span className="text-[9px] font-bold text-slate-400">دج</span>
+                        <span className="text-[9px] font-bold text-slate-400">{t('common.currency')}</span>
                       </div>
                     </div>
                   </div>
@@ -1206,8 +1212,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 mx-auto mb-4">
                     <ShoppingBag className="w-8 h-8 opacity-50" />
                   </div>
-                  <p className="text-slate-400 font-black text-xs">سلة المشتريات فارغة</p>
-                  <p className="text-slate-300 font-bold text-[10px] mt-1">أضف منتجات للبدء</p>
+                  <p className="text-slate-400 font-black text-xs">{t('orders.details.cart_empty')}</p>
+                  <p className="text-slate-300 font-bold text-[10px] mt-1">{t('orders.details.add_items_to_start')}</p>
                 </div>
               )}
             </div>
@@ -1217,7 +1223,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                 <div className="flex divide-x divide-slate-200 divide-x-reverse border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden w-full md:w-auto">
                   <div className="p-4 space-y-1 min-w-[140px]">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">سعر التوصيل</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">{t('orders.details.shipping_cost')}</label>
                     <div className="flex items-center gap-2">
                       <input
                         disabled={readOnly}
@@ -1226,12 +1232,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         onChange={e => setEditedOrder({ ...editedOrder, shippingCost: parseFloat(e.target.value) || 0 })}
                         className="w-full bg-transparent border-none p-0 text-sm font-black text-slate-700 focus:ring-0 outline-none"
                       />
-                      <span className="text-[9px] font-bold text-slate-400">دج</span>
+                      <span className="text-[9px] font-bold text-slate-400">{t('common.currency')}</span>
                     </div>
                   </div>
 
                   <div className="p-4 space-y-1 min-w-[140px] bg-rose-50/10">
-                    <label className="text-[9px] font-black text-rose-300 uppercase tracking-widest block">الخصم</label>
+                    <label className="text-[9px] font-black text-rose-300 uppercase tracking-widest block">{t('orders.details.discount')}</label>
                     <div className="flex items-center gap-2">
                       <input
                         disabled={readOnly}
@@ -1240,12 +1246,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         onChange={e => setEditedOrder({ ...editedOrder, discount: parseFloat(e.target.value) || 0 })}
                         className="w-full bg-transparent border-none p-0 text-sm font-black text-rose-500 focus:ring-0 outline-none"
                       />
-                      <span className="text-[9px] font-bold text-rose-300">دج</span>
+                      <span className="text-[9px] font-bold text-rose-300">{t('common.currency')}</span>
                     </div>
                   </div>
 
                   <div className="p-4 space-y-1 min-w-[140px] bg-slate-50/50">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الوزن (كلغ)</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">{t('common.weight_kg')}</label>
                     <div className="flex items-center gap-2">
                       <input
                         disabled={readOnly}
@@ -1255,18 +1261,18 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         onChange={e => setEditedOrder({ ...editedOrder, weight: parseFloat(e.target.value) || 0 })}
                         className="w-full bg-transparent border-none p-0 text-sm font-black text-slate-600 focus:ring-0 outline-none"
                       />
-                      <span className="text-[9px] font-bold text-slate-400">kg</span>
+                      <span className="text-[9px] font-bold text-slate-400">{t('common.unit_kg')}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المجموع النهائي</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('orders.details.total_price')}</p>
                   <div className="flex items-baseline gap-2">
                     <p className="text-4xl font-black text-indigo-900 font-mono tracking-tighter">
                       {(editedOrder.amount - (editedOrder.discount || 0)).toLocaleString()}
                     </p>
-                    <span className="text-sm font-black text-indigo-400">دج</span>
+                    <span className="text-sm font-black text-indigo-400">{t('common.currency')}</span>
                   </div>
                 </div>
 
@@ -1285,30 +1291,30 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">معلومات الطلب</h3>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('orders.details.order_title')}</h3>
               </div>
               <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'orderInfo' ? 'rotate-180' : ''}`} />
             </button>
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'orderInfo' ? 'max-h-[400px]' : 'max-h-0'}`}>
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الإنشاء</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('common.created_at')}</p>
                   <p className="text-xs font-bold text-slate-700 font-mono" dir="ltr">
-                    {new Date(editedOrder.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(editedOrder.createdAt).toLocaleString(i18n.language === 'ar' ? 'ar-DZ' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
 
                 {editedOrder.duplicatePhone > 1 && (
                   <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-600">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-[10px] font-black">رقم هاتف مكرر</span>
+                    <span className="text-[10px] font-black">{t('orders.confirmation.duplicate_orders', { count: editedOrder.duplicatePhone })}</span>
                   </div>
                 )}
 
                 {/* Source & Confirmer Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مصدر الطلب</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.source')}</label>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3">
                       {order.store.store ? (
                         <>
@@ -1317,7 +1323,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-slate-700">{order.store.store?.name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">متجر</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">{t('common.store')}</p>
                           </div>
                         </>
                       ) : order.sheet ? (
@@ -1336,7 +1342,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                             <User className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-slate-700">يدوي</p>
+                            <p className="text-[10px] font-black text-slate-700">{t('common.manual')}</p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase">Manual</p>
                           </div>
                         </>
@@ -1345,7 +1351,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مؤكد الطلب</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.confirmed_by')}</label>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${order.confirmed ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
                         <UserCheck className="w-4 h-4" />
@@ -1355,7 +1361,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user) || '-'}
                         </p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase">
-                          {order.confirmed ? 'Confirmed By' : 'Not Confirmed'}
+                          {order.confirmed ? t('common.confirmed_by') : t('common.not_confirmed')}
                         </p>
                       </div>
                     </div>
@@ -1375,14 +1381,14 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       <Store className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">مكان السحب</p>
+                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{t('orders.create_modal.storage_location')}</p>
                       <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">
-                        {editedOrder.storageLocation === 'SHOP' ? 'من المحل' : 'من شركة التوصيل'}
+                        {editedOrder.storageLocation === 'SHOP' ? t('orders.create_modal.storage_shop_desc') : t('orders.create_modal.storage_company_desc')}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'SHOP' ? 'text-indigo-600' : 'text-slate-400'}`}>المحل</span>
+                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'SHOP' ? 'text-indigo-600' : 'text-slate-400'}`}>{t('orders.create_modal.storage_shop')}</span>
                     <button
                       type="button"
                       disabled={readOnly}
@@ -1393,21 +1399,25 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600 shadow-md ring-2 ring-indigo-100/50' : 'bg-slate-300'} ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                          editedOrder.storageLocation === 'DELIVERY_COMPANY' 
+                            ? (i18n.dir() === 'rtl' ? '-translate-x-6' : 'translate-x-6') 
+                            : (i18n.dir() === 'rtl' ? '-translate-x-1' : 'translate-x-1')
+                        }`}
                       />
                     </button>
-                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>الشركة</span>
+                    <span className={`text-[9px] font-bold transition-colors ${editedOrder.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>{t('orders.create_modal.storage_company')}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة داخلية</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.notes')}</label>
                   <textarea
                     disabled={readOnly}
                     value={editedOrder.notes || ''}
                     onChange={e => setEditedOrder({ ...editedOrder, notes: e.target.value })}
                     className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none"
-                    placeholder="ملاحظات حول الطلب..."
+                    placeholder={t('orders.details.notes_placeholder')}
                   />
                 </div>
               </div>
@@ -1421,7 +1431,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تاريخ التأكيد</h3>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('orders.details.history_logs')}</h3>
                 <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                   {editedOrder.confirmationTimeLine?.length || 0}
                 </span>
@@ -1431,7 +1441,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'confirmation' ? 'max-h-[350px]' : 'max-h-0'}`}>
               <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
                 {(!editedOrder.confirmationTimeLine || editedOrder.confirmationTimeLine.length === 0) && (
-                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل تأكيد بعد</p>
+                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('orders.details.no_logs')}</p>
                 )}
                 {editedOrder.confirmationTimeLine?.map((log, idx) => {
                   const logStyle = getStatusStyle(log.status);
@@ -1451,7 +1461,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       </div>
                       <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                        <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">{t('common.user_init')}</div>
                         <span className="text-[8px] font-black text-slate-400">{log.user}</span>
                       </div>
                     </div>
@@ -1470,7 +1480,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Truck className="w-5 h-5 text-emerald-500" />
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">تتبع التوصيل</h3>
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('orders.bulk_delivery.steps.results')}</h3>
                   <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                     {editedOrder.deliveryTimeLine?.length || 0}
                   </span>
@@ -1480,7 +1490,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
                 <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
                   {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
-                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">لا يوجد سجل توصيل بعد</p>
+                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('orders.details.no_delivery_logs')}</p>
                   )}
                   {editedOrder.deliveryTimeLine?.map((log, idx) => {
                     const logStyle = getStatusStyle(log.status);
@@ -1500,7 +1510,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         </div>
                         <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
                         <div className="flex items-center gap-1.5">
-                          <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">أ</div>
+                          <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">{t('common.user_init')}</div>
                           <span className="text-[8px] font-black text-slate-400">{log.user}</span>
                         </div>
                       </div>
@@ -1518,8 +1528,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={executeDelete}
-        title="حذف الطلب"
-        description="هل أنت متأكد من أنك تريد حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
+        title={t('orders.details.delete_order')}
+        description={t('common.delete_confirm_desc')}
         isDeleting={isDeleting}
       />
 
@@ -1534,9 +1544,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white"><CheckCircle2 className="w-5 h-5" /></div>
                     <div>
-                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">تحديث الحالة</h4>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.details.update_status_title')}</h4>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">
-                        قم بتغيير حالة الطلب وإضافة ملاحظة
+                        {t('orders.details.update_status_desc')}
                       </p>
                     </div>
                   </div>
@@ -1545,7 +1555,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الحالة الجديدة</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.new_status')}</label>
                     <ModernSelect
                       value={(() => {
                         const currentKey = getStatusKey(newLog.status);
@@ -1565,10 +1575,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       }}
                       options={statusesToDisplay.map((s: any) => ({
                         value: s.id || s.nameEN, // Use ID if available
-                        label: s.nameAR || s.nameEN,
+                        label: getTranslatedName(s, i18n.language),
                         color: s.color // Pass color
                       }))}
-                      placeholder="اختر الحالة..."
+                      placeholder={t('orders.details.select_status_placeholder')}
                     />
                   </div>
 
@@ -1585,7 +1595,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 space-y-3 animate-in slide-in-from-top-2 duration-200">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-amber-500" />
-                          <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest">تاريخ التأجيل</label>
+                          <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{t('orders.details.postpone_date')}</label>
                         </div>
                         <input
                           type="date"
@@ -1596,31 +1606,31 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         />
                         <p className="text-[9px] font-bold text-amber-500/80 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
-                          سيتم تذكيرك بهذا الطلب في التاريخ المحدد
+                          {t('orders.details.postpone_desc')}
                         </p>
                       </div>
                     );
                   })()}
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظة (اختياري)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('common.notes')} ({t('common.optional')})</label>
                     <textarea
                       value={newLog.note}
                       onChange={e => setNewLog({ ...newLog, note: e.target.value })}
-                      placeholder="اكتب ملاحظة التغيير..."
+                      placeholder={t('orders.details.notes_placeholder')}
                       className="w-full min-h-[120px] px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none resize-none focus:border-indigo-500 transition-all shadow-inner"
                     />
                   </div>
                 </div>
 
                 <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4 shrink-0">
-                  <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100">إلغاء</button>
+                  <button onClick={() => setIsAddLogOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100">{t('common.cancel')}</button>
                   <button
                     onClick={addStatusUpdate}
                     disabled={isStatusUpdating}
                     className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isStatusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد التحديث'}
+                    {isStatusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.confirm_update')}
                   </button>
                 </div>
               </div>
@@ -1641,8 +1651,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <Truck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">إرسال للتوصيل</h4>
-                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">اختر شركة التوصيل لإسناد الطلب</p>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('orders.details.send')}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('orders.details.select_company')}</p>
                 </div>
               </div>
               <button onClick={() => setIsDeliveryModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X className="w-6 h-6" /></button>
@@ -1656,7 +1666,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               ) : deliveryCompanies.length === 0 ? (
                 <div className="text-center py-12">
                   <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-                  <p className="text-xs font-bold text-slate-500">لا توجد شركات توصيل متاحة</p>
+                  <p className="text-xs font-bold text-slate-500">{t('orders.bulk_delivery.no_companies')}</p>
                 </div>
               ) : (
                 <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
@@ -1701,13 +1711,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </div>
 
             <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
-              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100 transition-all">إلغاء</button>
+              <button onClick={() => setIsDeliveryModalOpen(false)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100 transition-all">{t('common.cancel')}</button>
               <button
                 onClick={handleSendToDelivery}
                 disabled={!selectedCompanyId || isSendingToDelivery}
                 className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
               >
-                {isSendingToDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Truck className="w-4 h-4" /> إرسال الطلب</>}
+                {isSendingToDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Truck className="w-4 h-4" /> {t('orders.details.send')}</>}
               </button>
             </div>
           </div>
@@ -1724,13 +1734,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-5 ring-4 ring-white/10 shadow-lg">
                 <CheckCircle2 className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-white font-black text-2xl tracking-tight">تم الإرسال بنجاح!</h3>
-              <p className="text-emerald-100 text-xs font-bold mt-2 uppercase tracking-widest">تم إسناد الطلب لشركة {successCompanyName}</p>
+              <h3 className="text-white font-black text-2xl tracking-tight">{t('orders.bulk_delivery.sent_success', { count: '' }).replace('()', '').trim()}</h3>
+              <p className="text-emerald-100 text-xs font-bold mt-2 uppercase tracking-widest">{t('orders.details.delivery_assigned_to', { company: successCompanyName })}</p>
             </div>
 
             <div className="p-10">
               <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center group relative hover:border-indigo-300 transition-colors">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">كود التتبع / Tracking Code</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('orders.details.tracking_code')}</p>
                 <div className="flex items-center justify-center gap-3">
                   <h2 className="text-3xl font-black text-slate-800 tracking-wider font-mono select-all cursor-pointer" onClick={copyTracking}>{successTrackingCode}</h2>
                   <button onClick={copyTracking} className="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-xl hover:bg-indigo-50"><Copy className="w-5 h-5" /></button>
@@ -1741,7 +1751,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 onClick={() => setIsSuccessModalOpen(false)}
                 className="w-full mt-8 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
               >
-                موافق، إغلاق النافذة
+                {t('common.confirm')}
               </button>
             </div>
           </div>
@@ -1756,8 +1766,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-rose-950">فشل الإرسال</h3>
-                <p className="text-xs font-bold text-rose-400 mt-0.5">يرجى تصحيح الأخطاء التالية والمحاولة مجدداً</p>
+                <h3 className="text-lg font-black text-rose-950">{t('orders.bulk_delivery.sent_failed', { count: '' }).replace('()', '').trim()}</h3>
+                <p className="text-xs font-bold text-rose-400 mt-0.5">{t('orders.details.send_error_validation')}</p>
               </div>
               <button onClick={() => setIsErrorModalOpen(false)} className="mr-auto w-8 h-8 flex items-center justify-center rounded-xl hover:bg-rose-100 text-rose-300 hover:text-rose-600 transition-colors">
                 <X className="w-5 h-5" />
@@ -1769,7 +1779,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <div key={idx} className="space-y-3">
                   {deliveryErrors.length > 1 && (
                     <div className="text-xs font-black text-slate-400 border-b border-slate-100 pb-2 mb-2">
-                      طلب #{fail.data?.numberOrder || 'Unknown'}
+                      {t('common.order')} #{fail.data?.numberOrder || 'Unknown'}
                     </div>
                   )}
                   {fail.parsedErrors.map((err: any, i: number) => (
@@ -1796,7 +1806,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 onClick={() => setIsErrorModalOpen(false)}
                 className="w-full py-3.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-black text-xs hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm"
               >
-                إغلاق النافذة
+                {t('common.cancel')}
               </button>
             </div>
           </div>

@@ -1,8 +1,10 @@
+import i18n from '../i18n';
+
 /**
  * Format date to Arabic locale
  */
 export const formatDate = (date: string | Date): string => {
-  return new Date(date).toLocaleDateString('ar', {
+  return new Date(date).toLocaleDateString(i18n.language === 'ar' ? 'ar' : (i18n.language === 'fr' ? 'fr-FR' : 'en-US'), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -13,8 +15,10 @@ export const formatDate = (date: string | Date): string => {
 /**
  * Format currency to Algerian Dinar
  */
-export const formatCurrency = (amount: number): string => {
-  return `${amount.toLocaleString('ar-DZ')} دج`;
+export const formatCurrency = (amount: number | undefined | null): string => {
+  const safeAmount = amount || 0;
+  const locale = i18n.language === 'ar' ? 'ar-DZ' : (i18n.language === 'fr' ? 'fr-DZ' : 'en-US');
+  return `${safeAmount.toLocaleString(locale)} ${i18n.t('common.currency')}`;
 };
 
 /**
@@ -25,10 +29,11 @@ export const generateOrderId = (): string => {
 };
 
 /**
- * Get current date in Arabic format
+ * Get current date in appropriate locale format
  */
-export const getCurrentDateArabic = (): string => {
-  return new Date().toLocaleDateString('ar', {
+export const getCurrentDate = (): string => {
+  const locale = i18n.language === 'ar' ? 'ar' : (i18n.language === 'fr' ? 'fr-FR' : 'en-US');
+  return new Date().toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long'

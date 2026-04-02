@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DeleteConfirmationModalProps {
     isOpen: boolean;
@@ -20,6 +21,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
     description,
     isDeleting = false,
 }) => {
+    const { t } = useTranslation();
     if (!isOpen) return null;
 
     return (
@@ -49,7 +51,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
                                 disabled={isDeleting}
                                 className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-black text-xs uppercase hover:bg-slate-50 transition-all disabled:opacity-50"
                             >
-                                إلغاء
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={onConfirm}
@@ -57,10 +59,10 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
                                 className="flex-1 py-3 bg-rose-600 text-white rounded-lg font-black text-xs uppercase shadow-lg shadow-rose-600/30 hover:bg-rose-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {isDeleting ? (
-                                    <>جاري الحذف...</>
+                                    <>{t('common.deleting')}...</>
                                 ) : (
                                     <>
-                                        <Trash2 className="w-4 h-4" /> تأكيد الحذف
+                                        <Trash2 className="w-4 h-4" /> {t('common.confirm_delete')}
                                     </>
                                 )}
                             </button>

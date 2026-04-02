@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_BASIC_STATISTICS = gql`
-  query GetBasicStatistics {
-    basicStatistics {
+  query GetBasicStatistics($startDate: Date, $endDate: Date) {
+    basicStatistics(startDate: $startDate, endDate: $endDate) {
       totalUsers
       totalOrders
       lowStockItems
@@ -23,6 +23,8 @@ export const GET_BASIC_STATISTICS = gql`
       ordersGrowth
       deliveryRateGrowth
       confirmationRateGrowth
+      confirmedCountGrowth
+      deliveredCountGrowth
     }
   }
 `;

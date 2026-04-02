@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ChevronRight,
     ChevronLeft,
@@ -27,6 +28,8 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
     totalItems,
     isLoading = false
 }) => {
+    const { t, i18n } = useTranslation();
+    const isRtl = i18n.language === 'ar';
     const limits = [5, 10, 20, 50, 100];
     const [jumpPage, setJumpPage] = useState<string>('');
 
@@ -83,13 +86,13 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                 {/* Total Info */}
                 {totalItems !== undefined && (
                     <div className="text-[11px] font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 whitespace-nowrap">
-                        عرض <span className="text-indigo-600 font-black">{startItem}</span> - <span className="text-indigo-600 font-black">{endItem}</span> من <span className="text-slate-800 font-black">{totalItems}</span>
+                        {t('common.pagination.showing')} <span className="text-indigo-600 font-black">{startItem}</span> - <span className="text-indigo-600 font-black">{endItem}</span> {t('common.pagination.of')} <span className="text-slate-800 font-black">{totalItems}</span>
                     </div>
                 )}
 
                 {/* Limit Selector */}
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">صفوف:</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">{t('common.pagination.rows')}:</span>
                     <div className="relative group">
                         <select
                             value={limit}
@@ -119,8 +122,8 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                     <button
                         disabled={currentPage === 1 || isLoading}
                         onClick={() => onPageChange(1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
-                        title="الصفحة الأولى"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all ${isRtl ? '' : 'rotate-180'}`}
+                        title={t('common.pagination.first')}
                     >
                         <ChevronsRight className="w-4 h-4" />
                     </button>
@@ -129,8 +132,8 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                     <button
                         disabled={currentPage === 1 || isLoading}
                         onClick={() => onPageChange(currentPage - 1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
-                        title="السابق"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all ${isRtl ? '' : 'rotate-180'}`}
+                        title={t('common.pagination.prev')}
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -168,8 +171,8 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                     <button
                         disabled={currentPage === totalPages || isLoading}
                         onClick={() => onPageChange(currentPage + 1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
-                        title="التالي"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all ${isRtl ? '' : 'rotate-180'}`}
+                        title={t('common.pagination.next')}
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -178,8 +181,8 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                     <button
                         disabled={currentPage === totalPages || isLoading}
                         onClick={() => onPageChange(totalPages)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
-                        title="الصفحة الأخيرة"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all ${isRtl ? '' : 'rotate-180'}`}
+                        title={t('common.pagination.last')}
                     >
                         <ChevronsLeft className="w-4 h-4" />
                     </button>
@@ -191,7 +194,7 @@ const PaginationControl: React.FC<PaginationControlProps> = ({
                     <form onSubmit={handleJumpToPage} className="flex items-center gap-2 hidden lg:flex">
                         <input
                             type="text"
-                            placeholder="اذهب..."
+                            placeholder={t('common.pagination.go')}
                             value={jumpPage}
                             onChange={(e) => setJumpPage(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-14 h-9 rounded-lg bg-slate-50 border border-slate-200 text-center text-[11px] font-bold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-300"

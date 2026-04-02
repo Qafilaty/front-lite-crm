@@ -9,8 +9,11 @@ import PostponedOrdersAlert from './common/PostponedOrdersAlert';
 import { useGlobalError } from '../contexts/GlobalErrorContext';
 import NetworkErrorScreen from './common/NetworkErrorScreen';
 import SubscriptionWarning from './common/SubscriptionWarning';
+import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 
 const Layout: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { user: authUser, logout } = useAuth();
   const { error, clearError } = useGlobalError();
   const navigate = useNavigate();
@@ -18,10 +21,17 @@ const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  useEffect(() => {
+    const dir = i18n.dir();
+    document.documentElement.dir = dir;
+    document.documentElement.lang = i18n.language;
+    document.body.style.fontFamily = i18n.language === 'ar' ? "'Tajawal', sans-serif" : "'Roboto', sans-serif";
+  }, [i18n.language]);
+
   // Fallback user for network error state to prevent crashes
   const user = authUser || {
     id: 'offline',
-    name: 'غير متصل',
+    name: t('header.offline'),
     email: 'offline@wilo.site',
     role: 'user',
     joinedDate: '-',
@@ -89,7 +99,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-['Tajawal'] text-slate-900 overflow-hidden" dir="rtl">
+    <div className={`flex h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden ${i18n.language === 'ar' ? "font-['Tajawal']" : "font-['Roboto']"}`} dir={i18n.dir()}>
       <ToastNotifications />
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />

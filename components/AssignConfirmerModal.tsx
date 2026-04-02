@@ -4,6 +4,7 @@ import { X, UserCheck, Loader2 } from 'lucide-react';
 import { GET_ALL_USERS } from '../graphql/queries/userQueries';
 import { gql } from '@apollo/client';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const CHANGE_CONFIRMED_ORDERS = gql`
   mutation ChangeConfirmedOrders($id: [ID!]!, $idConfirmed: ID!) {
@@ -21,6 +22,7 @@ interface AssignConfirmerModalProps {
 }
 
 export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOpen, onClose, selectedIds, onSuccess }) => {
+    const { t } = useTranslation();
     const [selectedUserId, setSelectedUserId] = useState('');
     const { data: usersData, loading: usersLoading } = useQuery(GET_ALL_USERS);
     const [assignOrders, { loading: assigning }] = useMutation(CHANGE_CONFIRMED_ORDERS);
@@ -40,16 +42,16 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
             });
 
             if (data?.changeConfirmedOrders?.status) {
-                toast.success('تم إسناد الطلبات بنجاح');
+                toast.success(t('orders.assign_confirmer.toast_success'));
                 onSuccess();
                 onClose();
                 setSelectedUserId('');
             } else {
-                toast.error('فشل إسناد الطلبات');
+                toast.error(t('orders.assign_confirmer.toast_error'));
             }
         } catch (error) {
             console.error('Error assigning orders:', error);
-            toast.error('حدث خطأ أثناء الإسناد');
+            toast.error(t('orders.assign_confirmer.toast_error'));
         }
     };
 
@@ -61,7 +63,7 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-indigo-600" />
-                        إسناد الطلبات ({selectedIds.length})
+                        {t('orders.assign_confirmer.title')} ({selectedIds.length})
                     </h3>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600">
                         <X className="w-5 h-5" />
@@ -70,7 +72,7 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
 
                 <div className="p-6 space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-600">اختر الموظف (Confirmer)</label>
+                        <label className="text-sm font-bold text-slate-600">{t('orders.assign_confirmer.select_user')}</label>
                         {usersLoading ? (
                             <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
                         ) : (
@@ -97,7 +99,7 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
                                     </button>
                                 ))}
                                 {confirmedUsers.length === 0 && (
-                                    <p className="text-center text-slate-400 py-4 text-sm font-medium">لا يوجد موظفين بصلاحية Confirmed</p>
+                                    <p className="text-center text-slate-400 py-4 text-sm font-medium">{t('orders.assign_confirmer.no_users')}</p>
                                 )}
                             </div>
                         )}
@@ -109,14 +111,14 @@ export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOp
                         onClick={onClose}
                         className="flex-1 py-3 px-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
                     >
-                        إلغاء
+                        {t('common.cancel')}
                     </button>
                     <button
                         onClick={handleAssign}
                         disabled={!selectedUserId || assigning}
                         className="flex-[2] py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        {assigning ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تأكيد الإسناد'}
+                        {assigning ? <Loader2 className="w-5 h-5 animate-spin" /> : t('orders.assign_confirmer.confirm_btn')}
                     </button>
                 </div>
             </div>

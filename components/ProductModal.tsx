@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, UploadCloud, Plus, Trash2, Package, Tag, Layers, DollarSign, Archive, CheckCircle2, AlertCircle, RefreshCw, Store } from 'lucide-react';
+import { X, UploadCloud, Plus, Trash2, Package, Tag, Layers, DollarSign, Archive, CheckCircle2, AlertCircle, RefreshCw, Store, ChevronRight, ChevronLeft, MapPin, Phone, User, Clock, ShoppingCart } from 'lucide-react';
 import { ProductVariantDefinition, ProductVariantProbability, VariantValue, Product } from '../types';
 import { Input, TextArea, Toggle, Button } from './UIComponents';
 import { useMutation } from '@apollo/client';
 import { CREATE_PRODUCT, UPDATE_PRODUCT } from '../graphql/mutations/productMutations';
 import { SINGLE_UPLOAD } from '../graphql/mutations/uploadMutations';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface ProductModalProps {
     isOpen: boolean;
@@ -46,6 +47,7 @@ const INITIAL_STATE: ProductFormState = {
 };
 
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess, product }) => {
+    const { t, i18n } = useTranslation();
     const isEditMode = !!product; // Derive isEditMode
     const [formData, setFormData] = useState<ProductFormState>(INITIAL_STATE);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,23 +107,23 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
     const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        const toastId = toast.loading('جاري رفع الصورة...');
+ 
+        const toastId = toast.loading(t('product_modal.toasts.uploading_image'));
         try {
             const result = await singleUpload({
                 variables: { file }
             });
-
+ 
             if (result.data?.singleUpload?.url) {
                 const fullUrl = `${result.data.singleUpload.url}/${result.data.singleUpload.filename}`;
                 setFormData(prev => ({ ...prev, thumbnail: fullUrl }));
-                toast.success('تم رفع الصورة بنجاح', { id: toastId });
+                toast.success(t('product_modal.toasts.upload_success'), { id: toastId });
             } else {
-                toast.error('فشل رفع الصورة', { id: toastId });
+                toast.error(t('product_modal.toasts.upload_failed'), { id: toastId });
             }
         } catch (error) {
             console.error(error);
-            toast.error('حدث خطأ أثناء رفع الصورة', { id: toastId });
+            toast.error(t('product_modal.toasts.upload_error'), { id: toastId });
         }
     };
 
@@ -275,56 +277,56 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
     const handleBlur = (field: string, value: any) => {
         const newErrors = { ...errors };
         delete newErrors[field];
-
+ 
         if (field === 'name') {
-            if (!value) newErrors.name = 'يرجى إدخال اسم المنتج';
+            if (!value) newErrors.name = t('product_modal.errors.name_required');
         }
         else if (field === 'sku') {
-            if (!value) newErrors.sku = 'يرجى إدخال رمز التخزين (SKU)';
+            if (!value) newErrors.sku = t('product_modal.errors.sku_required');
         }
         else if (field === 'price') {
-            if (Number(value) < 0) newErrors.price = 'لا يمكن أن يكون السعر أقل من 0';
+            if (Number(value) < 0) newErrors.price = t('product_modal.errors.price_positive');
         }
         else if (field === 'cost') {
-            if (Number(value) < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
+            if (Number(value) < 0) newErrors.cost = t('product_modal.errors.cost_positive');
         }
         else if (field === 'quantity') {
-            if (Number(value) < 0) newErrors.quantity = 'لا يمكن أن تكون الكمية أقل من 0';
+            if (Number(value) < 0) newErrors.quantity = t('product_modal.errors.quantity_positive');
         }
-
+ 
         setErrors(newErrors);
     };
 
     const handleSubmit = async () => {
         const newErrors: Record<string, string> = {};
-
-        if (!formData.name) newErrors.name = 'يرجى إدخال اسم المنتج';
-        if (!formData.sku) newErrors.sku = 'يرجى إدخال رمز التخزين (SKU)';
-        if (formData.price < 0) newErrors.price = 'لا يمكن أن يكون السعر أقل من 0';
-        if (formData.cost < 0) newErrors.cost = 'لا يمكن أن تكون التكلفة أقل من 0';
-        if (!hasVariants && formData.quantity < 0) newErrors.quantity = 'لا يمكن أن تكون الكمية أقل من 0';
-
+ 
+        if (!formData.name) newErrors.name = t('product_modal.errors.name_required');
+        if (!formData.sku) newErrors.sku = t('product_modal.errors.sku_required');
+        if (formData.price < 0) newErrors.price = t('product_modal.errors.price_positive');
+        if (formData.cost < 0) newErrors.cost = t('product_modal.errors.cost_positive');
+        if (!hasVariants && formData.quantity < 0) newErrors.quantity = t('product_modal.errors.quantity_positive');
+ 
         // Validate variants if present
         if (formData.variants.length > 0) {
             const invalidVariant = formData.variants.find(v => !v.name || !v.value || v.value.length === 0);
             console.log({ invalidVariant });
-
+ 
             if (invalidVariant) {
-                toast.error('يرجى التأكد من إدخال اسماء وقيم جميع المتغيرات');
+                toast.error(t('product_modal.errors.invalid_variants'));
                 return;
                 // Could also set a general error or specific variant error if complex
             }
         }
-
+ 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            toast.error('يرجى التحقق من الحقول');
+            toast.error(t('product_modal.errors.check_fields'));
             return;
         }
 
         setErrors({});
 
-        const toastId = toast.loading(isEditMode ? 'جاري تحديث المنتج...' : 'جاري إضافة المنتج...');
+        const toastId = toast.loading(isEditMode ? t('product_modal.toasts.updating') : t('product_modal.toasts.adding'));
         const isLoading = isEditMode ? isUpdating : isCreating;
 
         try {
@@ -366,7 +368,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                         content: content
                     }
                 });
-                toast.success('تم تحديث المنتج بنجاح', { id: toastId });
+                toast.success(t('product_modal.toasts.update_success_product'), { id: toastId });
                 onSuccess(result.data?.updateProduct?.data);
             } else {
                 result = await createProduct({
@@ -374,37 +376,37 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                         content: content
                     }
                 });
-                toast.success('تم إضافة المنتج بنجاح', { id: toastId });
+                toast.success(t('product_modal.toasts.add_success_product'), { id: toastId });
                 onSuccess(result.data?.createProduct);
             }
-
+ 
             onClose();
-
+ 
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || (isEditMode ? 'فشل تحديث المنتج' : 'فشل إضافة المنتج'), { id: toastId });
+            toast.error(error.message || (isEditMode ? t('product_modal.toasts.update_failed_product') : t('product_modal.toasts.add_failed_product')), { id: toastId });
         }
     };
 
     if (!isOpen) return null;
 
     const hasVariants = formData.variants.length > 0;
-
+ 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto no-scrollbar dir-rtl" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div className={`fixed inset-0 z-50 overflow-y-auto no-scrollbar ${i18n.dir() === 'rtl' ? 'dir-rtl text-right' : 'dir-ltr text-left'}`} aria-labelledby="modal-title" role="dialog" aria-modal="true">
             {/* Backdrop */}
             <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-
+ 
             <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div className="relative transform overflow-hidden rounded-2xl bg-white text-right shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-gray-100 flex flex-col h-[85vh]">
-
+                <div className="relative transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-gray-100 flex flex-col h-[85vh]">
+ 
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
                                 <Package size={22} strokeWidth={2.5} />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900" id="modal-title">{isEditMode ? 'تعديل بيانات المنتج' : 'إضافة منتج جديد'}</h3>
+                            <h3 className="text-xl font-bold text-slate-900" id="modal-title">{isEditMode ? t('product_modal.titles.edit') : t('product_modal.titles.add')}</h3>
                         </div>
                         <button onClick={onClose} className="text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 p-2 rounded-full transition-colors">
                             <X size={20} />
@@ -418,14 +420,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                             className={`py-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'general' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                         >
                             <Layers size={18} />
-                            بيانات المنتج
+                            {t('product_modal.tabs.general')}
                         </button>
                         <button
                             onClick={() => setActiveTab('variants')}
                             className={`py-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'variants' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                         >
                             <Tag size={18} />
-                            الخيارات والمتغيرات
+                            {t('product_modal.tabs.variants')}
                             {hasVariants && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] min-w-[20px] text-center">{formData.variantsProbability.length}</span>}
                         </button>
                     </div>
@@ -439,7 +441,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                 {/* Left Column: Image */}
                                 <div className="lg:col-span-4 space-y-6">
                                     <div className="bg-gray-50/50 rounded-2xl border border-dashed border-gray-300 p-6 text-center hover:bg-gray-50 transition-colors">
-                                        <label className="block text-sm font-medium text-slate-700 mb-4">صورة المنتج الرئيسية</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-4">{t('product_modal.fields.thumbnail')}</label>
                                         <div className="relative group w-full aspect-[4/3] rounded-xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-100 flex items-center justify-center">
                                             {formData.thumbnail ? (
                                                 <>
@@ -459,8 +461,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                             ) : (
                                                 <div className="flex flex-col items-center text-gray-400">
                                                     <UploadCloud className="h-12 w-12 mb-3 text-gray-300" />
-                                                    <span className="text-sm font-medium text-indigo-600">اضغط للرفع</span>
-                                                    <span className="text-xs text-gray-400 mt-1">PNG, JPG حتى 5MB</span>
+                                                    <span className="text-sm font-medium text-indigo-600">{t('product_modal.fields.upload_prompt')}</span>
+                                                    <span className="text-xs text-gray-400 mt-1">{t('product_modal.fields.upload_info')}</span>
                                                 </div>
                                             )}
                                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleThumbnailUpload} accept="image/*" />
@@ -468,9 +470,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                     </div>
 
                                     <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
-                                        <div className="flex flex-col text-right">
-                                            <span className="text-sm font-bold text-slate-900">حالة المنتج</span>
-                                            <span className="text-xs text-slate-500">المنتج متاح للبيع في المتجر</span>
+                                        <div className={`flex flex-col ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                                            <span className="text-sm font-bold text-slate-900">{t('product_modal.fields.status')}</span>
+                                            <span className="text-xs text-slate-500">{t('product_modal.fields.status_info')}</span>
                                         </div>
                                         <Toggle checked={formData.status} onChange={(v) => setFormData(prev => ({ ...prev, status: v }))} />
                                     </div>
@@ -478,27 +480,19 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                     <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
                                         <div className="flex items-center gap-2">
                                             <Store size={18} className="text-indigo-600" />
-                                            <span className="text-sm font-bold text-slate-900">مكان السحب</span>
+                                            <span className="text-sm font-bold text-slate-900">{t('product_modal.fields.storage_location')}</span>
                                         </div>
-                                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                        <div className={`flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100 ${i18n.dir() === 'rtl' ? 'flex-row' : 'flex-row-reverse'}`}>
                                             <div className="flex-1">
                                                 <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
-                                                    {formData.storageLocation === 'SHOP' ? 'المحل' : 'شركة التوصيل'}
+                                                    {formData.storageLocation === 'SHOP' ? t('product_modal.fields.shop') : t('product_modal.fields.delivery_company')}
                                                 </p>
-                                                <p className="text-[9px] font-bold text-slate-400">موقع سحب المنتج للشحن</p>
+                                                <p className="text-[9px] font-bold text-slate-400">{t('product_modal.fields.storage_info')}</p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setFormData(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
-                                                }}
-                                                className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${formData.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600' : 'bg-slate-300'}`}
-                                            >
-                                                <span
-                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
-                                                />
-                                            </button>
+                                            <Toggle
+                                                checked={formData.storageLocation === 'DELIVERY_COMPANY'}
+                                                onChange={(checked) => setFormData(prev => ({ ...prev, storageLocation: checked ? 'DELIVERY_COMPANY' : 'SHOP' }))}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -508,8 +502,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div className="md:col-span-2">
                                             <Input
-                                                label="اسم المنتج"
-                                                placeholder="مثال: قميص قطني صيفي"
+                                                label={t('product_modal.fields.name')}
+                                                placeholder={t('product_modal.placeholders.name')}
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={(e) => {
@@ -524,7 +518,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         </div>
                                         <div>
                                             <Input
-                                                label="رمز التخزين (SKU)"
+                                                label={t('product_modal.fields.sku')}
                                                 placeholder="PRD-001"
                                                 name="sku"
                                                 value={formData.sku}
@@ -543,7 +537,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
 
                                         <div>
                                             <Input
-                                                label="سعر البيع"
+                                                label={t('product_modal.fields.price')}
                                                 type="number"
                                                 name="price"
                                                 value={formData.price}
@@ -560,7 +554,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         </div>
                                         <div>
                                             <Input
-                                                label="سعر التكلفة"
+                                                label={t('product_modal.fields.cost')}
                                                 type="number"
                                                 name="cost"
                                                 value={formData.cost}
@@ -578,7 +572,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         {!hasVariants && (
                                             <div className="md:col-span-2">
                                                 <Input
-                                                    label="الكمية المتوفرة"
+                                                    label={t('product_modal.fields.quantity')}
                                                     type="number"
                                                     name="quantity"
                                                     value={formData.quantity}
@@ -597,18 +591,18 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         {hasVariants && (
                                             <div className="md:col-span-2 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl text-sm flex items-center gap-3 border border-blue-100">
                                                 <AlertCircle size={18} className="shrink-0" />
-                                                <p>يتم إدارة الأسعار من تبويب "الخيارات والمتغيرات" لأن المنتج يحتوي على أنواع متعددة.</p>
+                                                <p>{t('product_modal.fields.variant_management_info')}</p>
                                             </div>
                                         )}
-
+ 
                                         <div className="md:col-span-2">
                                             <TextArea
-                                                label="ملاحظات"
+                                                label={t('product_modal.fields.note')}
                                                 rows={4}
                                                 name="note"
                                                 value={formData.note}
                                                 onChange={handleInputChange}
-                                                placeholder="اكتب وصفاً مختصراً للمنتج..."
+                                                placeholder={t('product_modal.placeholders.note')}
                                             />
                                         </div>
                                     </div>
@@ -626,12 +620,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         <div className="p-1.5 bg-gray-100 rounded-md">
                                             {editingVariantIndex !== null ? <RefreshCw size={16} className="text-indigo-600" /> : <Plus size={16} className="text-gray-600" />}
                                         </div>
-                                        {editingVariantIndex !== null ? 'تعديل المتغير المختار' : 'إضافة نوع متغير'}
+                                        {editingVariantIndex !== null ? t('product_modal.variants.edit_selected') : t('product_modal.variants.add_type')}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                                         <div className="md:col-span-3">
                                             <Input
-                                                placeholder="الاسم (مثل: اللون)"
+                                                placeholder={t('product_modal.placeholders.variant_name')}
                                                 value={newVariantName}
                                                 onChange={(e) => setNewVariantName(e.target.value)}
                                                 className="bg-gray-50 border-gray-200 focus:bg-white"
@@ -643,17 +637,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                 onChange={(e) => setNewVariantType(e.target.value)}
                                                 className="block w-full rounded-lg border-gray-200 border bg-gray-50 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white transition-all font-bold text-slate-800"
                                             >
-                                                <option value="size">حجم (Size)</option>
-                                                <option value="color">لون (Color)</option>
-                                                <option value="material">مادة (Material)</option>
-                                                <option value="custom">مخصص (Custom)</option>
+                                                <option value="size">{t('product_modal.variants.types.size')}</option>
+                                                <option value="color">{t('product_modal.variants.types.color')}</option>
+                                                <option value="material">{t('product_modal.variants.types.material')}</option>
+                                                <option value="custom">{t('product_modal.variants.types.custom')}</option>
                                             </select>
                                         </div>
                                         <div className={newVariantType === 'color' ? 'md:col-span-3' : 'md:col-span-4'}>
                                             <div className="relative">
                                                 <input
                                                     className={`block w-full rounded-lg border bg-gray-50 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white transition-all font-bold ${editingValueIndex !== null ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/30' : 'border-gray-200'}`}
-                                                    placeholder={newVariantType === 'color' ? (editingValueIndex !== null ? "تعديل اسم اللون" : "اسم اللون (مثال: أحمر)") : (editingValueIndex !== null ? "تعديل القيمة" : "القيم (مثال: XL) - اضغط Enter")}
+                                                    placeholder={newVariantType === 'color' ? (editingValueIndex !== null ? t('product_modal.placeholders.edit_color_name') : t('product_modal.placeholders.color_name')) : (editingValueIndex !== null ? t('product_modal.placeholders.edit_value') : t('product_modal.placeholders.values'))}
                                                     value={newVariantValueInput}
                                                     onChange={(e) => setNewVariantValueInput(e.target.value)}
                                                     onKeyDown={(e) => {
@@ -668,7 +662,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                         <button
                                                             onClick={cancelEditValue}
                                                             className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors"
-                                                            title="إلغاء التعديل"
+                                                            title={t('common.cancel')}
                                                         >
                                                             <X size={16} />
                                                         </button>
@@ -701,10 +695,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                 onClick={handleAddVariantGroup}
                                                 disabled={!newVariantName || currentVariantValues.length === 0}
                                             >
-                                                {editingVariantIndex !== null ? 'تحديث' : 'إضافة'}
+                                                {editingVariantIndex !== null ? t('common.update') : t('common.add')}
                                             </Button>
                                             {editingVariantIndex !== null && (
-                                                <button onClick={cancelEditVariant} className="text-[10px] text-gray-400 hover:text-red-500 font-bold transition-colors underline">إلغاء التعديل</button>
+                                                <button onClick={cancelEditVariant} className="text-[10px] text-gray-400 hover:text-red-500 font-bold transition-colors underline">{t('common.cancel')}</button>
                                             )}
                                         </div>
                                     </div>
@@ -722,14 +716,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                          <button 
                                                              onClick={(e) => { e.preventDefault(); editVariantValue(idx); }}
                                                              className="hover:text-indigo-600 text-gray-400 transition-colors"
-                                                             title="تعديل"
+                                                             title={t('common.edit')}
                                                          >
                                                              <RefreshCw size={10} />
                                                          </button>
                                                          <button 
                                                              onClick={(e) => { e.preventDefault(); removeVariantValue(val.name); }}
                                                              className="hover:text-red-500 text-gray-400 transition-colors"
-                                                             title="حذف"
+                                                             title={t('common.delete')}
                                                          >
                                                              <X size={12} />
                                                          </button>
@@ -768,10 +762,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                     )}
                                                 </div>
                                                  <div className="mr-auto flex items-center gap-1 shrink-0">
-                                                     <button onClick={(e) => { e.preventDefault(); editVariantGroup(idx); }} className="text-gray-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-all opacity-0 group-hover:opacity-100" title="تعديل">
+                                                     <button onClick={(e) => { e.preventDefault(); editVariantGroup(idx); }} className="text-gray-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-all opacity-0 group-hover:opacity-100" title={t('common.edit')}>
                                                          <RefreshCw size={14} />
                                                      </button>
-                                                     <button onClick={(e) => { e.preventDefault(); removeVariantGroup(idx); }} className="text-gray-300 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" title="حذف">
+                                                     <button onClick={(e) => { e.preventDefault(); removeVariantGroup(idx); }} className="text-gray-300 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" title={t('common.delete')}>
                                                          <Trash2 size={14} />
                                                      </button>
                                                  </div>
@@ -786,9 +780,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                         <div className="flex items-center justify-between mb-4">
                                             <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
                                                 <Archive size={18} className="text-indigo-600" />
-                                                قائمة المتغيرات ({formData.variantsProbability.length})
+                                                {t('product_modal.variants.list_title', { count: formData.variantsProbability.length })}
                                             </h4>
-                                            {isGenerating && <span className="text-xs text-gray-400 flex items-center gap-1"><RefreshCw size={12} className="animate-spin" /> جاري التحديث...</span>}
+                                            {isGenerating && <span className="text-xs text-gray-400 flex items-center gap-1"><RefreshCw size={12} className="animate-spin" /> {t('common.updating')}</span>}
                                         </div>
 
                                         <div className="overflow-hidden border border-gray-200 rounded-xl shadow-sm bg-white">
@@ -798,15 +792,15 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                     <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
                                                         {/* Bulk Edit Row */}
                                                         <tr className="bg-indigo-50/30 border-b border-indigo-100">
-                                                            <td className="px-4 py-2 text-right text-xs font-bold text-indigo-600">
-                                                                تطبيق على الكل:
+                                                            <td className={`px-4 py-2 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-indigo-600`}>
+                                                                {t('product_modal.bulk.apply_all')}:
                                                             </td>
                                                             <td className="px-4 py-2"></td>
                                                             <td className="px-4 py-2">
                                                                 <div className="flex items-center gap-1 group/input">
                                                                     <input
                                                                         type="number"
-                                                                        placeholder="السعر"
+                                                                        placeholder={t('product_modal.fields.price')}
                                                                         id="bulk-price"
                                                                         className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                                                                         onKeyDown={(e) => {
@@ -818,7 +812,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                                         ...prev,
                                                                                         variantsProbability: prev.variantsProbability.map(p => ({ ...p, price: val }))
                                                                                     }));
-                                                                                    toast.success('تم تطبيق السعر على الكل');
+                                                                                    toast.success(t('product_modal.toasts.bulk_price_success'));
                                                                                     input.value = ''; // Clear after apply
                                                                                 }
                                                                             }
@@ -833,12 +827,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                                     ...prev,
                                                                                     variantsProbability: prev.variantsProbability.map(p => ({ ...p, price: val }))
                                                                                 }));
-                                                                                toast.success('تم تطبيق السعر على الكل');
+                                                                                toast.success(t('product_modal.toasts.bulk_price_success'));
                                                                                 input.value = '';
                                                                             }
                                                                         }}
                                                                         className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
-                                                                        title="تطبيق السعر"
+                                                                        title={t('product_modal.fields.price')}
                                                                     >
                                                                         <CheckCircle2 size={14} />
                                                                     </button>
@@ -848,7 +842,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                 <div className="flex items-center gap-1 group/input">
                                                                     <input
                                                                         type="number"
-                                                                        placeholder="التكلفة"
+                                                                        placeholder={t('product_modal.fields.cost')}
                                                                         id="bulk-cost"
                                                                         className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                                                                         onKeyDown={(e) => {
@@ -860,7 +854,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                                         ...prev,
                                                                                         variantsProbability: prev.variantsProbability.map(p => ({ ...p, cost: val }))
                                                                                     }));
-                                                                                    toast.success('تم تطبيق التكلفة على الكل');
+                                                                                    toast.success(t('product_modal.toasts.bulk_cost_success'));
                                                                                     input.value = '';
                                                                                 }
                                                                             }
@@ -875,7 +869,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                                     ...prev,
                                                                                     variantsProbability: prev.variantsProbability.map(p => ({ ...p, cost: val }))
                                                                                 }));
-                                                                                toast.success('تم تطبيق التكلفة على الكل');
+                                                                                toast.success(t('product_modal.toasts.bulk_cost_success'));
                                                                                 input.value = '';
                                                                             }
                                                                         }}
@@ -890,7 +884,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                 <div className="flex items-center gap-1 group/input">
                                                                     <input
                                                                         type="number"
-                                                                        placeholder="الكمية"
+                                                                        placeholder={t('product_modal.fields.quantity')}
                                                                         id="bulk-quantity"
                                                                         className="w-full text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
                                                                         onKeyDown={(e) => {
@@ -902,40 +896,40 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
                                                                                         ...prev,
                                                                                         variantsProbability: prev.variantsProbability.map(p => ({ ...p, quantity: val }))
                                                                                     }));
-                                                                                    toast.success('تم تطبيق الكمية على الكل');
+                                                                                    toast.success(t('product_modal.toasts.bulk_quantity_success'));
                                                                                     input.value = '';
                                                                                 }
                                                                             }
                                                                         }}
                                                                     />
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const input = document.getElementById('bulk-quantity') as HTMLInputElement;
-                                                                            const val = parseFloat(input?.value);
-                                                                            if (!isNaN(val)) {
-                                                                                setFormData(prev => ({
-                                                                                    ...prev,
-                                                                                    variantsProbability: prev.variantsProbability.map(p => ({ ...p, quantity: val }))
-                                                                                }));
-                                                                                toast.success('تم تطبيق الكمية على الكل');
-                                                                                input.value = '';
-                                                                            }
-                                                                        }}
-                                                                        className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
-                                                                        title="تطبيق الكمية"
-                                                                    >
-                                                                        <CheckCircle2 size={14} />
-                                                                    </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const input = document.getElementById('bulk-quantity') as HTMLInputElement;
+                                                                                const val = parseFloat(input?.value);
+                                                                                if (!isNaN(val)) {
+                                                                                    setFormData(prev => ({
+                                                                                        ...prev,
+                                                                                        variantsProbability: prev.variantsProbability.map(p => ({ ...p, quantity: val }))
+                                                                                    }));
+                                                                                    toast.success(t('product_modal.toasts.bulk_quantity_success'));
+                                                                                    input.value = '';
+                                                                                }
+                                                                            }}
+                                                                            className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-600 hover:text-white transition-colors"
+                                                                            title={t('product_modal.variants.apply_quantity')}
+                                                                        >
+                                                                            <CheckCircle2 size={14} />
+                                                                        </button>
                                                                 </div>
                                                             </td>
 
                                                         </tr>
                                                         <tr>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">المتغير</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-40">SKU</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">السعر</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-28">التكلفة</th>
-                                                            <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">الكمية</th>
+                                                            <th scope="col" className={`px-4 py-3 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-gray-500 uppercase tracking-wider`}>{t('product_modal.table.variant')}</th>
+                                                            <th scope="col" className={`px-4 py-3 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-gray-500 uppercase tracking-wider w-40`}>SKU</th>
+                                                            <th scope="col" className={`px-4 py-3 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-gray-500 uppercase tracking-wider w-28`}>{t('product_modal.fields.price')}</th>
+                                                            <th scope="col" className={`px-4 py-3 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-gray-500 uppercase tracking-wider w-28`}>{t('product_modal.fields.cost')}</th>
+                                                            <th scope="col" className={`px-4 py-3 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} text-xs font-bold text-gray-500 uppercase tracking-wider w-24`}>{t('product_modal.fields.quantity')}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-50">
@@ -990,16 +984,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSuccess,
 
                     {/* Footer / Actions */}
                     <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between sticky bottom-0 z-20 shrink-0">
-                        <Button variant="secondary" onClick={onClose} className="w-24 text-gray-500 border-gray-200 hover:text-gray-700 hover:bg-gray-50">إلغاء</Button>
+                        <Button variant="secondary" onClick={onClose} className="w-24 text-gray-500 border-gray-200 hover:text-gray-700 hover:bg-gray-50">{t('common.cancel')}</Button>
                         <div className="flex items-center gap-3">
                             {formData.variantsProbability.length > 0 && (
                                 <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full hidden sm:block">
-                                    {formData.variantsProbability.reduce((acc, curr) => acc + (curr.quantity || 0), 0)} قطعة في المخزون
+                                    {formData.variantsProbability.reduce((acc, curr) => acc + (curr.quantity || 0), 0)} {t('product_modal.footer.stock_count')}
                                 </span>
                             )}
                             <Button className="min-w-[160px] shadow-lg shadow-indigo-100" onClick={handleSubmit} isLoading={isCreating || isUpdating}>
-                                <CheckCircle2 size={18} className="ml-2" />
-                                {isEditMode ? 'حفظ التغييرات' : 'حفظ المنتج'}
+                                <CheckCircle2 size={18} className={`${i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}`} />
+                                {isEditMode ? t('product_modal.footer.save_changes') : t('product_modal.footer.save_product')}
                             </Button>
                         </div>
                     </div>

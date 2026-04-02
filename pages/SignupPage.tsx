@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/apiService';
@@ -7,6 +8,8 @@ import logoIcon from '../assets/logo-icon-black.png';
 import { Store, User, Phone, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const SignupPage: React.FC = () => {
+    const { t, i18n } = useTranslation();
+    const isRtl = i18n.language === 'ar';
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { login } = useAuth();
@@ -44,10 +47,10 @@ const SignupPage: React.FC = () => {
             if (result.success && result.token) {
                 window.location.href = '/dashboard';
             } else {
-                setError(result.error || 'فشل إنشاء الحساب');
+                setError(result.error || t('auth.signup.error'));
             }
         } catch (err: any) {
-            setError(err.message || 'حدث خطأ غير متوقع');
+            setError(err.message || t('auth.signup.unexpected_error'));
         } finally {
             setIsLoading(false);
         }
@@ -59,18 +62,18 @@ const SignupPage: React.FC = () => {
     const iconClass = "absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300";
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50" dir="rtl">
+        <div className={`min-h-screen flex items-center justify-center p-4 bg-slate-50 ${isRtl ? 'font-arabic' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
             <div className="max-w-2xl w-full">
                 <div className="bg-white rounded-[20px] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
 
                     {/* Header */}
                     <div className="p-8 text-center border-b border-slate-50 bg-slate-50/50">
                         <div className="w-16 h-16 mx-auto mb-4">
-                            <img src={logoIcon} alt="Wilo Logo" className="w-full h-full object-contain" />
+                                <img src={logoIcon} alt="Wilo Logo" className="w-full h-full object-contain" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-800 tracking-tight">إنشاء حساب جديد</h2>
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('auth.signup.title')}</h2>
                         <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                            أو <Link to="/login" className="text-indigo-600 hover:text-indigo-700 transition-colors">تسجيل الدخول إلى حسابك</Link>
+                            {t('auth.signup.subtitle')} <Link to="/login" className="text-indigo-600 hover:text-indigo-700 transition-colors">{t('auth.signup.login_link')}</Link>
                         </p>
                     </div>
 
@@ -87,9 +90,9 @@ const SignupPage: React.FC = () => {
 
                                 {/* Store Name */}
                                 <div className="md:col-span-1">
-                                    <label htmlFor="nameCompany" className={labelClass}>اسم المتجر</label>
+                                    <label htmlFor="nameCompany" className={labelClass}>{t('auth.signup.fields.store_name')}</label>
                                     <div className="relative">
-                                        <Store className={iconClass} />
+                                        <Store className={isRtl ? iconClass : iconClass.replace('right-3.5', 'left-3.5')} />
                                         <input
                                             id="nameCompany"
                                             name="nameCompany"
@@ -97,17 +100,17 @@ const SignupPage: React.FC = () => {
                                             required
                                             value={formData.nameCompany}
                                             onChange={handleChange}
-                                            placeholder="أدخل اسم المتجر"
-                                            className={inputClass}
+                                            placeholder={t('auth.signup.fields.store_name_placeholder')}
+                                            className={`${inputClass} ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'}`}
                                         />
                                     </div>
                                 </div>
 
                                 {/* User Name */}
                                 <div className="md:col-span-1">
-                                    <label htmlFor="nameAdmin" className={labelClass}>اسم المستخدم</label>
+                                    <label htmlFor="nameAdmin" className={labelClass}>{t('auth.signup.fields.username')}</label>
                                     <div className="relative">
-                                        <User className={iconClass} />
+                                        <User className={isRtl ? iconClass : iconClass.replace('right-3.5', 'left-3.5')} />
                                         <input
                                             id="nameAdmin"
                                             name="nameAdmin"
@@ -115,17 +118,17 @@ const SignupPage: React.FC = () => {
                                             required
                                             value={formData.nameAdmin}
                                             onChange={handleChange}
-                                            placeholder="أدخل الاسم الكامل"
-                                            className={inputClass}
+                                            placeholder={t('auth.signup.fields.username_placeholder')}
+                                            className={`${inputClass} ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'}`}
                                         />
                                     </div>
                                 </div>
 
                                 {/* Phone */}
                                 <div className="md:col-span-1">
-                                    <label htmlFor="phoneAdmin" className={labelClass}>رقم الهاتف</label>
+                                    <label htmlFor="phoneAdmin" className={labelClass}>{t('auth.signup.fields.phone')}</label>
                                     <div className="relative">
-                                        <Phone className={iconClass} />
+                                        <Phone className={isRtl ? iconClass : iconClass.replace('right-3.5', 'left-3.5')} />
                                         <input
                                             id="phoneAdmin"
                                             name="phoneAdmin"
@@ -134,16 +137,16 @@ const SignupPage: React.FC = () => {
                                             value={formData.phoneAdmin}
                                             onChange={handleChange}
                                             placeholder="05XXXXXXXX"
-                                            className={inputClass}
+                                            className={`${inputClass} ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'}`}
                                         />
                                     </div>
                                 </div>
 
                                 {/* Email */}
                                 <div className="md:col-span-1">
-                                    <label htmlFor="emailAdmin" className={labelClass}>البريد الإلكتروني</label>
+                                    <label htmlFor="emailAdmin" className={labelClass}>{t('auth.signup.fields.email')}</label>
                                     <div className="relative">
-                                        <Mail className={iconClass} />
+                                        <Mail className={isRtl ? iconClass : iconClass.replace('right-3.5', 'left-3.5')} />
                                         <input
                                             id="emailAdmin"
                                             name="emailAdmin"
@@ -153,16 +156,16 @@ const SignupPage: React.FC = () => {
                                             value={formData.emailAdmin}
                                             onChange={handleChange}
                                             placeholder="example@store.com"
-                                            className={inputClass}
+                                            className={`${inputClass} ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'}`}
                                         />
                                     </div>
                                 </div>
 
                                 {/* Password - Full Width */}
                                 <div className="md:col-span-2">
-                                    <label htmlFor="passwordAdmin" className={labelClass}>كلمة المرور</label>
+                                    <label htmlFor="passwordAdmin" className={labelClass}>{t('auth.signup.fields.password')}</label>
                                     <div className="relative">
-                                        <Lock className={iconClass} />
+                                        <Lock className={isRtl ? iconClass : iconClass.replace('right-3.5', 'left-3.5')} />
                                         <input
                                             id="passwordAdmin"
                                             name="passwordAdmin"
@@ -172,12 +175,12 @@ const SignupPage: React.FC = () => {
                                             value={formData.passwordAdmin}
                                             onChange={handleChange}
                                             placeholder="••••••••"
-                                            className={`${inputClass} pl-12`} // Extra padding for eye icon
+                                            className={`${inputClass} ${isRtl ? 'pr-11 pl-12' : 'pl-11 pr-12'}`} // Extra padding for eye icon
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                                            className={`absolute ${isRtl ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors`}
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
@@ -192,7 +195,7 @@ const SignupPage: React.FC = () => {
                                     type="submit"
                                     className="w-full py-3.5 bg-indigo-600 text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                                 >
-                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'إنشاء حساب'}
+                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('auth.signup.button')}
                                 </button>
                             </div>
                         </form>

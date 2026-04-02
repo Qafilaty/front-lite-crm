@@ -1,5 +1,6 @@
 import React from 'react';
 import { WifiOff, AlertTriangle, RefreshCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface NetworkErrorScreenProps {
     error: {
@@ -11,6 +12,7 @@ interface NetworkErrorScreenProps {
 }
 
 const NetworkErrorScreen: React.FC<NetworkErrorScreenProps> = ({ error, onRetry }) => {
+    const { t } = useTranslation();
     if (!error) return null;
 
     return (
@@ -34,7 +36,7 @@ const NetworkErrorScreen: React.FC<NetworkErrorScreenProps> = ({ error, onRetry 
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-500 font-mono text-left break-all overflow-hidden">
                             <div className="flex items-center gap-2 mb-2 text-rose-500 font-bold uppercase tracking-wider text-[10px]">
                                 <AlertTriangle className="w-3 h-3" />
-                                Error Details
+                                {t('common.network_error.error_details')}
                             </div>
                             {error.details}
                         </div>
@@ -45,13 +47,13 @@ const NetworkErrorScreen: React.FC<NetworkErrorScreenProps> = ({ error, onRetry 
                         className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
                     >
                         <RefreshCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                        إعادة المحاولة
+                        {t('common.network_error.retry')}
                     </button>
                 </div>
 
                 <div className="p-4 text-center">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        يرجى التأكد من اتصالك بالإنترنت
+                        {t('common.network_error.check_connection')}
                     </p>
                 </div>
             </div>
@@ -60,3 +62,4 @@ const NetworkErrorScreen: React.FC<NetworkErrorScreenProps> = ({ error, onRetry 
 };
 
 export default NetworkErrorScreen;
+

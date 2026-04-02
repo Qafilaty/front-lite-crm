@@ -4,7 +4,8 @@ import { Order, OrderStatus, OrderItem, StatusOrderObject } from '../types';
 import {
   Search, MapPin, Phone, Store, ArrowLeft, ChevronRight, ChevronLeft,
   Plus, X, ShoppingBag, Truck, Calendar, Filter, UserCheck, Trash2, Eye, User, CheckSquare, Square,
-  LayoutList, FileText, DollarSign, AlertOctagon, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Home, Building2, Copy, MessageSquare, MessageCircle
+  LayoutList, FileText, DollarSign, AlertOctagon, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Home, Building2, Copy, MessageSquare, MessageCircle,
+  Globe, CreditCard
 } from 'lucide-react';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
@@ -17,12 +18,15 @@ import toast from 'react-hot-toast';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
-import { ModernSelect, PaginationControl } from './common';
+import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
 import PostponedOrdersAlert from './common/PostponedOrdersAlert';
 import { useAuth } from '../contexts/AuthContext';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import { BulkDeliveryModal } from './BulkDeliveryModal';
 import { AssignConfirmerModal } from './AssignConfirmerModal';
+import { formatCurrency } from '../utils/formatters';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
 
 interface OrderConfirmationViewProps {
   orders?: Order[];
@@ -42,6 +46,7 @@ const SYNC_ORDERS_SUBSCRIPTION = gql`
 `;
 
 const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: initialOrders = [], setOrders: setParentOrders }) => {
+  const { t, i18n } = useTranslation();
   // Use GET_CURRENT_USER for reliable company ID
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const user = userData?.currentUser; // Override local user from useAuth for this context
@@ -85,14 +90,14 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     localStorage.setItem('ordersTableColumns_v4', JSON.stringify(newCols));
   };
   const labels: any = {
-    customerInfo: 'العميل',
-    locationInfo: 'الموقع',
-    source: 'المصدر', // Label
-    orderSummary: 'الطلبية',
-    financials: 'المالية والشحن',
-    status: 'الحالة',
-    confirmedBy: 'مؤكد الطلب',
-    note: 'الملاحظة'
+    customerInfo: t('orders.table.customer'),
+    locationInfo: t('orders.confirmation.location'),
+    source: t('orders.confirmation.source'),
+    orderSummary: t('orders.confirmation.order_summary'),
+    financials: t('orders.confirmation.financials'),
+    status: t('orders.table.status'),
+    confirmedBy: t('orders.confirmation.confirmed_by'),
+    note: t('orders.confirmation.notes')
   };
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,6 +106,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [productFilter, setProductFilter] = useState('all'); // Product ID
   const [stateFilter, setStateFilter] = useState('all'); // State Code
   const [confirmerFilter, setConfirmerFilter] = useState('all'); // User ID
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null, key: 'all' });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -224,6 +230,13 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
       filter["idConfirmed"] = confirmerFilter;
     }
 
+    // Date Range Filter
+    if (dateRange.startDate || dateRange.endDate) {
+      filter.createdAt = {};
+      if (dateRange.startDate) filter.createdAt.$gte = dateRange.startDate;
+      if (dateRange.endDate) filter.createdAt.$lte = dateRange.endDate;
+    }
+
     // Search Term (Server-side Regex)
     if (searchTerm) {
       const regex = { $regex: searchTerm, $options: 'i' };
@@ -239,7 +252,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
     filter.isAbandoned = { $ne: true };
 
     return filter;
-  }, [statusFilter, storeFilter, productFilter, stateFilter, confirmerFilter, searchTerm, confirmationStatuses]);
+  }, [statusFilter, storeFilter, productFilter, stateFilter, confirmerFilter, searchTerm, confirmationStatuses, dateRange]);
 
   // 4. Fetch Orders with Advanced Filter
   const { data: ordersData, loading: ordersLoading, refetch } = useQuery(GET_ALL_ORDERS, {
@@ -284,9 +297,10 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
 
   // Helpers
   const getStatusLabel = (s: any): string => {
-    if (typeof s === 'object' && s !== null) return s.nameAR || s.nameEN || 'غير محدد';
+    if (typeof s === 'object' && s !== null) return getTranslatedName(s, i18n.language);
     // Fallback for string statuses
-    return statusLabels[s] || s || 'غير محدد';
+    const label = statusLabels[s] || s;
+    return label ? t(label) : t('common.unspecified');
   };
 
   const getStatusStyle = (s: any) => {
@@ -343,7 +357,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
             return next;
           });
 
-          toast.success(`تم استلام ${newOrders.length} طلبات جديدة!`, {
+          toast.success(t('orders.confirmation.toast.new_orders', { count: newOrders.length }), {
             icon: '🚀',
             duration: 5000
           });
@@ -374,8 +388,8 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
 
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="animate-in slide-in-from-right duration-500">
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">تأكيد الطلبيات</h2>
-            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">إدارة وتحرير الطلبات</p>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('sidebar.items.order_confirmation')}</h2>
+            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('orders.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3 w-full lg:w-auto">
             {selectedOrderIds.length > 0 && (
@@ -384,7 +398,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   onClick={() => setIsBulkDeliveryModalOpen(true)}
                   className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
                 >
-                  <Truck className="w-4 h-4" /> إرسال ({selectedOrderIds.length})
+                  <Truck className="w-4 h-4" /> {t('orders.send_orders', { count: selectedOrderIds.length })}
                 </button>
               ) : (
                 (user?.role === 'admin' || user?.role === 'owner') && (
@@ -392,18 +406,18 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     onClick={() => setIsAssignModalOpen(true)}
                     className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
                   >
-                    <UserCheck className="w-4 h-4" /> إسناد ({selectedOrderIds.length})
+                    <UserCheck className="w-4 h-4" /> {t('orders.assign_orders', { count: selectedOrderIds.length })}
                   </button>
                 )
               )
             )}
             <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none">
-              <Plus className="w-4 h-4" /> إضافة طلب يدوي
+              <Plus className="w-4 h-4" /> {t('orders.add_manual')}
             </button>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4 relative z-[20]">
           <div className="flex flex-col gap-4">
             {/* Top Row: Search + Filter Toggle + Add Button (Mobile) */}
             <div className="flex items-center gap-3">
@@ -411,7 +425,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
                 <input
                   type="text"
-                  placeholder="بحث سريع... (الاسم، الهاتف، المبلغ)"
+                  placeholder={t('orders.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-600 placeholder:text-slate-400"
@@ -423,7 +437,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                 className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isFiltersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
               >
                 <Filter className={`w-4 h-4 transition-transform duration-300 ${isFiltersOpen ? 'rotate-180' : ''}`} />
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">تصفية</span>
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('orders.filter')}</span>
                 {(storeFilter !== 'all' || stateFilter !== 'all' || productFilter !== 'all' || confirmerFilter !== 'all') && (
                   <span className="flex items-center justify-center w-4 h-4 bg-indigo-600 text-white text-[8px] font-bold rounded-full">
                     {[storeFilter, stateFilter, productFilter, confirmerFilter].filter(f => f !== 'all').length}
@@ -452,7 +466,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   className={`p-3 rounded-xl border transition-all flex items-center gap-2 group ${isColumnsMenuOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600'}`}
                 >
                   <LayoutList className="w-4 h-4" />
-                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">الأعمدة</span>
+                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">{t('orders.columns')}</span>
                 </button>
 
                 {isColumnsMenuOpen && (
@@ -460,19 +474,19 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     onClick={(e) => e.stopPropagation()}
                     className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-50 p-2 animate-in slide-in-from-top-2 fade-in"
                   >
-                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">عرض الأعمدة</p>
+                    <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('orders.show_columns')}</p>
                     <div className="space-y-1">
                       {Object.keys(visibleColumns).map(key => {
                         if (key === 'actions') return null;
                         const labels: any = {
-                          customerInfo: 'العميل',
-                          locationInfo: 'الموقع',
-                          orderSummary: 'الطلبية',
-                          financials: 'المالية والشحن',
-                          status: 'الحالة',
-                          confirmedBy: 'مؤكد الطلب',
-                          communication: 'التواصل',
-                          note: 'الملاحظة'
+                          customerInfo: t('common.customer'),
+                          locationInfo: t('common.location'),
+                          orderSummary: t('common.order'),
+                          financials: t('common.financials'),
+                          status: t('common.status'),
+                          confirmedBy: t('common.confirmed_by'),
+                          communication: t('sidebar.items.google_sheets'), // Fallback or mapping
+                          note: t('common.note')
                         };
                         return (
                           <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors" onClick={(e) => e.stopPropagation()}>
@@ -494,14 +508,22 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
 
             {/* Collapsible Filters Area */}
             {isFiltersOpen && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2 animate-in slide-in-from-top-2 fade-in duration-300">
                 <div className="space-y-1">
-                  <span className="text-[9px] font-black text-slate-400 px-2">المتجر</span>
+                  <span className="text-[9px] font-black text-slate-400 px-2">{t('common.date')}</span>
+                  <DateRangeSelector
+                    value={dateRange}
+                    onChange={setDateRange}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 px-2">{t('sidebar.items.store_linking')}</span>
                   <ModernSelect
                     value={storeFilter}
                     onChange={setStoreFilter}
                     options={[
-                      { value: 'all', label: 'جميع المتاجر' },
+                      { value: 'all', label: t('orders.all_stores') },
                       ...(storesData?.allStore?.map((s: any) => ({ value: s.id, label: s.name })) || [])
                     ]}
                     className="w-full"
@@ -510,12 +532,12 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[9px] font-black text-slate-400 px-2">المنتج</span>
+                  <span className="text-[9px] font-black text-slate-400 px-2">{t('sidebar.items.inventory')}</span>
                   <ModernSelect
                     value={productFilter}
                     onChange={setProductFilter}
                     options={[
-                      { value: 'all', label: 'جميع المنتجات' },
+                      { value: 'all', label: t('orders.all_products') },
                       ...(productsData?.allProduct?.data?.map((p: any) => ({ value: p.id, label: p.name })) || [])
                     ]}
                     className="w-full"
@@ -525,12 +547,12 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                 </div>
                 {(user?.role === 'admin' || user?.role === 'owner') && (
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-slate-400 px-2">المؤكد</span>
+                    <span className="text-[9px] font-black text-slate-400 px-2">{t('sidebar.items.users')}</span>
                     <ModernSelect
                       value={confirmerFilter}
                       onChange={setConfirmerFilter}
                       options={[
-                        { value: 'all', label: 'جميع المؤكدين' },
+                        { value: 'all', label: t('orders.all_confirmers') },
                         ...(usersData?.allUser
                           ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin')
                           ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
@@ -542,13 +564,13 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   </div>
                 )}
                 <div className="space-y-1">
-                  <span className="text-[9px] font-black text-slate-400 px-2">الولاية</span>
+                  <span className="text-[9px] font-black text-slate-400 px-2">{t('shipping.table.state')}</span>
                   <ModernSelect
                     value={stateFilter}
                     onChange={setStateFilter}
                     options={[
-                      { value: 'all', label: 'جميع الولايات' },
-                      ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${w.name}` })) || [])
+                      { value: 'all', label: t('common.all_wilayas') },
+                      ...(wilayasData?.allWilayas?.map((w: any) => ({ value: w.code, label: `${w.code} - ${getTranslatedName(w, i18n.language)}` })) || [])
                     ]}
                     className="w-full"
                     onOpen={() => getWilayas()}
@@ -593,7 +615,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                         : `bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100 shadow-sm`}`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'all' ? 'bg-white' : 'bg-slate-400'}`} />
-                    الكل
+                    {t('common.all')}
                   </button>
                   {confirmationStatuses.map((s: any) => {
                     if (!s) return null;
@@ -615,8 +637,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           borderColor: style.color
                         } : {})}
                       >
-                        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />}
-                        {s.nameAR || s.nameEN}
+                        {getTranslatedName(s, i18n.language)}
                       </button>
                     );
                   })}
@@ -633,7 +654,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-right border-collapse min-w-[1100px]">
+              <table className={`w-full ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} border-collapse min-w-[1100px]`}>
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
                     <th className="px-6 py-4 w-12 text-center animate-in slide-in-from-right-4 fade-in">
@@ -644,17 +665,17 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                         onChange={toggleAll}
                       />
                     </th>
-                    {(visibleColumns as any).customerInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">العميل</th>}
-                    {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">التواصل</th>}
-                    {(visibleColumns as any).locationInfo && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الموقع (الولاية - البلدية)</th>}
-                    {(visibleColumns as any).source && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المصدر</th>}
-                    {(visibleColumns as any).orderSummary && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الطلبية</th>}
-                    {(visibleColumns as any).financials && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">المالية والشحن</th>}
-                    {(visibleColumns as any).status && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>}
-                    {(visibleColumns as any).confirmedBy && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">مؤكد الطلب</th>}
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">تاريخ الطلب</th>
-                    {(visibleColumns as any).note && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">ملاحظة</th>}
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">الإجراء</th>
+                    {(visibleColumns as any).customerInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.customer')}</th>}
+                    {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">{t('orders.confirmation.communication')}</th>}
+                    {(visibleColumns as any).locationInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.location')}</th>}
+                    {(visibleColumns as any).source && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.source')}</th>}
+                    {(visibleColumns as any).orderSummary && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.order_summary')}</th>}
+                    {(visibleColumns as any).financials && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.financials')}</th>}
+                    {(visibleColumns as any).status && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.table.status')}</th>}
+                    {(visibleColumns as any).confirmedBy && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.confirmed_by')}</th>}
+                    <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.order_date')}</th>
+                    {(visibleColumns as any).note && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('orders.confirmation.notes')}</th>}
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">{t('orders.confirmation.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -662,30 +683,29 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     const statusStyle = getStatusStyle(order.status);
                     const statusLabel = getStatusLabel(order.status);
                     const isSelected = selectedOrderIds.includes(order.id);
-                    const displayItems = order.products || order.items || []; // Handle both products (backend) and items (frontend type)
+                    const displayItems = order.products || order.items || [];
+                    const totalAmount = order.totalPrice || order.amount || 0;
 
-                    // Fallback colors if status is object but no color, OR if status is string
                     let fallbackColors = statusColors.default;
-                    let hexColor = '#64748b'; // Default slate-500
+                    let hexColor = '#64748b';
 
                     if (typeof order.status === 'string') {
                       fallbackColors = statusColors[order.status] || statusColors.default;
-                      // Map standard string statuses to hex for row coloring
                       const hexMap: Record<string, string> = {
-                        confirmed: '#4f46e5', // indigo-600
-                        delivered: '#10b981', // emerald-500
-                        pending: '#64748b',   // slate-500
-                        cancelled: '#e11d48', // rose-600
-                        postponed: '#d97706', // amber-600
-                        failed_01: '#ef4444', // red-500
+                        confirmed: '#4f46e5',
+                        delivered: '#10b981',
+                        pending: '#64748b',
+                        cancelled: '#e11d48',
+                        postponed: '#d97706',
+                        failed_01: '#ef4444',
                         failed_02: '#ef4444',
                         failed_03: '#ef4444',
-                        processing: '#2563eb', // blue-600
-                        out_of_stock: '#ea580c', // orange-600
-                        ramasse: '#8b5cf6', // violet-500
+                        processing: '#2563eb',
+                        out_of_stock: '#ea580c',
+                        ramasse: '#8b5cf6',
                         shipped: '#8b5cf6',
                         paid: '#10b981',
-                        retour_vendeur: '#9333ea', // purple-600
+                        retour_vendeur: '#9333ea',
                         retourne_vendeur: '#9333ea',
                       };
                       if (hexMap[order.status]) hexColor = hexMap[order.status];
@@ -693,7 +713,6 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       hexColor = order.status.color;
                     }
 
-                    // Check highlight
                     const isNew = highlightedOrderIds.has(order.id);
 
                     return (
@@ -714,97 +733,94 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           />
                         </td>
 
-                        {(visibleColumns as any).customerInfo && <td className="px-6 py-5">
-                          <div className="flex items-center gap-4">
-                            {/* Avatar */}
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm shrink-0 uppercase transition-transform group-hover:scale-110 duration-300
-                              ${(() => {
-                                const name = order.fullName || order.customer || '?';
-                                const char = name.charCodeAt(0);
-                                const colors = [
-                                  'bg-indigo-100 text-indigo-600 ring-indigo-50',
-                                  'bg-emerald-100 text-emerald-600 ring-emerald-50',
-                                  'bg-rose-100 text-rose-600 ring-rose-50',
-                                  'bg-amber-100 text-amber-600 ring-amber-50',
-                                  'bg-violet-100 text-violet-600 ring-violet-50',
-                                  'bg-cyan-100 text-cyan-600 ring-cyan-50',
-                                  'bg-pink-100 text-pink-600 ring-pink-50',
-                                  'bg-slate-100 text-slate-600 ring-slate-50'
-                                ];
-                                return colors[char % colors.length];
-                              })()}
-                            `}>
-                              <span className="font-black drop-shadow-sm">
-                                {(order.fullName || order.customer || '?').charAt(0)}
-                              </span>
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex flex-col gap-1">
-                              <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                                {order.fullName || order.customer || 'زائر'}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-bold font-mono tracking-tight text-slate-400 dir-ltr`}>
-                                  {order.phone}
+                        {(visibleColumns as any).customerInfo && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex items-center gap-4">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm shrink-0 uppercase transition-transform group-hover:scale-110 duration-300
+                                ${(() => {
+                                  const name = order.fullName || order.customer || '?';
+                                  const char = name.charCodeAt(0);
+                                  const colors = [
+                                    'bg-indigo-100 text-indigo-600 ring-indigo-50',
+                                    'bg-emerald-100 text-emerald-600 ring-emerald-50',
+                                    'bg-rose-100 text-rose-600 ring-rose-50',
+                                    'bg-amber-100 text-amber-600 ring-amber-50',
+                                    'bg-violet-100 text-violet-600 ring-violet-50',
+                                    'bg-cyan-100 text-cyan-600 ring-cyan-50',
+                                    'bg-pink-100 text-pink-600 ring-pink-50',
+                                    'bg-slate-100 text-slate-600 ring-slate-50'
+                                  ];
+                                  return colors[char % colors.length];
+                                })()}
+                              `}>
+                                <span className="font-black drop-shadow-sm">
+                                  {(order.fullName || order.customer || '?').charAt(0)}
                                 </span>
-                                {order.duplicatePhone && order.duplicatePhone > 1 && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSearchTerm(order.phone);
-                                    }}
-                                    className="px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
-                                    title={`${order.duplicatePhone} طلبات لهذا الرقم`}
-                                  >
-                                    <span className="text-[9px] font-black">{order.duplicatePhone}</span>
-                                    <RefreshCw className="w-2.5 h-2.5" />
-                                  </button>
-                                )}
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <p className="text-[14px] font-bold font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                  {order.fullName || order.customer || t('orders.confirmation.visitor')}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[10px] font-bold font-mono tracking-tight text-slate-400 dir-ltr`}>
+                                    {order.phone}
+                                  </span>
+                                  {order.duplicatePhone && order.duplicatePhone > 1 && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSearchTerm(order.phone);
+                                      }}
+                                      className="px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
+                                      title={t('orders.confirmation.duplicate_orders', { count: order.duplicatePhone })}
+                                    >
+                                      <span className="text-[9px] font-black">{order.duplicatePhone}</span>
+                                      <RefreshCw className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>}
+                          </td>
+                        )}
 
-                        {/* Communication Buttons */}
                         {(visibleColumns as any).communication && (
-                          <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-4 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
-                              {/* Copy Button */}
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(order.phone);
-                                  toast.success('تم نسخ الرقم!');
+                                  toast.success(t('orders.confirmation.toast.number_copied'));
                                 }}
                                 className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm border border-slate-100"
-                                title="نسخ الرقم"
+                                title={t('orders.confirmation.copy_number')}
                               >
                                 <Copy size={14} />
                               </button>
-                              
-                              {/* SMS Button */}
                               <a
                                 href={`sms:${order.phone.replace(/\s/g, '')}`}
                                 className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all shadow-sm border border-blue-100"
-                                title="إرسال SMS"
+                                title={t('orders.confirmation.send_sms')}
                               >
                                 <MessageSquare size={14} />
                               </a>
-                              
-                              {/* WhatsApp Button */}
                               <button
                                 onClick={() => {
                                   const phone = order.phone.replace(/\s/g, '');
-                                  const name = order.fullName || order.customer || 'عميلنا العزيز';
-                                  const storeName = order.store?.store?.name || 'متجرنا';
-                                  const products = (order.products || order.items || []).map((p: any) => p.product?.name || p.name).join(', ');
-                                  const total = order.totalPrice || order.amount || 0;
-                                  
-                                  const message = `السلام عليكم ${name}، معك ${storeName} بخصوص طلبك رقم #${order.numberOrder}${products ? ` (${products})` : ''} بقيمة ${total} دج. هل ترغب في تأكيد الطلب؟`;
+                                  const name = order.fullName || order.customer || t('orders.confirmation.dear_customer');
+                                  const storeName = order.store?.store?.name || t('orders.confirmation.our_store');
+                                  const total = totalAmount;
+                                  const message = t('orders.confirmation.whatsapp_template', {
+                                    name,
+                                    store: storeName,
+                                    number: order.numberOrder,
+                                    total
+                                  });
                                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                 }}
                                 className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100"
-                                title="واتساب"
+                                title={t('orders.confirmation.whatsapp')}
                               >
                                 <MessageCircle size={14} className="fill-current" />
                               </button>
@@ -812,142 +828,152 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                           </td>
                         )}
 
-                        {(visibleColumns as any).locationInfo && <td className="px-6 py-5">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 ">
-                              <MapPin className="w-3 h-3 text-slate-300" />
-                              <span className="text-[10px] font-bold text-slate-700">
-                                {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
-                                {order.city && ` - ${order.city}`}
+                        {(visibleColumns as any).locationInfo && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="w-3 h-3 text-slate-300" />
+                                <span className="text-[10px] font-bold text-slate-700">
+                                  {order.state ? (typeof order.state === 'object' ? getTranslatedName(order.state, i18n.language) : order.state) : (order.wilaya ? (typeof order.wilaya === 'object' ? getTranslatedName(order.wilaya, i18n.language) : order.wilaya) : '-')}
+                                  {(order.city || order.commune) && ` - ${typeof order.city === 'object' ? getTranslatedName(order.city, i18n.language) : (typeof order.commune === 'object' ? getTranslatedName(order.commune, i18n.language) : (order.city || order.commune))}`}
+                                </span>
+                              </div>
+                              {order.address && (
+                                <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>
+                                  {order.address}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
+                        {(visibleColumns as any).source && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex flex-col gap-1">
+                              {order.store?.store ? (
+                                <div className="flex items-center gap-1.5 bg-violet-50 px-2 py-1 rounded-md border border-violet-100 max-w-fit" title={t('common.store_label', { name: order.store.store.name })}>
+                                  <Store className="w-3 h-3 text-violet-500" />
+                                  <span className="text-[9px] font-black text-violet-700 truncate max-w-[80px]">
+                                    {order.store.store.name}
+                                  </span>
+                                </div>
+                              ) : order.sheet ? (
+                                <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100 max-w-fit" title={t('common.sheet_label', { name: order.sheet.nameSheet })}>
+                                  <FileText className="w-3 h-3 text-emerald-500" />
+                                  <span className="text-[9px] font-black text-emerald-700 truncate max-w-[80px]">
+                                    {order.sheet.nameSheet}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 max-w-fit">
+                                  <Globe className="w-3 h-3 text-slate-400" />
+                                  <span className="text-[9px] font-bold text-slate-400">{t('common.manual')}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
+                        {(visibleColumns as any).orderSummary && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex flex-col gap-1 max-w-[200px]">
+                              {displayItems && displayItems.length > 0 ? displayItems.slice(0, 2).map((item: any, idx: number) => {
+                                const isProductMissing = !item.product;
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={`text-[9px] font-bold truncate block ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'} ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
+                                    title={isProductMissing ? t('orders.confirmation.product_missing') : item.name}
+                                  >
+                                    {item?.product?.name || item.name} {(item.variantsProduct?.name || item.variant) ? `(${item.variantsProduct?.name || item.variant})` : ''}
+                                    {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
+                                    <span className="text-slate-400"> x{item.quantity}</span>
+                                  </span>
+                                );
+                              }) : <span className="text-[9px] text-slate-300 font-bold">-</span>}
+                              {displayItems && displayItems.length > 2 && (
+                                <span className="text-[8px] text-indigo-500 font-black">{t('orders.confirmation.more_items', { count: displayItems.length - 2 })}</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
+                        {(visibleColumns as any).financials && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{formatCurrency(totalAmount)}</span>
+                              <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                <CreditCard className="w-3 h-3 text-indigo-400" />
+                                <span className="text-[9px] font-bold text-slate-500">{formatCurrency(order.shippingCost || order.deliveryPrice || 0)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        )}
+
+                        {(visibleColumns as any).status && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <span
+                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black border uppercase tracking-widest flex items-center justify-center gap-2 w-fit min-w-[100px] ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
+                              style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                            >
+                              {(() => {
+                                const statusKey = typeof order?.status === 'string' ? order?.status : order?.status?.nameEN?.toLowerCase();
+                                let Icon = AlertOctagon;
+                                if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
+                                else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
+                                else if (statusKey?.includes('deliver')) Icon = Truck;
+                                else if (statusKey?.includes('cancel') || statusKey?.includes('fail') || statusKey?.includes('wrong')) Icon = X;
+                                else if (statusKey?.includes('postpone')) Icon = Calendar;
+                                else if (statusKey?.includes('ramasse') || statusKey?.includes('shipped')) Icon = ShoppingBag;
+                                else if (statusKey?.includes('out')) Icon = AlertTriangle;
+                                else if (statusKey?.includes('paid')) Icon = DollarSign;
+                                else if (statusKey?.includes('return')) Icon = ArrowLeft;
+
+                                if (statusKey === 'pending') Icon = RefreshCw;
+                                if (statusKey === 'confirmed') Icon = CheckCircle2;
+
+                                return <Icon className="w-3.5 h-3.5" />;
+                              })()}
+                              {statusLabel}
+                            </span>
+                          </td>
+                        )}
+
+                        {(visibleColumns as any).confirmedBy && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="flex items-center gap-1.5 px-0.5">
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${order.confirmed || (order.confirmationTimeLine && order.confirmationTimeLine.length > 0) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-300'}`}>
+                                <UserCheck className="w-2.5 h-2.5" />
+                              </div>
+                              <span className="text-[9px] font-bold text-slate-500">
+                                {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user?.name) || '-'}
                               </span>
                             </div>
-                            {order.address && (
-                              <p className="text-[9px] text-slate-400 font-bold pr-5 truncate max-w-[150px]" title={order.address}>
-                                {order.address}
-                              </p>
-                            )}
-                          </div>
-                        </td>}
+                          </td>
+                        )}
 
-                        {(visibleColumns as any).source && <td className="px-6 py-5">
-                          <div className="flex flex-col gap-1">
-                            {order.store?.store ? (
-                              <div className="flex items-center gap-1.5 bg-violet-50 px-2 py-1 rounded-md border border-violet-100 max-w-fit" title={`المتجر: ${order.store.store.name}`}>
-                                <Store className="w-3 h-3 text-violet-500" />
-                                <span className="text-[9px] font-black text-violet-700 truncate max-w-[80px]">
-                                  {order.store.store.name}
-                                </span>
-                              </div>
-                            ) : order.sheet ? (
-                              <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100 max-w-fit" title={`الشيت: ${order.sheet.nameSheet}`}>
-                                <FileText className="w-3 h-3 text-emerald-500" />
-                                <span className="text-[9px] font-black text-emerald-700 truncate max-w-[80px]">
-                                  {order.sheet.nameSheet}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 max-w-fit">
-                                <span className="text-[9px] font-bold text-slate-400">يدوي</span>
-                              </div>
-                            )}
-                          </div>
-                        </td>}
-
-                        {(visibleColumns as any).orderSummary && <td className="px-6 py-5">
-                          <div className="flex flex-col gap-1 max-w-[200px]">
-                            {displayItems && displayItems.length > 0 ? displayItems.slice(0, 2).map((item: any, idx: number) => {
-                              const isProductMissing = !item.product;
-                              return (
-                                <span
-                                  key={idx}
-                                  className={`text-[9px] font-bold truncate block text-right ${isProductMissing ? 'text-rose-500' : 'text-slate-600'}`}
-                                  title={isProductMissing ? 'هذا المنتج غير متوفر في المخزون (محذوف)' : item.name}
-                                >
-                                  {item?.product?.name || item.name} {(item.variantsProduct?.name || item.variant) ? `(${item.variantsProduct?.name || item.variant})` : ''}
-                                  {isProductMissing && <AlertTriangle className="w-2.5 h-2.5 inline-block mr-1 mb-0.5" />}
-                                  <span className="text-slate-400"> x{item.quantity}</span>
-                                </span>
-                              );
-                            }) : <span className="text-[9px] text-slate-300 font-bold">-</span>}
-                            {displayItems && displayItems.length > 2 && (
-                              <span className="text-[8px] text-indigo-500 font-black">+ {displayItems.length - 2} المزيد</span>
-                            )}
-                          </div>
-                        </td>}
-
-                        {(visibleColumns as any).financials && <td className="px-6 py-5">
-                          <div className="flex flex-col gap-1.5 items-start">
-                            <span className="text-[12px] font-black text-indigo-700 font-mono tracking-tight">{order.totalPrice || order.amount} دج</span>
-                            <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                              {order.deliveryType === 'home' ? <Home className="w-3 h-3 text-indigo-400" /> : <Building2 className="w-3 h-3 text-indigo-400" />}
-                              <span className="text-[9px] font-bold text-slate-500">{order.shippingCost || order.deliveryPrice || 0} دج</span>
-                            </div>
-                          </div>
-                        </td>}
-
-                        {(visibleColumns as any).status && <td className="px-6 py-5">
-                          <span
-                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black border uppercase tracking-widest flex items-center justify-center gap-2 w-fit min-w-[100px] ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
-                            style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                          >
-                            {(() => {
-                              // Icon mapping
-                              const statusKey = typeof order?.status === 'string' ? order?.status : order?.status?.nameEN?.toLowerCase();
-                              let Icon = AlertOctagon;
-                              if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
-                              else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
-                              else if (statusKey?.includes('deliver')) Icon = Truck;
-                              else if (statusKey?.includes('cancel') || statusKey?.includes('fail') || statusKey?.includes('wrong')) Icon = X;
-                              else if (statusKey?.includes('postpone')) Icon = Calendar;
-                              else if (statusKey?.includes('ramasse') || statusKey?.includes('shipped')) Icon = ShoppingBag;
-                              else if (statusKey?.includes('out')) Icon = AlertTriangle;
-                              else if (statusKey?.includes('paid')) Icon = DollarSign;
-                              else if (statusKey?.includes('return')) Icon = ArrowLeft;
-
-                              // Specific overrides based on statusConstants mostly
-                              if (statusKey === 'pending') Icon = RefreshCw;
-                              if (statusKey === 'confirmed') Icon = CheckCircle2;
-                              if (statusKey === 'delivered') Icon = CheckSquare;
-                              if (statusKey === 'cancelled') Icon = X;
-                              if (statusKey === 'postponed') Icon = Calendar;
-
-                              return <Icon className="w-3.5 h-3.5" />;
-                            })()}
-                            {statusLabel}
-                          </span>
-                        </td>}
-
-                        {(visibleColumns as any).confirmedBy && <td className="px-6 py-5">
-                          <div className="flex items-center gap-1.5 px-0.5">
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${order.confirmed || (order.confirmationTimeLine && order.confirmationTimeLine.length > 0) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-300'}`}>
-                              <UserCheck className="w-2.5 h-2.5" />
-                            </div>
-                            <span className="text-[9px] font-bold text-slate-500">
-                              {order.confirmed?.name || (order.confirmationTimeLine?.[0]?.user?.name) || '-'}
-                            </span>
-                          </div>
-                        </td>}
-
-                        <td className="px-6 py-5">
+                        <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[10px] font-bold text-slate-700">
-                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar') : '-'}
+                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString(i18n.language) : '-'}
                             </span>
                             <span className="text-[9px] font-bold text-slate-400">
-                              {order.createdAt ? new Date(order.createdAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {order.createdAt ? new Date(order.createdAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) : ''}
                             </span>
                           </div>
                         </td>
 
-                        {(visibleColumns as any).note && <td className="px-6 py-5">
-                          <div className="max-w-[150px] truncate text-[9px] font-bold text-slate-500 bg-slate-50 p-2 rounded-md border border-slate-100" title={order.notes || order.note}>
-                            {order.notes || order.note || '-'}
-                          </div>
-                        </td>}
+                        {(visibleColumns as any).note && (
+                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                            <div className="max-w-[150px] truncate text-[9px] font-bold text-slate-500 bg-slate-50 p-2 rounded-md border border-slate-100" title={order.notes || order.note}>
+                              {order.notes || order.note || '-'}
+                            </div>
+                          </td>
+                        )}
 
                         <td className="px-6 py-5 text-center">
                           <button onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/orders/${order.id}`); }} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg transition-all mx-auto">
-                            مراجعة <Eye className="w-3.5 h-3.5" />
+                            {t('common.review')} <Eye className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -955,7 +981,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   })}
                   {orders.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">لا توجد طلبات تطابق معايير البحث</td>
+                      <td colSpan={12} className="text-center py-10 text-slate-400 font-bold">{t('common.no_results')}</td>
                     </tr>
                   )}
                 </tbody>

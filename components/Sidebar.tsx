@@ -6,6 +6,7 @@ import logoIcon from '../assets/logo-icon.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { storeService } from '../services/apiService';
+import { useTranslation } from 'react-i18next';
 
 // const ALLOWED_EMAILS = ['wilo@gmail.com', 'slimo.hammouda@gmail.com'];
 
@@ -33,6 +34,7 @@ interface SidebarSection {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, isCollapsed, onToggleCollapse, onLogout }) => {
+  const { t, i18n } = useTranslation();
   const {
     hasConfirmationOrders,
     hasAbandonedOrders,
@@ -64,60 +66,61 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
 
   const allSections: SidebarSection[] = [
     {
-      title: 'الأساسية',
+      title: t('sidebar.sections.main'),
       items: [
-        { id: View.DASHBOARD, label: 'الرئيسية', icon: LayoutDashboard },
-        { id: View.USERS, label: 'المستخدمين', icon: Users },
+        { id: View.DASHBOARD, label: t('sidebar.items.dashboard'), icon: LayoutDashboard },
+        { id: View.USERS, label: t('sidebar.items.users'), icon: Users },
       ]
+
     },
     {
-      title: 'العمليات',
+      title: t('sidebar.sections.operations'),
       items: [
         {
           id: View.ORDER_CONFIRMATION,
-          label: 'تأكيد الطلبيات',
+          label: t('sidebar.items.order_confirmation'),
           icon: CheckCircle2,
           hasNotification: hasConfirmationOrders,
           postponedBadge: duePostponedCount
         },
         {
           id: View.ORDER_ABANDONED,
-          label: 'الطلبات المتروكة',
+          label: t('sidebar.items.abandoned_orders'),
           icon: FileWarning,
           hasNotification: hasAbandonedOrders
         },
-        { id: View.ORDER_TRACKING, label: 'تتبع الطلبيات', icon: Truck },
-        { id: View.INVENTORY, label: 'المخزون', icon: Box },
+        { id: View.ORDER_TRACKING, label: t('sidebar.items.order_tracking'), icon: Truck },
+        { id: View.INVENTORY, label: t('sidebar.items.inventory'), icon: Box },
       ]
     },
     {
-      title: 'الاحصائيات والارباح',
+      title: t('sidebar.sections.stats'),
       items: [
-        { id: View.FINANCIAL_STATS, label: 'إحصائيات الطلبيات', icon: LayoutDashboard },
-        { id: View.PROFIT_SIMULATOR, label: 'محاكي الأرباح', icon: Calculator }
+        { id: View.FINANCIAL_STATS, label: t('sidebar.items.financial_stats'), icon: LayoutDashboard },
+        { id: View.PROFIT_SIMULATOR, label: t('sidebar.items.profit_simulator'), icon: Calculator }
       ]
     },
     {
-      title: 'المالية',
+      title: t('sidebar.sections.finance'),
       items: [
-        { id: View.FINANCES, label: 'العمليات المالية', icon: Wallet },
-        { id: View.SALARIES, label: 'الرواتب والعمولات', icon: Banknote },
+        { id: View.FINANCES, label: t('sidebar.items.finances'), icon: Wallet },
+        { id: View.SALARIES, label: t('sidebar.items.salaries'), icon: Banknote },
       ]
     },
     {
-      title: 'الربط والتقنية',
+      title: t('sidebar.sections.tech'),
       items: [
-        { id: View.SHIPPING_CARRIERS, label: 'شركات التوصيل', icon: Share2 },
-        { id: View.SHIPPING_PRICING, label: 'تسعير التوصيل', icon: Map },
+        { id: View.SHIPPING_CARRIERS, label: t('sidebar.items.shipping_carriers'), icon: Share2 },
+        { id: View.SHIPPING_PRICING, label: t('sidebar.items.shipping_pricing'), icon: Map },
         { 
           id: View.STORE_LINKING, 
-          label: 'ربط المتاجر', 
+          label: t('sidebar.items.store_linking'), 
           icon: Store, 
-          badge: hasSmartFunnel === false ? 'جديد ✨' : undefined 
+          badge: hasSmartFunnel === false ? t('common.new') : undefined 
         },
-        { id: View.INTEGRATION_SETTINGS, label: 'Google Sheets', icon: FileSpreadsheet },
-        { id: View.SUBSCRIPTIONS, label: 'الإشتراكات', icon: Banknote },
-        // { id: View.API_DOCS, label: 'وثائق الـ API', icon: BookOpen, badge: 'قريباً' },
+        { id: View.INTEGRATION_SETTINGS, label: t('sidebar.items.google_sheets'), icon: FileSpreadsheet },
+        { id: View.SUBSCRIPTIONS, label: t('sidebar.items.subscriptions'), icon: Banknote },
+        // { id: View.API_DOCS, label: t('sidebar.items.api_docs'), icon: BookOpen, badge: t('common.soon') },
       ]
     }
   ];
@@ -140,8 +143,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
 
   return (
     <aside className={`
-      fixed inset-y-0 right-0 z-50 bg-[#0F172A] text-slate-400 shadow-2xl transition-all duration-300 ease-in-out flex flex-col w-64 md:static
-      ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+      fixed inset-y-0 ${i18n.dir() === 'rtl' ? 'right-0' : 'left-0'} z-50 bg-[#0F172A] text-slate-400 shadow-2xl transition-all duration-300 ease-in-out flex flex-col w-64 md:static
+      ${isOpen ? 'translate-x-0' : (i18n.dir() === 'rtl' ? 'translate-x-full' : '-translate-x-full')}
       ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       md:translate-x-0
     `}>
@@ -182,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                   <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${currentView === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
                 </div>
                 {!isCollapsed && (
-                  <div className="flex-1 flex justify-between items-center">
+                  <div className={`flex-1 flex justify-between items-center ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                     <span className="text-[12px] font-bold">{item.label}</span>
                     <div className="flex items-center gap-2">
 
@@ -195,7 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                 {/* @ts-ignore */}
                 {item.hasNotification && (
                   <span className={`absolute w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-500/50
-                    ${isCollapsed ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2 left-3'}
+                    ${isCollapsed ? 'top-2 right-2' : `top-1/2 -translate-y-1/2 ${i18n.dir() === 'rtl' ? 'left-3' : 'right-3'}`}
                   `} />
                 )}
 
@@ -216,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
           <div className="p-4 border-t border-slate-800/50 bg-slate-900/50">
             <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">رصيد النقاط</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('sidebar.footer.points_balance')}</span>
                 <span className={`text-xs font-black ${(user.company.plans.pointes || 0) < 10 ? 'text-rose-500' : 'text-emerald-400'}`}>
                   {user.company.plans.pointes || 0}
                 </span>
@@ -227,8 +230,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
                   style={{ width: `${Math.min(100, ((user.company.plans.pointes || 0) / 100) * 100)}%` }}
                 ></div>
               </div>
-              <p className="text-[9px] text-slate-500 mt-2 font-bold text-left">
-                {user.company.plans.name === 'payg' ? 'دفع حسب الاستخدام' : 'اشتراك شهري'}
+              <p className={`text-[9px] text-slate-500 mt-2 font-bold ${i18n.dir() === 'rtl' ? 'text-left' : 'text-right'}`}>
+                {user.company.plans.name === 'payg' ? t('sidebar.footer.payg') : t('sidebar.footer.monthly')}
               </p>
             </div>
           </div>

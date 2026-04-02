@@ -13,3 +13,4 @@ export { default as TableSkeleton } from './TableSkeleton';
 export { default as ToastNotifications } from './ToastNotifications';
 export { default as OrderStatsSkeleton } from './OrderStatsSkeleton';
 export { default as OrderDetailsSkeleton } from './OrderDetailsSkeleton';
+export { DateRangeSelector, type DateRange } from './DateRangeSelector';

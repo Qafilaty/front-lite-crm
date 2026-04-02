@@ -16,6 +16,7 @@ const DashboardPage: React.FC = () => {
 
   // New State for Backend Statistics
   const [backendStats, setBackendStats] = useState<any>(null);
+  const [dateRange, setDateRange] = useState<any>({ startDate: null, endDate: null, key: 'all' });
 
   useEffect(() => {
     const loadData = async () => {
@@ -25,7 +26,7 @@ const DashboardPage: React.FC = () => {
         setLoading(true);
 
         // Fetch aggregated statistics from backend
-        const statsResult = await generalService.getBasicStatistics();
+        const statsResult = await generalService.getBasicStatistics(dateRange.startDate, dateRange.endDate);
         if (statsResult.success) {
           setBackendStats(statsResult.stats);
         }
@@ -38,7 +39,7 @@ const DashboardPage: React.FC = () => {
     };
 
     loadData();
-  }, [user]);
+  }, [user, dateRange]);
 
   // Map backend stats to the format DashboardView expects, or pass new prop
   const stats = {
@@ -55,10 +56,12 @@ const DashboardPage: React.FC = () => {
   return (
     <DashboardView
       stats={stats}
-      orders={orders} // Empty now, need to update DashboardView to not rely on this for charts
+      orders={orders}
       inventory={inventory}
       subscriptionTier={subscriptionTier}
-      backendStats={backendStats} // Pass full backend stats including charts
+      backendStats={backendStats}
+      dateRange={dateRange}
+      onDateRangeChange={setDateRange}
       onUpgrade={() => {
         console.log('Upgrade clicked');
       }}

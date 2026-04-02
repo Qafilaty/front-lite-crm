@@ -10,11 +10,14 @@ import { GET_ALL_WILAYAS } from '../graphql/queries';
 import { CREATE_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
 import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
+import { Button, Input, TextArea, Toggle } from './UIComponents';
 import { ModernSelect } from './common';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
 import { Product, Wilaya } from '../types';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedName } from '../utils/i18nUtils';
 
 interface CreateOrderModalProps {
     isOpen: boolean;
@@ -23,6 +26,7 @@ interface CreateOrderModalProps {
 }
 
 const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, onSuccess }) => {
+    const { t, i18n } = useTranslation();
     const { user } = useAuth();
 
     // --- States ---
@@ -155,7 +159,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
         products.forEach(p => {
             if (p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query)) {
-                const cat = p.category || 'عام';
+                const cat = p.category || t('common.general');
                 if (!result[cat]) result[cat] = [];
                 result[cat].push(p);
             }
@@ -169,7 +173,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         const price = variant ? variant.price : (product.variantsProbability?.[0]?.price || product.price);
         const sku = variant ? variant.sku : (product.variantsProbability?.[0]?.sku || product.sku);
         const name = product.name;
-        const variantName = variant ? variant.name : (product.variantsProbability?.length ? product.variantsProbability[0].name : "Standard");
+        const variantName = variant ? variant.name : (product.variantsProbability?.length ? product.variantsProbability[0].name : t('common.standard'));
 
         // Check if exists
         const existingIdx = cart.findIndex(i => i.id === product.id && i.variant === variantName);
@@ -197,14 +201,14 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         delete newErrors[field];
 
         if (field === 'customer') {
-            if (!value) newErrors.customer = 'يرجى إدخال اسم العميل';
+            if (!value) newErrors.customer = t('orders.confirmation.create_modal.errors.customer_required');
         }
         else if (field === 'phone') {
-            if (!value) newErrors.phone = 'يرجى إدخال رقم الهاتف';
-            else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
+            if (!value) newErrors.phone = t('orders.confirmation.create_modal.errors.phone_required');
+            else if (!/^(0)(5|6|7)[0-9]{8}$/.test(value.replace(/\s/g, ''))) newErrors.phone = t('orders.confirmation.create_modal.errors.phone_invalid');
         }
         else if (field === 'shippingCost') {
-            if ((Number(value) || 0) < 0) newErrors.shippingCost = 'لا يمكن أن يكون سعر التوصيل أقل من 0';
+            if ((Number(value) || 0) < 0) newErrors.shippingCost = t('orders.confirmation.create_modal.errors.shipping_cost_min');
         }
 
         setErrors(newErrors);
@@ -213,28 +217,28 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
     const handleConfirmOrder = async () => {
         const newErrors: Record<string, string> = {};
 
-        if (!newOrder.customer) newErrors.customer = 'يرجى إدخال اسم العميل';
-        if (!newOrder.phone) newErrors.phone = 'يرجى إدخال رقم الهاتف';
-        if (!newOrder.state) newErrors.state = 'يرجى اختيار الولاية';
+        if (!newOrder.customer) newErrors.customer = t('orders.confirmation.create_modal.errors.customer_required');
+        if (!newOrder.phone) newErrors.phone = t('orders.confirmation.create_modal.errors.phone_required');
+        if (!newOrder.state) newErrors.state = t('orders.confirmation.create_modal.errors.state_required');
 
         // Phone Validation (Algerian Format: 05/06/07 + 8 digits = 10 digits total)
         const phoneRegex = /^(0)(5|6|7)[0-9]{8}$/;
         if (newOrder.phone && !phoneRegex.test(newOrder.phone.replace(/\s/g, ''))) {
-            newErrors.phone = 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
+            newErrors.phone = t('orders.confirmation.create_modal.errors.phone_invalid');
         }
 
         if (cart.length === 0) {
-            toast.error('يرجى إضافة منتج واحد على الأقل');
+            toast.error(t('orders.confirmation.create_modal.errors.no_products'));
             return;
         }
 
         if ((newOrder.shippingCost || 0) < 0) {
-            newErrors.shippingCost = 'لا يمكن أن يكون سعر التوصيل أقل من 0';
+            newErrors.shippingCost = t('orders.confirmation.create_modal.errors.shipping_cost_min');
         }
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            toast.error('يرجى التحقق من الحقول');
+            toast.error(t('orders.confirmation.create_modal.errors.check_fields'));
             return;
         }
 
@@ -291,7 +295,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 }
             });
 
-            toast.success('تم إنشاء الطلبية بنجاح');
+            toast.success(t('orders.confirmation.create_modal.success'));
             onSuccess();
             onClose();
             // Reset form
@@ -306,7 +310,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || 'فشل إنشاء الطلبية');
+            toast.error(error.message || t('orders.confirmation.create_modal.errors.create_failed'));
         }
     };
 
@@ -318,8 +322,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
     if (!isOpen || !mounted) return null;
 
     return createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300" dir="rtl">
-            <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300" dir={i18n.dir()}>
+            <div className={`bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh] border border-slate-200 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
 
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
@@ -328,8 +332,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             <ShoppingCart className="w-6 h-6" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">إنشاء طلبية</h4>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">أدخل البيانات اللوجستية بدقة</p>
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">{t('orders.confirmation.create_modal.title')}</h4>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{t('orders.confirmation.create_modal.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-rose-500 transition-all p-2 rounded-lg hover:bg-rose-50">
@@ -344,13 +348,13 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                             <User className="w-4 h-4 text-indigo-500" />
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">بيانات العميل</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{t('orders.confirmation.create_modal.customer_info')}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الاسم الكامل</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.customer_name')}</label>
                                 <input
-                                    placeholder="أحمد الجزائري..."
+                                    placeholder={t('orders.confirmation.create_modal.customer_placeholder')}
                                     value={newOrder.customer}
                                     onChange={e => {
                                         setNewOrder({ ...newOrder, customer: e.target.value });
@@ -362,9 +366,9 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 {errors.customer && <p className="text-red-500 text-[9px] font-bold px-1">{errors.customer}</p>}
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">رقم الهاتف</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.phone_number')}</label>
                                 <input
-                                    placeholder="05 / 06 / 07..."
+                                    placeholder={t('orders.confirmation.create_modal.phone_placeholder')}
                                     value={newOrder.phone}
                                     onChange={e => {
                                         setNewOrder({ ...newOrder, phone: e.target.value });
@@ -382,41 +386,41 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                             <MapPinned className="w-4 h-4 text-indigo-500" />
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">العنوان والشحن</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{t('orders.confirmation.create_modal.location_info')}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الولاية</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.wilaya')}</label>
                                 <ModernSelect
                                     value={newOrder.state}
                                     onChange={(val) => {
-                                        const w = wilayas.find(w => w.name === val);
+                                        const w = wilayas.find(w => w.name === val || w.arName === val);
                                         setNewOrder({ ...newOrder, state: val, stateCode: w?.code || '', city: '' });
                                     }}
                                     options={[
-                                        { value: '', label: 'اختر الولاية...' },
-                                        ...wilayas.map(w => ({ value: w.name, label: `${w.code} - ${w.name}` }))
+                                        { value: '', label: t('common.select_wilaya') },
+                                        ...wilayas.map(w => ({ value: w.name, label: `${w.code} - ${getTranslatedName(w, i18n.language)}` }))
                                     ]}
-                                    placeholder="اختر الولاية..."
+                                    placeholder={t('common.select_wilaya')}
                                     onOpen={() => getWilayas()}
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">البلدية</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.commune')}</label>
                                 <ModernSelect
                                     disabled={!newOrder.state}
                                     value={newOrder.city}
                                     onChange={(val) => setNewOrder({ ...newOrder, city: val })}
                                     options={[
-                                        { value: '', label: 'اختر البلدية...' },
-                                        ...(selectedWilaya?.communes?.map(c => ({ value: c.name, label: c.name })) || [])
+                                        { value: '', label: t('common.select_commune') },
+                                        ...(selectedWilaya?.communes?.map(c => ({ value: c.name, label: getTranslatedName(c, i18n.language) })) || [])
                                     ]}
-                                    placeholder="اختر البلدية..."
+                                    placeholder={t('common.select_commune')}
                                 />
                             </div>
                             <div className="col-span-full space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">العنوان التفصيلي</label>
-                                <textarea placeholder="اسم الشارع، رقم البيت..." value={newOrder.address} onChange={e => setNewOrder({ ...newOrder, address: e.target.value })} className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:bg-white outline-none transition-all resize-none" />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.address')}</label>
+                                <textarea placeholder={t('orders.confirmation.create_modal.address_placeholder')} value={newOrder.address} onChange={e => setNewOrder({ ...newOrder, address: e.target.value })} className="w-full h-20 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:bg-white outline-none transition-all resize-none" />
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -425,10 +429,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-lg border-2 transition-all ${newOrder.deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Home className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمنزل</span>
+                                    <Home className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">{t('orders.confirmation.create_modal.shipping_home')}</span>
                                 </div>
                                 {currentPricing && (
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.home || 0} دج</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.home || 0} {t('orders.confirmation.create_modal.currency')}</span>
                                 )}
                             </button>
                             <button
@@ -436,10 +440,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-lg border-2 transition-all ${newOrder.deliveryType === "inDesk" ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">للمكتب</span>
+                                    <Building2 className="w-4 h-4" /> <span className="text-[10px] uppercase font-black">{t('orders.confirmation.create_modal.shipping_desk')}</span>
                                 </div>
                                 {currentPricing && (
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.desk || 0} دج</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{currentPricing?.desk || 0} {t('orders.confirmation.create_modal.currency')}</span>
                                 )}
                             </button>
                         </div>
@@ -447,34 +451,34 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         {newOrder.deliveryType === "inDesk" && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">شركة التوصيل</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.delivery_company')}</label>
                                     <ModernSelect
                                         value={newOrder.deliveryCompanyId}
                                         onChange={(val) => setNewOrder({ ...newOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
                                         options={[
-                                            { value: '', label: 'اختر الشركة...' },
+                                            { value: '', label: t('orders.confirmation.create_modal.select_company') },
                                             ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
                                                 value: c.id,
                                                 label: c.name
                                             })) || [])
                                         ]}
-                                        placeholder="اختر شركة التوصيل..."
+                                        placeholder={t('orders.confirmation.create_modal.select_company')}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">مركز التوصيل</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.delivery_center')}</label>
                                     <ModernSelect
                                         disabled={!newOrder.deliveryCompanyId || loadingCenters}
                                         value={newOrder.deliveryCenterId}
                                         onChange={(val) => setNewOrder({ ...newOrder, deliveryCenterId: val })}
                                         options={[
-                                            { value: '', label: loadingCenters ? 'جاري التحميل...' : 'اختر المركز...' },
+                                            { value: '', label: loadingCenters ? t('orders.confirmation.create_modal.loading') : t('orders.confirmation.create_modal.select_center') },
                                             ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
                                                 value: c.id,
                                                 label: `${c.name} (${c.commune || c.communeAr})`
                                             })) || [])
                                         ]}
-                                        placeholder="اختر المركز..."
+                                        placeholder={t('orders.confirmation.create_modal.select_center')}
                                     />
                                 </div>
                             </div>
@@ -485,7 +489,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                             <ShoppingBag className="w-4 h-4 text-indigo-500" />
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">المنتجات</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{t('orders.confirmation.create_modal.products')}</span>
                         </div>
 
                         <div className="relative" ref={pickerRef}>
@@ -500,7 +504,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                             >
                                 <div className="flex items-center gap-3">
                                     <PlusCircle className="w-4 h-4 text-indigo-400" />
-                                    <span>{cart.length > 0 ? `تم اختيار (${cart.length}) منتجات` : 'اختر المنتج من القائمة'}</span>
+                                    <span>{cart.length > 0 ? t('orders.confirmation.create_modal.products_selected', { count: cart.length }) : t('orders.confirmation.create_modal.select_product_prompt')}</span>
                                 </div>
                                 <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isProductPickerOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -511,7 +515,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         <Search className="w-4 h-4 text-slate-400" />
                                         <input
                                             autoFocus
-                                            placeholder="بحث سريع في المخزون..."
+                                            placeholder={t('orders.confirmation.create_modal.search_inventory')}
                                             value={productSearchQuery}
                                             onChange={e => setProductSearchQuery(e.target.value)}
                                             className="flex-1 bg-transparent text-[11px] font-bold outline-none"
@@ -530,12 +534,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                                                     <p className="text-[11px] font-bold text-slate-700 leading-none">{p.name}</p>
                                                                     <p className="text-[9px] text-slate-400 mt-1 uppercase">{v.name}</p>
                                                                 </div>
-                                                                <span className="text-[10px] font-black text-indigo-600">+{v.price}دج</span>
+                                                                <span className="text-[10px] font-black text-indigo-600">+{v.price}{t('orders.confirmation.create_modal.currency')}</span>
                                                             </button>
                                                         )) : (
                                                             <button onClick={() => handleAddItemToCart(p)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-indigo-50 transition-colors group">
                                                                 <span className="text-[11px] font-bold text-slate-700">{p.name}</span>
-                                                                <span className="text-[10px] font-black text-indigo-600">+{p.price}دج</span>
+                                                                <span className="text-[10px] font-black text-indigo-600">+{p.price} {t('orders.confirmation.create_modal.currency')}</span>
                                                             </button>
                                                         )}
                                                     </div>
@@ -543,7 +547,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                             </div>
                                         ))}
                                         {Object.keys(filteredAndGroupedProducts).length === 0 && (
-                                            <div className="p-8 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">لا توجد منتجات مطابقة</div>
+                                            <div className="p-8 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">{t('orders.confirmation.create_modal.no_products_found')}</div>
                                         )}
                                     </div>
                                 </div>
@@ -584,27 +588,17 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                     <Store className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">مكان السحب</p>
+                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">{t('orders.confirmation.create_modal.storage_location')}</p>
                                     <p className="text-[10px] font-bold text-slate-500 mt-0.5">
-                                        {newOrder.storageLocation === 'SHOP' ? 'سيتم السحب من المحل' : 'سيتم السحب من شركة التوصيل'}
+                                        {newOrder.storageLocation === 'SHOP' ? t('orders.confirmation.create_modal.storage_shop_desc') : t('orders.confirmation.create_modal.storage_company_desc')}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className={`text-[10px] font-bold transition-colors ${newOrder.storageLocation === 'SHOP' ? 'text-indigo-600' : 'text-slate-400'}`}>المحل</span>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setNewOrder(prev => ({ ...prev, storageLocation: prev.storageLocation === 'SHOP' ? 'DELIVERY_COMPANY' : 'SHOP' }));
-                                    }}
-                                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'bg-indigo-600 shadow-md ring-2 ring-indigo-200' : 'bg-slate-300'}`}
-                                >
-                                    <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? '-translate-x-7' : '-translate-x-1'}`}
-                                    />
-                                </button>
-                                <span className={`text-[10px] font-bold transition-colors ${newOrder.storageLocation === 'DELIVERY_COMPANY' ? 'text-indigo-600' : 'text-slate-400'}`}>الشركة</span>
+                                <Toggle
+                                    checked={newOrder.storageLocation === 'DELIVERY_COMPANY'}
+                                    onChange={(checked) => setNewOrder(prev => ({ ...prev, storageLocation: checked ? 'DELIVERY_COMPANY' : 'SHOP' }))}
+                                />
                             </div>
                         </div>
                     </div>
@@ -613,11 +607,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                     <div className="space-y-4 pb-4">
                         <div className="flex items-center gap-2 mb-1">
                             <Info className="w-4 h-4 text-indigo-500" />
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">التكاليف والملاحظات</span>
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{t('orders.confirmation.create_modal.costs_notes')}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">سعر التوصيل</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.confirmation.create_modal.shipping_cost')}</label>
                                 <div className="relative">
                                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -634,7 +628,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 {errors.shippingCost && <p className="text-red-500 text-[9px] font-bold px-1">{errors.shippingCost}</p>}
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الوزن (كلغ)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('common.weight')}</label>
                                 <div className="relative">
                                     <input
                                         type="number"
@@ -648,7 +642,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">الخصم (دج)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('common.discount')}</label>
                                 <div className="relative">
                                     <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input
@@ -665,8 +659,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ملاحظات (اختياري)</label>
-                                <input value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} placeholder="تعليمات التوصيل..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('common.notes')}</label>
+                                <input value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} placeholder={t('common.delivery_instructions')} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" />
                             </div>
                         </div>
                     </div>
@@ -676,11 +670,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 <div className="p-6 border-t border-slate-200 bg-white shrink-0 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         <div>
-                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">إجمالي المبلغ المطلوب</p>
-                            <p className="text-2xl font-black text-slate-800 font-mono tracking-tighter">{total} <span className="text-[10px] opacity-40">دج</span></p>
+                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">{t('orders.confirmation.create_modal.total_amount')}</p>
+                            <p className="text-2xl font-black text-slate-800 font-mono tracking-tighter">{total} <span className="text-[10px] opacity-40">{t('orders.confirmation.create_modal.currency')}</span></p>
                         </div>
                         <button disabled={isSubmitting} onClick={handleConfirmOrder} className="w-full sm:w-auto px-10 py-4 bg-indigo-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:scale-100">
-                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>تأكيد إنشاء الطلبية <ChevronLeft className="w-5 h-5" /></>}
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{t('orders.create_modal.create')} <ChevronLeft className="w-5 h-5" /></>}
                         </button>
                     </div>
                 </div>

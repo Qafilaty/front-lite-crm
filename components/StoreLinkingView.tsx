@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactDOM from 'react-dom';
 import { Store as StoreIcon, Settings, X, Link2, Copy, CheckCircle2, ShieldCheck, ExternalLink, Globe, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,55 +17,50 @@ const SUPPORTED_STORES = [
   {
     key: 'lightfunnels',
     name: 'Lightfunnels',
-    logo: 'https://sendibad.s3.eu-central-1.amazonaws.com/lightfunnels-logo.png', // More stable official asset path if available, or stay with brandfetch if reliable.
+    logo: 'https://sendibad.s3.eu-central-1.amazonaws.com/lightfunnels-logo.png',
     color: '#000000',
-    description: 'منصة التجارة الإلكترونية لبناء مسارات بيع عالية التحويل'
+    descriptionKey: 'store_linking.platforms.lightfunnels.description'
   },
   {
     key: 'woocommerce',
     name: 'WooCommerce',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/WooCommerce_logo_%282015%29.svg/960px-WooCommerce_logo_%282015%29.svg.png?20210210075453',
     color: '#96588a',
-    description: 'إضافة التجارة الإلكترونية مفتوحة المصدر لـ WordPress'
+    descriptionKey: 'store_linking.platforms.woocommerce.description'
   },
   {
     key: 'shopify',
     name: 'Shopify',
     logo: 'https://cdn.worldvectorlogo.com/logos/shopify.svg',
     color: '#96bf48',
-    description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+    descriptionKey: 'store_linking.platforms.shopify.description'
   },
   {
     key: 'ayor',
     name: 'Ayor',
     logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/ayor-logo.png',
     color: '#7269f8',
-    description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+    descriptionKey: 'store_linking.platforms.ayor.description'
   },
   {
     key: 'feeef',
     name: 'Feeef',
     logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/feeef-logo.png',
     color: '#7269f8',
-    description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
+    descriptionKey: 'store_linking.platforms.feeef.description'
   },
-  // {
-  //   key: 'hanotify',
-  //   name: 'Hanotify',
-  //   logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/hanotify-logo.png',
-  //   color: '#5820b8',
-  //   description: 'منصة تجارة إلكترونية شاملة لبدء وتنمية وإدارة الأعمال'
-  // },
   {
     key: 'smartfunnel',
     name: 'Smart Funnel',
     logo: 'https://funnels.wilo.site/logo.png',
     color: '#8b5cf6',
-    description: 'بناء صفحات هبوط احترافية ومسارات بيع ذكية'
+    descriptionKey: 'store_linking.platforms.smartfunnel.description'
   }
 ];
 //https://api.wilo.site/api/hooks/hanotify/createdOrder/ew9T0P8jI0
 const StoreLinkingView: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<Store[]>([]);
@@ -91,11 +87,11 @@ const StoreLinkingView: React.FC = () => {
       if (result.success) {
         setStores(result.stores);
       } else {
-        toast.error('فشل تحميل المتاجر');
+        toast.error(t('store_linking.toasts.load_failed'));
       }
     } catch (error) {
       console.error(error);
-      toast.error('حدث خطأ أثناء تحميل المتاجر');
+      toast.error(t('store_linking.toasts.load_error'));
     } finally {
       setLoading(false);
     }
@@ -112,7 +108,7 @@ const StoreLinkingView: React.FC = () => {
         setIsPopupOpen(false);
         fetchStores();
         setIsModalOpen(false);
-        toast.success('تمت عملية المصادقة بنجاح');
+        toast.success(t('store_linking.toasts.auth_success'));
       }
     };
 
@@ -138,23 +134,22 @@ const StoreLinkingView: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!storeToDelete) return;
-
     setIsDeleting(true);
-    const toastId = toast.loading('جاري حذف المتجر...');
+    const toastId = toast.loading(t('store_linking.toasts.deleting'));
 
     try {
       const result = await storeService.deleteStore(storeToDelete);
       if (result.success) {
-        toast.success('تم حذف المتجر وإيقاف المزامنة بنجاح', { id: toastId });
+        toast.success(t('store_linking.toasts.delete_success'), { id: toastId });
         setStores(prev => prev.filter(s => s.id !== storeToDelete));
         setShowDeleteModal(false);
         setStoreToDelete(null);
       } else {
-        toast.error('فشل حذف المتجر', { id: toastId });
+        toast.error(t('store_linking.toasts.delete_failed'), { id: toastId });
       }
     } catch (error) {
       console.error(error);
-      toast.error('حدث خطأ أثناء العملية', { id: toastId });
+      toast.error(t('store_linking.toasts.error'), { id: toastId });
     } finally {
       setIsDeleting(false);
     }
@@ -169,7 +164,7 @@ const StoreLinkingView: React.FC = () => {
     const existingStore = stores.find(s => s.typeStore === platform.key);
     if (existingStore) return;
 
-    const toastId = toast.loading('جاري ربط Smart Funnel...');
+    const toastId = toast.loading(t('store_linking.toasts.linking_smart_funnel'));
     try {
       const payload = {
         name: platform.name,
@@ -179,13 +174,13 @@ const StoreLinkingView: React.FC = () => {
       const createResult = await storeService.createStore(payload);
       if (createResult.success && createResult.store) {
         setStores(prev => [...prev, createResult.store]);
-        toast.success('تم ربط Smart Funnel بنجاح', { id: toastId });
+        toast.success(t('store_linking.toasts.smart_funnel_success'), { id: toastId });
       } else {
-        throw new Error('فشل الربط');
+        throw new Error(t('store_linking.toasts.link_failed'));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('حدث خطأ أثناء الربط', { id: toastId });
+      toast.error(error.message || t('store_linking.toasts.link_error'), { id: toastId });
     }
   };
 
@@ -193,7 +188,7 @@ const StoreLinkingView: React.FC = () => {
     if (!user?.company?.id || !selectedPlatform) return;
 
     if (selectedPlatform.key === 'woocommerce' && isDirectLink && !storeDomain) {
-      toast.error('يرجى إدخال رابط المتجر للربط المباشر');
+      toast.error(t('store_linking.toasts.enter_domain'));
       return;
     }
 
@@ -233,20 +228,16 @@ const StoreLinkingView: React.FC = () => {
               setIsPopupOpen(false);
               fetchStores(); // Refresh to see if added
               setIsModalOpen(false); // Close modal on finish
-              toast.success('تمت عملية المصادقة (يرجى التحقق من الحالة)');
+              toast.success(t('store_linking.toasts.auth_processing'));
             }
           }, 500);
         } else {
-          toast.error('تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة للمتابعة.');
+          toast.error(t('store_linking.toasts.popup_blocked'));
         }
 
         setIsProcessing(false);
         return; // Logic ends here for direct link, handled by popup
       }
-
-      // Standard API/Webhook Logic (Lightfunnels, Shopify, or WooCommerce manual)
-      // If store exists, we maybe update it or just show webhook?
-      // The requirement says: "When adding store... user sends basic info... then show webhook" based on the button.
 
       // If we don't have this store yet, create it.
       if (!existingStore) {
@@ -254,18 +245,15 @@ const StoreLinkingView: React.FC = () => {
           name: selectedPlatform.name,
           typeStore: selectedPlatform.key,
           status: true, // Active by default
-          // We don't have domain yet if it's just "Connect" button for webhook generation, 
-          // unless user entered it (optional for non-WooCommerce based on prompt "Remove webhook field... only direct link has input")
-          // Actually prompt says: "just input basic info... then show webhook".
         };
 
         const createResult = await storeService.createStore(payload);
         if (createResult.success && createResult.store) {
           storeData = createResult.store;
           setStores(prev => [...prev, createResult.store]);
-          toast.success('تم إنشاء المتجر بنجاح');
+          toast.success(t('store_linking.toasts.store_created'));
         } else {
-          throw new Error('فشل إنشاء المتجر');
+          throw new Error(t('store_linking.toasts.create_failed'));
         }
       } else {
         storeData = existingStore;
@@ -276,17 +264,13 @@ const StoreLinkingView: React.FC = () => {
         if (storeData.url) {
           setGeneratedWebhook(storeData.url);
         } else {
-          // Fallback if API hasn't returned it yet or needs refresh?
-          // Ideally API returns it on create/get.
-          // If missing, maybe construct it manually if we knew the format, but better to rely on API.
-          // Assuming API returns it as requested in plan.
-          toast.error('لم يتم العثور على رابط Webhook من الخادم');
+          toast.error(t('store_linking.toasts.webhook_not_found'));
         }
       }
 
     } catch (error) {
       console.error(error);
-      toast.error('حدث خطأ أثناء العملية');
+      toast.error(t('store_linking.toasts.error'));
     } finally {
       setIsProcessing(false);
     }
@@ -294,7 +278,7 @@ const StoreLinkingView: React.FC = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('تم النسخ للحافظة');
+    toast.success(t('store_linking.toasts.copied'));
   };
 
   if (loading) {
@@ -307,9 +291,9 @@ const StoreLinkingView: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">ربط المتاجر</h2>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('store_linking.title')}</h2>
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">
-            إدارة عمليات الربط مع منصات التجارة الإلكترونية
+            {t('store_linking.subtitle')}
           </p>
         </div>
       </div>
@@ -325,19 +309,19 @@ const StoreLinkingView: React.FC = () => {
               className={`relative bg-white rounded-xl border transition-all duration-300 overflow-hidden group hover:shadow-lg ${isConnected ? 'border-emerald-100 shadow-emerald-100/50' : 'border-slate-100 shadow-sm'}`}
             >
               {isConnected && (
-                <div className="absolute top-3 left-3 flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md">
+                <div className={`absolute top-3 ${isRtl ? 'left-3' : 'right-3'} flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md`}>
                   <ShieldCheck className="w-3 h-3" />
-                  <span className="text-[9px] font-black uppercase">تم الربط</span>
+                  <span className="text-[9px] font-black uppercase">{t('store_linking.connected')}</span>
                 </div>
               )}
 
               {!isConnected && platform.key === 'smartfunnel' && (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md border border-indigo-100/50 shadow-sm animate-in fade-in zoom-in duration-500">
+                <div className={`absolute top-3 ${isRtl ? 'left-3' : 'right-3'} flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md border border-indigo-100/50 shadow-sm animate-in fade-in zoom-in duration-500`}>
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-600"></span>
                   </span>
-                  <span className="text-[9px] font-black uppercase tracking-wider">جديد</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider">{t('store_linking.new')}</span>
                 </div>
               )}
 
@@ -349,7 +333,7 @@ const StoreLinkingView: React.FC = () => {
 
                 <h3 className="text-lg font-black text-slate-800 mb-2">{platform.name}</h3>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6 line-clamp-2">
-                  {platform.description}
+                  {t(platform.descriptionKey as any)}
                 </p>
 
                 <div className="mt-auto w-full">
@@ -365,12 +349,12 @@ const StoreLinkingView: React.FC = () => {
                         }}
                         className="flex-1 py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
                       >
-                        {platform.key === 'smartfunnel' ? <ExternalLink className="w-3.5 h-3.5" /> : <Settings className="w-3.5 h-3.5" />} {platform.key === 'smartfunnel' ? 'الانتقال للفانل' : 'معلومات الربط'}
+                        {platform.key === 'smartfunnel' ? <ExternalLink className="w-3.5 h-3.5" /> : <Settings className="w-3.5 h-3.5" />} {platform.key === 'smartfunnel' ? t('store_linking.go_to_funnel') : t('store_linking.link_info')}
                       </button>
                       <button
                         onClick={() => connectedStore?.id && handleOpenDeleteModal(connectedStore.id)}
                         className="px-3 py-2.5 rounded-lg text-xs font-black flex items-center justify-center transition-all bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100"
-                        title="حذف المتجر"
+                        title={t('common.delete') as any}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -383,7 +367,7 @@ const StoreLinkingView: React.FC = () => {
                       }}
                       className="w-full py-2.5 px-4 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
                     >
-                      <Link2 className="w-3.5 h-3.5" /> إعداد الربط
+                      <Link2 className="w-3.5 h-3.5" /> {t('store_linking.setup_link')}
                     </button>
                   )}
                 </div>
@@ -397,8 +381,8 @@ const StoreLinkingView: React.FC = () => {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDelete}
-        title="حذف ربط المتجر"
-        description="هل أنت متأكد أنك تريد حذف ربط هذا المتجر؟ سيتم إيقاف المزامنة فوراً ولن تستقبل أي طلبات جديدة من هذا المتجر بعد الآن."
+        title={t('store_linking.delete_title')}
+        description={t('store_linking.delete_description')}
         isDeleting={isDeleting}
       />
 
@@ -417,7 +401,7 @@ const StoreLinkingView: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-slate-800">{selectedPlatform.name}</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">إعدادات الربط</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t('store_linking.modal.settings_title')}</p>
                     </div>
                   </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-full border border-transparent hover:border-rose-100 hover:bg-rose-50">
@@ -433,15 +417,15 @@ const StoreLinkingView: React.FC = () => {
                         <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 animate-in zoom-in spin-in-12">
                           <CheckCircle2 className="w-6 h-6" />
                         </div>
-                        <h4 className="text-sm font-black text-slate-800">المتجر جاهز للربط!</h4>
+                        <h4 className="text-sm font-black text-slate-800">{t('store_linking.modal.ready_title')}</h4>
                         <p className="text-xs text-slate-500">
-                          إنسخ رابط Webhook التالي وقم بإضافته في إعدادات متجر {selectedPlatform.name}
+                          {t('store_linking.modal.ready_subtitle', { platform: selectedPlatform.name })}
                         </p>
                       </div>
 
                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
                         <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Webhook URL</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('store_linking.modal.webhook_url')}</label>
                           <span className="text-[9px] font-mono text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">POST</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -451,7 +435,7 @@ const StoreLinkingView: React.FC = () => {
                           <button
                             onClick={() => copyToClipboard(generatedWebhook)}
                             className="p-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                            title="نسخ الرابط"
+                            title={t('store_linking.modal.copy_title') as any}
                           >
                             <Copy className="w-4 h-4" />
                           </button>
@@ -461,14 +445,11 @@ const StoreLinkingView: React.FC = () => {
                       <button
                         onClick={() => {
                           setGeneratedWebhook(null);
-                          // If it was just created, maybe we want to keep it connected visually in the background
-                          // but clearing webhook allows "re-viewing" or "done". 
-                          // Let's just close modal.
                           setIsModalOpen(false);
                         }}
                         className="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-xs hover:bg-slate-200 transition-all"
                       >
-                        إغلاق
+                        {t('store_linking.modal.close')}
                       </button>
                     </div>
                   ) : (
@@ -481,16 +462,16 @@ const StoreLinkingView: React.FC = () => {
                             <div className="flex items-start gap-3">
                               <Globe className="w-5 h-5 text-indigo-600 mt-0.5" />
                               <div>
-                                <h5 className="text-xs font-black text-indigo-900 mb-1">الربط المباشر (Direct Link)</h5>
+                                <h5 className="text-xs font-black text-indigo-900 mb-1">{t('store_linking.modal.direct_link_title')}</h5>
                                 <p className="text-[10px] text-indigo-700/80 leading-relaxed">
-                                  لربط متجر WooCommerce تلقائياً، أدخل رابط المتجر أدناه وسيتم فتح نافذة للمصادقة.
+                                  {t('store_linking.modal.direct_link_subtitle')}
                                 </p>
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <input
                                 type="text"
-                                placeholder="مثال: mystore.com"
+                                placeholder={t('store_linking.modal.domain_placeholder')}
                                 value={storeDomain}
                                 onChange={(e) => setStoreDomain(e.target.value)}
                                 className="flex-1 px-4 py-2 bg-white border border-indigo-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500/20 outline-none text-left"
@@ -504,7 +485,7 @@ const StoreLinkingView: React.FC = () => {
                                 {isProcessing ? (
                                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
-                                  'ربط الآن'
+                                  t('store_linking.modal.link_now')
                                 )}
                               </button>
                             </div>
@@ -515,7 +496,7 @@ const StoreLinkingView: React.FC = () => {
                         {selectedPlatform.key === 'woocommerce' && (
                           <div className="relative flex items-center py-2">
                             <div className="flex-grow border-t border-slate-100"></div>
-                            <span className="flex-shrink-0 mx-4 text-[10px] font-bold text-slate-300 uppercase">أو الربط اليدوي</span>
+                            <span className="flex-shrink-0 mx-4 text-[10px] font-bold text-slate-300 uppercase">{t('store_linking.modal.manual_linking')}</span>
                             <div className="flex-grow border-t border-slate-100"></div>
                           </div>
                         )}
@@ -524,7 +505,7 @@ const StoreLinkingView: React.FC = () => {
                         <div className="text-center space-y-4">
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                              لربط متجر {selectedPlatform.name}، سنقوم بتوليد رابط Webhook خاص بك. قم بنسخه وإضافته في إعدادات متجرك لاستقبال الطلبات تلقائياً.
+                              {t('store_linking.modal.manual_subtitle', { platform: selectedPlatform.name })}
                             </p>
                             <button
                               onClick={() => handleConnect(false)}
@@ -536,7 +517,7 @@ const StoreLinkingView: React.FC = () => {
                               ) : (
                                 <>
                                   <Link2 className="w-4 h-4 group-hover:rotate-45 transition-transform" />
-                                  توليد رابط Webhook
+                                  {t('store_linking.modal.generate_webhook')}
                                 </>
                               )}
                             </button>
@@ -554,7 +535,7 @@ const StoreLinkingView: React.FC = () => {
                       onClick={() => setIsModalOpen(false)}
                       className="px-6 py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-black hover:bg-slate-50 transition-colors"
                     >
-                      إلغاء
+                      {t('store_linking.modal.cancel')}
                     </button>
                   </div>
                 )}

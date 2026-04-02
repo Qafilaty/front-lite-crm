@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useMutation } from '@apollo/client';
 import { invoiceService } from '../services/apiService';
@@ -8,88 +9,90 @@ import { History, Filter, Download, CreditCard, ArrowRight, Loader2 } from 'luci
 import toast from 'react-hot-toast';
 import { SINGLE_UPLOAD } from '../graphql/mutations/uploadMutations';
 import { CREATE_INVOICE } from '../graphql/mutations/invoiceMutations';
+import { formatCurrency } from '../utils/formatters';
 
 // New Plans Data (from PricingPlans.tsx)
 const MAIN_PLANS = [
   {
     id: 'starter',
-    name: 'الباقة الاقتصادية',
-    price: '1,900',
-    description: 'مثالية للمبتدئين وأصحاب المشاريع الناشئة.',
+    nameKey: 'subscriptions.starter',
+    price: 1900,
+    descriptionKey: 'subscriptions.starter_desc',
     features: [
-      '600 طلب شهريًا',
-      'طلبات متروكة غير محدودة',
-      '4 حسابات مستخدمين',
-      'توزيع الطلبات على وكلاء التأكيد',
-      'إدارة المخزون & الإدارة المالية',
-      'الإحصائيات والتقارير',
-      'الربط مع شركات التوصيل',
-      'الربط مع المتاجر الإلكترونية',
-      'الربط مع جداول Google',
-      'التحديثات والتحسينات',
-      'دعم 24/7',
-      'كل طلب اضافي 10 دج'
+      { key: 'subscriptions.features.orders_count', params: { count: 600 } },
+      { key: 'subscriptions.features.unlimited_abandoned' },
+      { key: 'subscriptions.features.users_count', params: { count: 4 } },
+      { key: 'subscriptions.features.assign_agents' },
+      { key: 'subscriptions.features.inventory_finance' },
+      { key: 'subscriptions.features.stats_reports' },
+      { key: 'subscriptions.features.delivery_linking' },
+      { key: 'subscriptions.features.estore_linking' },
+      { key: 'subscriptions.features.sheets_linking' },
+      { key: 'subscriptions.features.updates' },
+      { key: 'subscriptions.features.support' },
+      { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
-    buttonText: 'ابدأ الآن',
+    buttonTextKey: 'subscriptions.start_now',
     popular: false,
     color: 'bg-white border-slate-200'
   },
   {
     id: 'pro',
-    name: 'الباقة الاحترافية',
-    price: '3,900',
-    description: 'الباقة الأكثر طلباً للمتاجر المتوسطة.',
+    nameKey: 'subscriptions.pro',
+    price: 3900,
+    descriptionKey: 'subscriptions.pro_desc',
     features: [
-      '2500 طلب شهريًا',
-      'طلبات متروكة غير محدودة',
-      '7 حسابات مستخدمين',
-      'توزيع الطلبات على وكلاء التأكيد',
-      'إدارة المخزون & الإدارة المالية',
-      'الإحصائيات والتقارير',
-      'الربط مع شركات التوصيل',
-      'الربط مع المتاجر الإلكترونية',
-      'الربط مع جداول Google',
-      'التحديثات والتحسينات',
-      'دعم 24/7',
-      'كل طلب اضافي 10 دج'
+      { key: 'subscriptions.features.orders_count', params: { count: 2500 } },
+      { key: 'subscriptions.features.unlimited_abandoned' },
+      { key: 'subscriptions.features.users_count', params: { count: 7 } },
+      { key: 'subscriptions.features.assign_agents' },
+      { key: 'subscriptions.features.inventory_finance' },
+      { key: 'subscriptions.features.stats_reports' },
+      { key: 'subscriptions.features.delivery_linking' },
+      { key: 'subscriptions.features.estore_linking' },
+      { key: 'subscriptions.features.sheets_linking' },
+      { key: 'subscriptions.features.updates' },
+      { key: 'subscriptions.features.support' },
+      { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
-    buttonText: 'تجديد الاشتراك',
+    buttonTextKey: 'subscriptions.renew',
     popular: true,
     color: 'bg-white border-indigo-600 ring-2 ring-indigo-600 ring-offset-4 ring-offset-slate-50'
   },
   {
     id: 'ultimate',
-    name: 'الباقة اللامحدودة',
-    price: '5,900',
-    description: 'للمتاجر الكبيرة التي تسعى للتوسع السريع.',
+    nameKey: 'subscriptions.ultimate',
+    price: 5900,
+    descriptionKey: 'subscriptions.ultimate_desc',
     features: [
-      'طلبات غير محدودة',
-      'طلبات متروكة غير محدودة',
-      '14 حسابات مستخدمين',
-      'توزيع الطلبات على وكلاء التأكيد',
-      'إدارة المخزون & الإدارة المالية',
-      'الإحصائيات والتقارير',
-      'الربط مع شركات التوصيل',
-      'الربط مع المتاجر الإلكترونية',
-      'الربط مع جداول Google',
-      'التحديثات والتحسينات',
-      'دعم 24/7',
-      'التحديثات والتحسينات'
+      { key: 'subscriptions.features.unlimited_orders' },
+      { key: 'subscriptions.features.unlimited_abandoned' },
+      { key: 'subscriptions.features.users_count', params: { count: 14 } },
+      { key: 'subscriptions.features.assign_agents' },
+      { key: 'subscriptions.features.inventory_finance' },
+      { key: 'subscriptions.features.stats_reports' },
+      { key: 'subscriptions.features.delivery_linking' },
+      { key: 'subscriptions.features.estore_linking' },
+      { key: 'subscriptions.features.sheets_linking' },
+      { key: 'subscriptions.features.updates' },
+      { key: 'subscriptions.features.support' },
+      { key: 'subscriptions.features.updates' }
     ],
-    buttonText: 'توسع الآن',
+    buttonTextKey: 'subscriptions.expand',
     popular: false,
     color: 'bg-white border-slate-200'
   }
 ];
 
 const POINT_BUNDLES = [
-  { points: 100, price: 1000, label: '100 طلب', discount: 0 },
-  { points: 500, price: 4500, label: '500 طلب', discount: 5 },
-  { points: 1000, price: 8000, label: '1000 طلب', discount: 10 },
-  { points: 5000, price: 35000, label: '5000 طلب', discount: 15 }
+  { points: 100, price: 1000, labelKey: 'subscriptions.points_bundle', params: { count: 100 }, discount: 0 },
+  { points: 500, price: 4500, labelKey: 'subscriptions.points_bundle', params: { count: 500 }, discount: 5 },
+  { points: 1000, price: 8000, labelKey: 'subscriptions.points_bundle', params: { count: 1000 }, discount: 10 },
+  { points: 5000, price: 35000, labelKey: 'subscriptions.points_bundle', params: { count: 5000 }, discount: 15 }
 ];
 
 const SubscriptionsView: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
@@ -118,12 +121,12 @@ const SubscriptionsView: React.FC = () => {
   const planData = user?.company?.plans;
 
   let currentPlan = {
-    name: 'لا توجد خطة نشطة',
+    name: t('subscriptions.no_active_plan'),
     expiryDate: '',
     daysLeft: 0,
     credit: 0,
     type: 'none',
-    status: 'غير نشط'
+    status: t('subscriptions.status_inactive')
   };
 
   if (planData && planData.name) {
@@ -141,7 +144,7 @@ const SubscriptionsView: React.FC = () => {
 
     // Find Arabic name from MAIN_PLANS
     const planDetails = MAIN_PLANS.find(p => p.id === nameLower);
-    const displayName = isPayg ? 'الدفع حسب الاستخدام' : (planDetails ? planDetails.name : planData.name);
+    const displayName = isPayg ? t('subscriptions.payg_title') : (planDetails ? t(planDetails.nameKey) : planData.name);
 
     currentPlan = {
       name: displayName,
@@ -149,7 +152,7 @@ const SubscriptionsView: React.FC = () => {
       daysLeft: daysLeft,
       credit: planData.pointes || 0,
       type: isPayg ? 'payg' : 'monthly',
-      status: isPayg ? 'نشط' : (daysLeft > 0 ? 'نشط' : 'منتهي')
+      status: isPayg ? t('subscriptions.status_active') : (daysLeft > 0 ? t('subscriptions.status_active') : t('subscriptions.status_expired'))
     };
   }
 
@@ -215,7 +218,7 @@ const SubscriptionsView: React.FC = () => {
         }
         setTotalPrice(Math.floor(price));
       } else {
-        const basePrice = parseInt(selectedPlan.price.replace(/,/g, ''));
+        const basePrice = typeof selectedPlan.price === 'number' ? selectedPlan.price : parseInt(selectedPlan.price.replace(/,/g, ''));
         let price = basePrice * duration;
 
         // Apply Duration Discounts
@@ -250,10 +253,10 @@ const SubscriptionsView: React.FC = () => {
   // Helper to get formatted price
   const getDisplayPrice = () => {
     if (currency === 'USD') {
-      // Approximate conversion for UI demo (1 USD ~ 200 DZD)
+      // Approximate conversion for UI demo (1 USD ~ 250 DZD)
       return (totalPrice / 250).toFixed(2);
     }
-    return totalPrice.toLocaleString();
+    return formatCurrency(totalPrice).split(' ')[0]; // Just the number part if we want manual currency symbol, but let's see
   };
 
   const handleApplyCoupon = async () => {
@@ -264,10 +267,10 @@ const SubscriptionsView: React.FC = () => {
     setTimeout(() => {
       if (couponCode === 'PRO20') {
         setAppliedCoupon({ code: 'PRO20', discount: 20 });
-        setCouponMsg({ type: 'success', text: 'تم تطبيق الخصم: 20%' });
+        setCouponMsg({ type: 'success', text: t('subscriptions.toast.coupon_applied', { discount: 20 }) });
       } else {
         setAppliedCoupon(null);
-        setCouponMsg({ type: 'error', text: 'كود الكوبون غير صالح' });
+        setCouponMsg({ type: 'error', text: t('subscriptions.toast.coupon_invalid') });
       }
       setCouponLoading(false);
     }, 800);
@@ -292,7 +295,7 @@ const SubscriptionsView: React.FC = () => {
 
   const handleSubmitSubscription = async (isPayLater: boolean) => {
     if (!proofFile) {
-      toast.error('يرجى إرفاق وصل الدفع للمتابعة');
+      toast.error(t('subscriptions.toast.attach_proof'));
       return;
     }
 
@@ -306,7 +309,7 @@ const SubscriptionsView: React.FC = () => {
       const proofFilename = uploadResult.data?.singleUpload?.filename;
 
       if (!proofFilename) {
-        throw new Error('فشل رفع الصورة');
+        throw new Error(t('subscriptions.toast.upload_failed'));
       }
 
       // 2. Create Invoice
@@ -327,21 +330,21 @@ const SubscriptionsView: React.FC = () => {
       });
 
       if (result.data?.createInvoice) {
-        toast.success('تم إرسال طلب الاشتراك بنجاح! سيتم مراجعته قريباً.');
+        toast.success(t('subscriptions.toast.success'));
         handleCloseModal();
         fetchInvoices(); // Refresh list
       }
 
     } catch (error) {
       console.error('Subscription Error:', error);
-      toast.error('حدث خطأ أثناء الاشتراك. يرجى المحاولة مرة أخرى.');
+      toast.error(t('subscriptions.toast.error'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24 max-w-[1400px] mx-auto text-right">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24 max-w-[1400px] mx-auto" dir={i18n.dir()}>
 
       {/* 0. Active Subscription Status Bar */}
       <section className="bg-indigo-600 text-white rounded-lg p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
@@ -352,7 +355,7 @@ const SubscriptionsView: React.FC = () => {
             <i className="fa-solid fa-crown"></i>
           </div>
           <div>
-            <p className="text-xs font-bold text-indigo-100/80 uppercase tracking-widest">حالة الاشتراك الحالي</p>
+            <p className="text-xs font-bold text-indigo-100/80 uppercase tracking-widest">{t('subscriptions.active_status')}</p>
             <h3 className="text-2xl font-black">{currentPlan.name}</h3>
           </div>
         </div>
@@ -360,27 +363,27 @@ const SubscriptionsView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-4 relative z-10 w-full md:w-auto">
           {currentPlan.type !== 'payg' && (
             <div className="flex-1 md:flex-none bg-white/10 border border-white/20 px-6 py-3 rounded-lg backdrop-blur-md">
-              <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1 text-center md:text-right">المدة المتبقية</p>
-              <p className="text-lg font-black text-center md:text-right">{currentPlan.daysLeft} يوم</p>
+              <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1 text-center md:text-right">{t('subscriptions.days_left')}</p>
+              <p className="text-lg font-black text-center md:text-right">{currentPlan.daysLeft} {t('subscriptions.days')}</p>
             </div>
           )}
           {currentPlan.type === 'payg' && (
             <div className="flex-1 md:flex-none bg-emerald-500/20 border border-emerald-500/30 px-6 py-3 rounded-lg backdrop-blur-md">
-              <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-1 text-center md:text-right">الرصيد المتاح</p>
-              <p className="text-lg font-black text-center md:text-right">{currentPlan.credit} نقطة</p>
+              <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-1 text-center md:text-right">{t('subscriptions.credit_available')}</p>
+              <p className="text-lg font-black text-center md:text-right">{currentPlan.credit} {t('subscriptions.points')}</p>
             </div>
           )}
           <div className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-black text-xs shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            اشتراك {currentPlan.status}
+            {t('common.order')} {currentPlan.status}
           </div>
         </div>
       </section>
 
       {/* 1. Page Header */}
       <section className="text-center space-y-4 max-w-3xl mx-auto px-4">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">جميع الباقات والخيارات المتاحة</h2>
-        <p className="text-slate-500 font-medium text-base">بإمكانك الترقية أو تغيير خطتك في أي وقت، التغيير يتم فوراً وبكل سهولة.</p>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">{t('subscriptions.title')}</h2>
+        <p className="text-slate-500 font-medium text-base">{t('subscriptions.subtitle')}</p>
       </section>
 
       {/* 2. Monthly Subscriptions Grid */}
@@ -392,26 +395,26 @@ const SubscriptionsView: React.FC = () => {
           const currentIndex = PLAN_ORDER.indexOf(currentPlanId);
           const planIndex = PLAN_ORDER.indexOf(plan.id);
 
-          let buttonText = 'ابدأ الآن';
+          let buttonText = t('subscriptions.start_now');
           let buttonStyle = 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200';
           let showBadge = false;
 
           if (currentPlanId && currentPlanId === plan.id) {
             // Current Plan
-            buttonText = 'تجديد الاشتراك';
+            buttonText = t('subscriptions.renew');
             buttonStyle = 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100';
           } else if (currentIndex !== -1 && planIndex > currentIndex) {
             // Upgrade Plan
-            buttonText = 'ترقية الآن';
+            buttonText = t('subscriptions.upgrade_now');
             buttonStyle = 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 animate-pulse-slow ring-offset-2 focus:ring-2 ring-indigo-500';
             showBadge = true;
           } else if (currentIndex !== -1 && planIndex < currentIndex) {
             // Downgrade / Lower Plan
-            buttonText = 'ابدأ الآن'; // Or "تغيير للخطة"
+            buttonText = t('subscriptions.start_now'); // Or "تغيير للخطة"
             buttonStyle = 'bg-white text-slate-700 border-2 border-slate-100 hover:border-slate-300 hover:bg-slate-50';
           } else {
             // No active monthly plan (or PAYG)
-            buttonText = plan.buttonText; // Default fallback
+            buttonText = t(plan.buttonTextKey); // Default fallback
             if (plan.popular) {
               buttonStyle = 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100';
             } else {
@@ -423,43 +426,43 @@ const SubscriptionsView: React.FC = () => {
             <div key={plan.id} className={`relative flex flex-col p-8 rounded-lg border transition-all hover:scale-[1.02] hover:shadow-2xl ${plan.color}`}>
               {(plan.popular || showBadge) && (
                 <span className={`absolute -top-4 right-1/2 translate-x-1/2 px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl ${showBadge ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
-                  {showBadge ? 'ينصح بالترقية' : 'الأكثر طلباً'}
+                  {showBadge ? t('subscriptions.recommended_upgrade') : t('subscriptions.most_popular')}
                 </span>
               )}
 
               <div className="mb-6">
-                <h3 className="text-xl font-black text-slate-900">{plan.name}</h3>
-                <p className="text-xs text-slate-400 font-bold mt-2 leading-relaxed">{plan.description}</p>
+                <h3 className="text-xl font-black text-slate-900">{t(plan.nameKey)}</h3>
+                <p className="text-xs text-slate-400 font-bold mt-2 leading-relaxed">{t(plan.descriptionKey)}</p>
               </div>
 
               <div className="mb-8 flex items-baseline gap-2">
                 {(() => {
                   const referralDiscount = user?.company?.affiliate?.referralDiscount || 0;
                   if (isFirstPurchase && referralDiscount > 0) {
-                    const baseP = parseInt(plan.price.replace(/,/g, ''));
+                    const baseP = typeof plan.price === 'number' ? plan.price : parseInt((plan.price as string).replace(/,/g, ''));
                     const finalP = Math.floor(baseP * (1 - referralDiscount / 100));
                     return (
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="text-4xl font-black text-slate-900 tracking-tighter">{finalP.toLocaleString()}</span>
-                          <span className="text-lg font-bold text-slate-300 line-through">{plan.price}</span>
+                          <span className="text-4xl font-black text-slate-900 tracking-tighter">{formatCurrency(finalP).split(' ')[0]}</span>
+                          <span className="text-lg font-bold text-slate-300 line-through">{formatCurrency(baseP).split(' ')[0]}</span>
                         </div>
                         <div className="mt-1 flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md w-fit border border-emerald-100">
-                          <span className="text-[9px] font-black uppercase tracking-wider">خصم: {referralDiscount}%</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider">{t('subscriptions.discount_badge', { percent: referralDiscount })}</span>
                         </div>
                       </div>
                     );
                   }
-                  return <span className="text-4xl font-black text-slate-900 tracking-tighter">{plan.price}</span>;
+                  return <span className="text-4xl font-black text-slate-900 tracking-tighter">{formatCurrency(plan.price as number).split(' ')[0]}</span>;
                 })()}
-                <span className="text-sm font-bold text-slate-400">دج / شهرياً</span>
+                <span className="text-sm font-bold text-slate-400">{' ' + t('common.currency')} / {t('subscriptions.duration_month')}</span>
               </div>
 
               <ul className="flex-1 space-y-4 mb-10 border-t border-slate-50 pt-8">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-600">
                     <i className="fa-solid fa-circle-check text-indigo-500 text-xs shrink-0"></i>
-                    {feature}
+                    {t(feature.key, feature.params)}
                   </li>
                 ))}
               </ul>
@@ -488,37 +491,37 @@ const SubscriptionsView: React.FC = () => {
                 <i className="fa-solid fa-bolt-lightning"></i>
               </div>
               <div>
-                <h4 className="text-2xl font-black text-slate-900">الدفع حسب الاستخدام</h4>
-                <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest mt-1">بدون رسوم اشتراك شهري</p>
+                <h4 className="text-2xl font-black text-slate-900">{t('subscriptions.payg_title')}</h4>
+                <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest mt-1">{t('subscriptions.payg_subtitle')}</p>
               </div>
             </div>
 
             <p className="text-slate-600 text-sm font-medium leading-relaxed">
-              مثالي للمتاجر الجديدة التي لا تريد الالتزام بميزانية ثابتة. ادفع فقط مقابل الطلبيات التي يتم تأكيدها بنجاح من خلال نظامنا.
+              {t('subscriptions.payg_desc')}
             </p>
 
             <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg border border-amber-100 flex items-center justify-between">
               <div className="text-right">
-                <span className="block text-[10px] font-black text-slate-400 uppercase">تكلفة التأكيد الواحد</span>
-                <span className="text-3xl font-black text-amber-600 tracking-tighter">10 دج</span>
+                <span className="block text-[10px] font-black text-slate-400 uppercase">{t('subscriptions.payg_cost_per_conf')}</span>
+                <span className="text-3xl font-black text-amber-600 tracking-tighter">{formatCurrency(10)}</span>
               </div>
               <ul className="space-y-1.5">
                 <li className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
                   <i className="fa-solid fa-circle text-[4px] text-amber-400"></i>
-                  أقل خطر مالي
+                  {t('subscriptions.payg_benefit_1')}
                 </li>
                 <li className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
                   <i className="fa-solid fa-circle text-[4px] text-amber-400"></i>
-                  شحن الرصيد متى شئت
+                  {t('subscriptions.payg_benefit_2')}
                 </li>
               </ul>
             </div>
           </div>
 
           <button
-            onClick={() => handleOpenModal({ id: 'payg', name: 'الدفع حسب الاستخدام', price: '0' })}
+            onClick={() => handleOpenModal({ id: 'payg', nameKey: 'subscriptions.payg_title', price: '0' })}
             className="w-full mt-8 bg-slate-900 text-white py-4 rounded-md font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-            شحن الرصيد (Top-up)
+            {t('subscriptions.payg_title')} ({t('subscriptions.top_up')})
           </button>
         </div>
 
@@ -532,21 +535,21 @@ const SubscriptionsView: React.FC = () => {
                 <i className="fa-solid fa-server"></i>
               </div>
               <div>
-                <h4 className="text-2xl font-black text-white">الاستضافة الذاتية (Self-Hosted)</h4>
-                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1">خصوصية مطلقة لبياناتك</p>
+                <h4 className="text-2xl font-black text-white">{t('subscriptions.self_hosted_title')}</h4>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1">{t('subscriptions.self_hosted_subtitle')}</p>
               </div>
             </div>
 
             <p className="text-slate-400 text-sm font-medium leading-relaxed">
-              الحل الأمثل للشركات اللوجستية والشبكات الكبرى التي تتطلب التحكم الكامل في السيرفرات وقواعد البيانات الخاصة بها مع ميزات تخصيص غير محدودة.
+              {t('subscriptions.self_hosted_desc')}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'أمان البيانات', icon: 'fa-shield-halved' },
-                { label: 'سيرفرات خاصة', icon: 'fa-microchip' },
-                { label: 'دعم API مفتوح', icon: 'fa-code' },
-                { label: 'لوحة تحكم مخصصة', icon: 'fa-sliders' }
+                { label: t('subscriptions.self_hosted_feat_1'), icon: 'fa-shield-halved' },
+                { label: t('subscriptions.self_hosted_feat_2'), icon: 'fa-microchip' },
+                { label: t('subscriptions.self_hosted_feat_3'), icon: 'fa-code' },
+                { label: t('subscriptions.self_hosted_feat_4'), icon: 'fa-sliders' }
               ].map((item, i) => (
                 <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-md flex items-center gap-3">
                   <i className={`fa-solid ${item.icon} text-indigo-400 text-xs`}></i>
@@ -557,8 +560,8 @@ const SubscriptionsView: React.FC = () => {
 
             <div className="pt-6 border-t border-white/5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase">التسعير بناءً على الحجم والمتطلبات</span>
-                <span className="text-sm font-black text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded-sm border border-indigo-400/20">حسب الطلب</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">{t('subscriptions.self_hosted_pricing_desc')}</span>
+                <span className="text-sm font-black text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded-sm border border-indigo-400/20">{t('subscriptions.on_request')}</span>
               </div>
             </div>
           </div>
@@ -570,7 +573,7 @@ const SubscriptionsView: React.FC = () => {
             className="w-full mt-8 bg-white text-slate-900 py-4 rounded-md font-black text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-3 shadow-2xl"
           >
             <i className="fa-solid fa-headset text-base"></i>
-            تحدث مع فريق الخبراء
+            {t('subscriptions.talk_to_experts')}
           </a>
         </div>
 
@@ -584,12 +587,12 @@ const SubscriptionsView: React.FC = () => {
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">سجل المدفوعات</h3>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">إدارة الفواتير والعمليات السابقة</p>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{t('subscriptions.payment_history')}</h3>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{t('common.financials')}</p>
             </div>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase hover:bg-slate-50 transition-all">
-            <Filter className="w-3.5 h-3.5" /> تصفية السجل
+            <Filter className="w-3.5 h-3.5" /> {t('subscriptions.filter_history')}
           </button>
         </div>
 
@@ -598,22 +601,22 @@ const SubscriptionsView: React.FC = () => {
             <table className="w-full text-right border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 text-slate-500 border-b border-slate-100">
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">معرف الفاتورة</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">التاريخ</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">الخطة</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">المبلغ</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">الوسيلة</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">الحالة</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">الإجراء</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('subscriptions.invoice_id')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('subscriptions.date')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('subscriptions.plan')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('subscriptions.amount')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('subscriptions.method')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">{t('common.status')}</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-center">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {loadingInvoices ? (
-                  <tr><td colSpan={7} className="text-center py-10">جاري التحميل...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10">{t('common.soon')}</td></tr>
                 ) : invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/50 transition-all">
                     <td className="px-8 py-4 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{inv.id}</td>
-                    <td className="px-8 py-4 text-[11px] font-bold text-slate-500">{new Date(inv.createdAt).toLocaleDateString('ar')}</td>
+                    <td className="px-8 py-4 text-[11px] font-bold text-slate-500">{new Date(inv.createdAt).toLocaleDateString(i18n.language)}</td>
                     <td className="px-8 py-4 text-[11px] font-black text-slate-700">{inv.plan}</td>
                     <td className="px-8 py-4 text-[11px] font-black text-slate-800">{inv.price} {inv.currency}</td>
                     <td className="px-8 py-4 text-[11px] font-bold text-slate-400">{inv.paymentMethod}</td>
@@ -622,15 +625,15 @@ const SubscriptionsView: React.FC = () => {
                         inv.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                           'bg-rose-50 text-rose-600 border-rose-100'
                         }`}>
-                        {inv.status === 'confirmed' ? 'ناجحة' : inv.status === 'pending' ? 'معلقة' : 'فاشلة'}
+                        {inv.status === 'confirmed' ? t('subscriptions.history_status.success') : inv.status === 'pending' ? t('subscriptions.history_status.pending') : t('subscriptions.history_status.failed')}
                       </span>
                     </td>
                     <td className="px-8 py-4 text-center flex justify-center gap-2">
-                      <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="تحميل الفاتورة">
+                      <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t('subscriptions.download_invoice')}>
                         <Download className="w-4 h-4" />
                       </button>
                       {inv.status === 'pending' && (
-                        <button className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all" title="إكمال الدفع">
+                        <button className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all" title={t('subscriptions.complete_payment')}>
                           <CreditCard className="w-4 h-4" />
                         </button>
                       )}
@@ -652,9 +655,9 @@ const SubscriptionsView: React.FC = () => {
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div>
-                <h3 className="text-lg font-black text-slate-800">تفعيل الاشتراك</h3>
+                <h3 className="text-lg font-black text-slate-800">{t('subscriptions.activate')}</h3>
                 <p className="text-[10px] font-bold text-slate-400 mt-1">
-                  أنت بصدد الاشتراك في <span className="text-indigo-600">{selectedPlan.name}</span>
+                  {t('subscriptions.subtitle')} <span className="text-indigo-600">{selectedPlan.nameKey ? t(selectedPlan.nameKey) : selectedPlan.id}</span>
                 </p>
               </div>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-rose-500 transition-colors">
@@ -682,7 +685,7 @@ const SubscriptionsView: React.FC = () => {
               {step === 1 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                   <h4 className="font-black text-slate-800 text-sm flex items-center gap-3">
-                    {selectedPlan.id === 'payg' ? 'اختر حزمة النقاط' : 'اختر مدة الاشتراك'}
+                    {selectedPlan.id === 'payg' ? t('subscriptions.choose_points') : t('subscriptions.choose_duration')}
                   </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {selectedPlan.id === 'payg' ? (
@@ -696,9 +699,9 @@ const SubscriptionsView: React.FC = () => {
                             }`}
                         >
                           <h5 className="text-xl font-black">{bundle.points}</h5>
-                          <span className="text-[10px] font-bold uppercase">نقطة</span>
-                          <span className="block text-xs font-bold text-slate-900 mt-1">{bundle.price.toLocaleString()} دج</span>
-                          {bundle.discount > 0 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {bundle.discount}%</span>}
+                          <span className="text-[10px] font-bold uppercase">{t('subscriptions.points')}</span>
+                          <span className="block text-xs font-bold text-slate-900 mt-1">{formatCurrency(bundle.price).split(' ')[0]}</span>
+                          {bundle.discount > 0 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">{t('subscriptions.discount_percent', { percent: bundle.discount })}</span>}
                         </button>
                       ))
                     ) : (
@@ -712,8 +715,8 @@ const SubscriptionsView: React.FC = () => {
                             }`}
                         >
                           <h5 className="text-xl font-black">{m}</h5>
-                          <span className="text-[10px] font-bold uppercase">أشهر</span>
-                          {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">خصم {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
+                          <span className="text-[10px] font-bold uppercase">{t('subscriptions.months')}</span>
+                          {m > 1 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">{t('subscriptions.discount')} {(m === 3 ? 5 : m === 6 ? 10 : 15)}%</span>}
                         </button>
                       ))
                     )}
@@ -726,7 +729,7 @@ const SubscriptionsView: React.FC = () => {
                           type="text"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
-                          placeholder="كود الخصم (اختياري)"
+                          placeholder={t('subscriptions.promo_code')}
                           className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-indigo-500"
                         />
                         <button
@@ -734,7 +737,7 @@ const SubscriptionsView: React.FC = () => {
                           disabled={couponLoading}
                           className="px-6 py-3 bg-slate-900 text-white rounded-md text-xs font-black hover:bg-slate-800 disabled:opacity-50"
                         >
-                          {couponLoading ? '...' : 'تطبيق'}
+                          {couponLoading ? '...' : t('subscriptions.apply')}
                         </button>
                       </div>
                       {couponMsg && (
@@ -749,27 +752,27 @@ const SubscriptionsView: React.FC = () => {
                     <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg space-y-2 animate-in zoom-in duration-300">
                       <div className="flex items-center gap-2 text-emerald-700">
                         <i className="fa-solid fa-gift text-sm"></i>
-                        <span className="text-xs font-black">لقد حصلت على خصم تلقائي!</span>
+                        <span className="text-xs font-black">{t('subscriptions.auto_discount_title')}</span>
                       </div>
                       <p className="text-[10px] text-emerald-600 font-bold leading-relaxed">
-                        بما أنك قمت بالتسجيل عن طريق رابط خاص، فقد تم تطبيق خصم {user.company.affiliate.referralDiscount}% على فاتورتك الأولى بنجاح.
+                        {t('subscriptions.auto_discount_desc', { discount: user.company.affiliate.referralDiscount })}
                       </p>
                     </div>
                   )}
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-                      <span className="text-xs font-black text-slate-500 uppercase">الإجمالي</span>
+                      <span className="text-xs font-black text-slate-500 uppercase">{t('subscriptions.total')}</span>
                       <div className="text-left">
                         <span className="text-2xl font-black text-slate-900">{getDisplayPrice()} <small className="text-sm font-bold text-slate-400">{currency}</small></span>
                         {(user?.company?.affiliate && isFirstPurchase) ? (
-                          <p className="text-[9px] font-bold text-emerald-600 text-left mt-0.5">شامل الخصم ({user.company.affiliate.referralDiscount}%)</p>
+                          <p className="text-[9px] font-bold text-emerald-600 text-left mt-0.5">{t('subscriptions.discount_included', { percent: user.company.affiliate.referralDiscount })}</p>
                         ) : null}
                       </div>
                     </div>
                   </div>
 
                   <button onClick={() => setStep(2)} className="w-full py-4 bg-indigo-600 text-white rounded-md font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
-                    متابعة للدفع
+                    {t('subscriptions.proceed_payment')}
                   </button>
                 </div>
               )}
@@ -777,10 +780,10 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 2: Payment Method */}
               {step === 2 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <h4 className="font-black text-slate-800 text-sm">اختر وسيلة الدفع</h4>
+                  <h4 className="font-black text-slate-800 text-sm">{t('subscriptions.payment_method')}</h4>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { id: 'ccp', name: 'CCP البريد الجزائري', icon: 'fa-building-columns', color: 'text-yellow-600 bg-yellow-50', details: '0023555199 79 - HICHAM LEHOUEDJ' },
+                      { id: 'ccp', name: t('subscriptions.ccp_title'), icon: 'fa-building-columns', color: 'text-yellow-600 bg-yellow-50', details: '0023555199 79 - ' + t('subscriptions.ccp_name') },
                       { id: 'baridimob', name: 'BaridiMob', icon: 'fa-mobile-screen', color: 'text-blue-600 bg-blue-50', details: '00799999002355519979' },
                       { id: 'redotpay', name: 'RedotPay (USD)', icon: 'fa-credit-card', color: 'text-rose-600 bg-rose-50', details: '1484831242' },
                     ].map((method) => (
@@ -805,8 +808,8 @@ const SubscriptionsView: React.FC = () => {
                     ))}
                   </div>
                   <div className="flex gap-4">
-                    <button onClick={() => setStep(1)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">عودة</button>
-                    <button onClick={() => setStep(3)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-md font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">تأكيد الوسيلة</button>
+                    <button onClick={() => setStep(1)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">{t('common.back')}</button>
+                    <button onClick={() => setStep(3)} className="flex-[2] py-4 bg-indigo-600 text-white rounded-md font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">{t('subscriptions.confirm_method')}</button>
                   </div>
                 </div>
               )}
@@ -815,7 +818,7 @@ const SubscriptionsView: React.FC = () => {
               {step === 3 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                   <div className="bg-slate-50 p-5 rounded-md border border-slate-200 text-center">
-                    <p className="text-xs font-bold text-slate-500 mb-2">يرجى إرسال المبلغ: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> إلى:</p>
+                    <p className="text-xs font-bold text-slate-500 mb-2">{t('subscriptions.send_amount')}: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> {t('common.to')}:</p>
                     <div className="bg-white p-3 rounded-sm border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer text-center" onClick={() => {
                       // @ts-ignore
                       navigator.clipboard.writeText(
@@ -824,7 +827,7 @@ const SubscriptionsView: React.FC = () => {
                             paymentMethod === 'redotpay' ? '1484831242' : ''
                       )
                     }}>
-                      {paymentMethod === 'ccp' && <>0023555199 79 <br /><span className="text-xs text-slate-400">HICHAM LEHOUEDJ - DJEDEIDA</span></>}
+                      {paymentMethod === 'ccp' && <>0023555199 79 <br /><span className="text-xs text-slate-400">{t('subscriptions.ccp_name')}</span></>}
                       {paymentMethod === 'baridimob' && '00799999002355519979'}
                       {paymentMethod === 'redotpay' && '1484831242'}
                     </div>
@@ -839,21 +842,21 @@ const SubscriptionsView: React.FC = () => {
                         <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
                           <i className="fa-solid fa-cloud-arrow-up"></i>
                         </div>
-                        <h5 className="font-black text-slate-700 text-xs">اضغط لرفع صورة الوصل</h5>
-                        <p className="text-[10px] text-slate-400 mt-1">تأكد من وضوح الصورة والمعلومات</p>
+                        <h5 className="font-black text-slate-700 text-xs">{t('subscriptions.upload_proof')}</h5>
+                        <p className="text-[10px] text-slate-400 mt-1">{t('subscriptions.upload_proof_desc')}</p>
                       </>
                     )}
                   </div>
 
                   <div className="flex gap-4">
-                    <button onClick={() => setStep(2)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">عودة</button>
+                    <button onClick={() => setStep(2)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-md font-black text-xs hover:bg-slate-200">{t('common.back')}</button>
                     <button
                       onClick={() => handleSubmitSubscription(false)}
                       disabled={isSubmitting}
                       className="flex-[2] py-4 bg-emerald-600 text-white rounded-md font-black text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                      {isSubmitting ? 'جاري الإرسال...' : 'إتمام وإرسال الطلب'}
+                      {isSubmitting ? t('common.sending') : t('subscriptions.finish_send')}
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '../types';
 import {
   Plus, Search, Edit3, Trash2,
@@ -51,6 +52,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   filterStatus = 'all',
   onFilterStatusChange
 }) => {
+  const { t, i18n } = useTranslation();
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   // Modal States
@@ -75,15 +77,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       const prices = p.variantsProbability.map(v => v.price);
       const min = Math.min(...prices);
       const max = Math.max(...prices);
-      if (min === max) return <span className="font-bold text-slate-900">{min} د.ج</span>;
+      if (min === max) return <span className="font-bold text-slate-900">{min} {t('common.currency')}</span>;
       return (
         <div className="flex flex-col text-xs">
-          <span className="font-bold text-slate-900">{min} - {max} د.ج</span>
-          <span className="text-gray-400">حسب الخيار</span>
+          <span className="font-bold text-slate-900">{min} - {max} {t('common.currency')}</span>
+          <span className="text-gray-400">{t('inventory.general.depends_on_variant')}</span>
         </div>
       );
     }
-    return <span className="font-bold text-slate-900">{p.price} د.ج</span>;
+    return <span className="font-bold text-slate-900">{p.price} {t('common.currency')}</span>;
   };
 
   const getCostDisplay = (p: Product) => {
@@ -91,14 +93,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       const costs = p.variantsProbability.map(v => v.cost || 0);
       const min = Math.min(...costs);
       const max = Math.max(...costs);
-      if (min === max) return <span className="font-medium text-gray-500">{min} د.ج</span>;
+      if (min === max) return <span className="font-medium text-gray-500">{min} {t('common.currency')}</span>;
       return (
         <div className="flex flex-col text-xs">
-          <span className="font-medium text-gray-600">{min} - {max} د.ج</span>
+          <span className="font-medium text-gray-600">{min} - {max} {t('common.currency')}</span>
         </div>
       );
     }
-    return <span className="font-medium text-gray-500">{p.cost || 0} د.ج</span>;
+    return <span className="font-medium text-gray-500">{p.cost || 0} {t('common.currency')}</span>;
   };
 
   // --- Actions ---
@@ -136,11 +138,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     if (success) {
       // Robust Refresh
       await onRefresh();
-      toast.success('تم حذف المنتج بنجاح');
+      toast.success(t('inventory.toast.delete_success'));
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
     } else {
-      toast.error('فشل حذف المنتج');
+      toast.error(t('inventory.toast.delete_error'));
     }
     setIsDeleting(false);
   };
@@ -152,20 +154,20 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={i18n.dir()}>
 
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">إدارة المخزون</h2>
-          <p className="text-slate-500 text-sm">إدارة وإضافة وتعديل المنتجات والمتغيرات الخاصة بها</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('inventory.title')}</h2>
+          <p className="text-slate-500 text-sm">{t('inventory.subtitle')}</p>
         </div>
         <button
           onClick={openAddModal}
           className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95"
         >
           <Plus size={20} />
-          إضافة منتج جديد
+          {t('inventory.add_product')}
         </button>
       </div>
 
@@ -175,7 +177,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
-            placeholder="بحث بالاسم أو SKU..."
+            placeholder={t('inventory.search_placeholder')}
             className="w-full pl-4 pr-10 py-2.5 rounded-lg border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 text-sm text-gray-600 placeholder-gray-400"
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
@@ -186,19 +188,19 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             onClick={() => onFilterStatusChange?.('all')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            الكل
+            {t('inventory.all')}
           </button>
           <button
             onClick={() => onFilterStatusChange?.('active')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'active' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            نشط
+            {t('inventory.active')}
           </button>
           <button
             onClick={() => onFilterStatusChange?.('draft')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterStatus === 'draft' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            مسودة
+            {t('inventory.draft')}
           </button>
         </div>
       </div>
@@ -211,9 +213,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       ) : filteredProducts.length === 0 ? (
         <EmptyState
           icon={Box}
-          title={searchQuery ? "لا توجد نتائج" : "المخزون فارغ"}
-          description={searchQuery ? "جرب كلمة بحث أخرى" : "ابدأ بإضافة منتجاتك"}
-          actionLabel={!searchQuery ? "إضافة منتج" : undefined}
+          title={searchQuery ? t('inventory.empty_state.no_results') : t('inventory.empty_state.empty_stock')}
+          description={searchQuery ? t('inventory.empty_state.try_diff_search') : t('inventory.empty_state.start_adding')}
+          actionLabel={!searchQuery ? t('inventory.add_product') : undefined}
           onAction={!searchQuery ? openAddModal : undefined}
         />
       ) : (
@@ -222,14 +224,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             <table className="w-full text-right border-collapse">
               <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المنتج والقسم</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">SKU</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">تاريخ الإضافة</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المخزون</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التكلفة</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">السعر</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">الحالة</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">الإجراءات</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.product_category')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.sku')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.created_at')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.stock')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.cost')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('inventory.price')}</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">{t('common.status')}</th>
+                  <th className={`px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider ${i18n.dir() === 'rtl' ? 'text-left' : 'text-right'}`}>{t('inventory.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -267,14 +269,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                               </h4>
                               <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                                 <Tag size={10} />
-                                {product.category || 'عام'}
+                                {product.category || t('inventory.general.general_cat')}
                               </span>
                             </div>
                           </div>
                           {hasVariants && !isExpanded && (
                             <div className="absolute left-1/2 bottom-1 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="text-[10px] text-indigo-500 bg-white shadow-sm border px-2 py-0.5 rounded-full border-indigo-100">
-                                {product.variantsProbability?.length} خيارات
+                                {product.variantsProbability?.length} {t('inventory.variants')}
                               </span>
                             </div>
                           )}
@@ -283,7 +285,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                           <button
                             className="group/sku flex items-center gap-1.5 text-xs font-mono font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 hover:border-indigo-200 hover:text-indigo-600 transition-all shadow-sm"
                             onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(product.sku); }}
-                            title="نسخ"
+                            title={t('common.copy', 'نسخ')}
                           >
                             {product.sku || '---'}
                             <Copy size={10} className="opacity-0 group-hover/sku:opacity-100" />
@@ -291,7 +293,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-xs font-bold text-slate-500">
-                            {product.createdAt ? new Date(product.createdAt).toLocaleDateString('ar') : '-'}
+                            {product.createdAt ? new Date(product.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : (i18n.language === 'fr' ? 'fr-FR' : 'en-GB')) : '-'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -300,16 +302,16 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                               <span className={`text-sm font-bold ${isOutOfStock ? 'text-red-500' : isLowStock ? 'text-orange-500' : 'text-slate-700'}`}>
                                 {stock}
                               </span>
-                              <span className="text-xs text-gray-400">قطعة</span>
+                              <span className="text-xs text-gray-400">{t('inventory.general.piece')}</span>
                             </div>
                             {isLowStock && (
                               <span className="text-[10px] text-orange-600 flex items-center gap-1">
-                                <AlertCircle size={10} /> مخزون منخفض
+                                <AlertCircle size={10} /> {t('inventory.low_stock')}
                               </span>
                             )}
                             {isOutOfStock && (
                               <span className="text-[10px] text-red-600 flex items-center gap-1">
-                                <AlertCircle size={10} /> نفد المخزون
+                                <AlertCircle size={10} /> {t('inventory.out_of_stock')}
                               </span>
                             )}
                           </div>
@@ -322,7 +324,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.status !== false ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
-                            {product.status !== false ? 'نشط' : 'مسودة'}
+                            {product.status !== false ? t('inventory.active') : t('inventory.draft')}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-left">
@@ -330,14 +332,14 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                             <button
                               onClick={(e) => openEditModal(product, e)}
                               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
-                              title="تعديل"
+                              title={t('common.edit')}
                             >
                               <Edit3 size={18} />
                             </button>
                             <button
                               onClick={(e) => confirmDelete(product.id, e)}
                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
-                              title="حذف"
+                              title={t('common.delete')}
                             >
                               <Trash2 size={18} />
                             </button>
@@ -358,7 +360,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                 {!hasVariants ? (
                                   <div className="p-6 text-center text-gray-400 flex flex-col items-center">
                                     <PackageOpen size={32} className="mb-2 opacity-50" />
-                                    <p className="text-sm">هذا المنتج بسيط وليس له متغيرات (مثل اللون أو المقاس).</p>
+                                    <p className="text-sm">{t('inventory.simple_product_msg')}</p>
                                   </div>
                                 ) : (
                                   <>
@@ -367,7 +369,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                         {product.variants.map((v, i) => (
                                           <div key={i} className="flex flex-col">
                                             <span className="text-[10px] uppercase font-black text-indigo-400 tracking-wider">
-                                              {v.type === 'color' ? 'لون' : v.type === 'size' ? 'حجم' : v.type === 'material' ? 'مادة' : 'مخصص'}
+                                              {v.type === 'color' ? t('inventory.variant_types.color') : v.type === 'size' ? t('inventory.variant_types.size') : v.type === 'material' ? t('inventory.variant_types.material') : t('inventory.variant_types.custom')}
                                             </span>
                                               <div className="flex items-center gap-1.5 mt-0.5">
                                                 <span className="text-xs font-bold text-slate-600">{v.name}</span>
@@ -391,25 +393,25 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                                     <div className="overflow-x-auto">
                                       <table className="w-full text-sm text-right">
                                         <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
-                                          <tr>
-                                            <th className="px-4 py-3 font-medium text-xs">خيار المنتج</th>
-                                            <th className="px-4 py-3 font-medium text-xs">SKU</th>
-                                            <th className="px-4 py-3 font-medium text-xs">السعر</th>
-                                            <th className="px-4 py-3 font-medium text-xs">التكلفة</th>
-                                            <th className="px-4 py-3 font-medium text-xs">الكمية المتوفرة</th>
-                                            <th className="px-4 py-3 font-medium text-xs text-center">الافتراضي</th>
-                                          </tr>
+                                            <tr>
+                                              <th className="px-4 py-3 font-medium text-xs">{t('inventory.columns.variant_opt')}</th>
+                                              <th className="px-4 py-3 font-medium text-xs">{t('inventory.sku')}</th>
+                                              <th className="px-4 py-3 font-medium text-xs">{t('inventory.price')}</th>
+                                              <th className="px-4 py-3 font-medium text-xs">{t('inventory.cost')}</th>
+                                              <th className="px-4 py-3 font-medium text-xs">{t('inventory.columns.available_qty')}</th>
+                                              <th className="px-4 py-3 font-medium text-xs text-center">{t('inventory.columns.default')}</th>
+                                            </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
                                           {product.variantsProbability?.map((variant, idx) => (
                                           <tr key={idx} className="hover:bg-gray-50/50">
                                             <td className="px-4 py-3 font-medium text-slate-700">{variant.name}</td>
                                             <td className="px-4 py-3 font-mono text-xs text-gray-500">{variant.sku}</td>
-                                            <td className="px-4 py-3 text-slate-700 font-bold">{variant.price} د.ج</td>
-                                            <td className="px-4 py-3 text-gray-500">{variant.cost} د.ج</td>
+                                            <td className="px-4 py-3 text-slate-700 font-bold">{variant.price} {t('common.currency')}</td>
+                                            <td className="px-4 py-3 text-gray-500">{variant.cost} {t('common.currency')}</td>
                                             <td className="px-4 py-3">
                                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variant.quantity > 5 ? 'bg-green-50 text-green-700' : variant.quantity > 0 ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
-                                                {variant.quantity} قطعة
+                                                {variant.quantity} {t('inventory.general.piece')}
                                               </span>
                                             </td>
                                             <td className="px-4 py-3 text-center">
@@ -463,8 +465,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={executeDelete}
-        title="حذف المنتج"
-        description="هل أنت متأكد من حذف هذا المنتج؟"
+        title={t('inventory.delete_modal.title')}
+        description={t('inventory.delete_modal.desc')}
         isDeleting={isDeleting}
       />
     </div>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ErrorState {
     title: string;
@@ -16,6 +17,7 @@ const GlobalErrorContext = createContext<GlobalErrorContextType | undefined>(und
 
 export const GlobalErrorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [error, setError] = useState<ErrorState | null>(null);
+    const { t } = useTranslation();
 
     const clearError = () => setError(null);
 
@@ -27,16 +29,16 @@ export const GlobalErrorProvider: React.FC<{ children: ReactNode }> = ({ childre
             const { message, originalError } = event.detail || {};
 
             // Determine error type
-            let title = "مشكلة في الاتصال";
-            let errorMsg = "تعذر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.";
+            let title = t('common.network_error.connection_issue');
+            let errorMsg = t('common.network_error.connection_issue_msg');
             let details = originalError?.message || message;
 
             if (message && message.includes('Failed to fetch')) {
-                title = "الخادم غير مستجيب";
-                errorMsg = "يبدو أن الخادم متوقف أو هناك مشكلة في الشبكة.";
+                title = t('common.network_error.server_down');
+                errorMsg = t('common.network_error.server_down_msg');
             } else if (message && message.includes('Network request failed')) {
-                title = "فشل طلب الشبكة";
-                errorMsg = "يرجى التحقق من اتصال الإنترنت.";
+                title = t('common.network_error.network_failed');
+                errorMsg = t('common.network_error.network_failed_msg');
             }
 
             setError({
@@ -51,7 +53,7 @@ export const GlobalErrorProvider: React.FC<{ children: ReactNode }> = ({ childre
         return () => {
             window.removeEventListener('feature:network-error' as any, handleNetworkError);
         };
-    }, []);
+    }, [t]);
 
     return (
         <GlobalErrorContext.Provider value={{ error, setError, clearError }}>
