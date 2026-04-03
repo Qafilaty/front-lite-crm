@@ -1472,25 +1472,24 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
 
           {/* Delivery Timeline - Collapsible */}
-          {(editedOrder.deliveryTimeLine && editedOrder.deliveryTimeLine.length > 0) && (
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              <button
-                onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
-                className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-emerald-500" />
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('orders.bulk_delivery.steps.results')}</h3>
-                  <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {editedOrder.deliveryTimeLine?.length || 0}
-                  </span>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
-              </button>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
+              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Truck className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('tracking.delivery_timeline')}</h3>
+                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {editedOrder.deliveryTimeLine?.length || 0}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
+            </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
                 <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
                   {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
-                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('orders.details.no_delivery_logs')}</p>
+                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('tracking.no_delivery_timeline')}</p>
                   )}
                   {editedOrder.deliveryTimeLine?.map((log, idx) => {
                     const logStyle = getStatusStyle(log.status);
@@ -1519,7 +1518,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               </div>
             </div>
-          )}
         </div>
       </div>
 

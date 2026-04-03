@@ -131,6 +131,7 @@ export interface Order {
     trackingCode?: string;
   };
   confirmed?: User;
+  updatedAtStatusDeliveryCompany?: string;
   isLocked?: boolean;
   storageLocation?: 'SHOP' | 'DELIVERY_COMPANY';
   store?: {

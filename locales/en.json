@@ -1589,6 +1589,7 @@
       "confirmed_by": "Confirmed By",
       "financials": "Financials",
       "status": "Status",
+      "delivery_status": "Last Status (Carrier)",
       "date": "Order Date",
       "actions": "Actions"
     },
@@ -1601,6 +1602,7 @@
       "confirmedBy": "Confirmed By",
       "financials": "Financials",
       "status": "Status",
+      "delivery_status": "Carrier Status",
       "communication": "Communication"
     },
     "labels": {
@@ -1616,6 +1618,27 @@
       "track_btn": "Track",
       "empty_state": "No shipments match the search criteria",
       "whatsapp_msg": "Hello {name}, this is {storeName}. Regarding your order #{orderNumber} ({products}). We are glad to inform you that your order is out for delivery with a total of {total}. Your tracking number is: {trackingCode}"
+    },
+    "delivery_timeline": "Delivery Timeline",
+    "no_delivery_timeline": "No delivery updates yet"
+  },
+  "subscription": {
+    "warning": {
+      "expired": {
+        "title": "Subscription Expired!",
+        "desc": "Order creation has stopped. Please renew your subscription to continue.",
+        "btn": "Renew Now"
+      },
+      "expiring_soon": {
+        "title": "Subscription expiring soon ({{days}} days)",
+        "desc": "Renew your subscription now to avoid service interruption.",
+        "btn": "Renew Subscription"
+      },
+      "low_points": {
+        "title": "Low points balance ({{points}} points)",
+        "desc": "Recharge your balance now to ensure continuous order creation.",
+        "btn": "Recharge Balance"
+      }
     }
   }
 }

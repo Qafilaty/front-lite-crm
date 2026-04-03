@@ -137,6 +137,7 @@ export const GET_ORDER = gql`
       createdAt
       updatedAt
       updatedAtStatus
+      updatedAtStatusDeliveryCompany
     }
   }
 `;
@@ -235,6 +236,7 @@ export const GET_ALL_ORDERS = gql`
         createdAt
         updatedAt
         updatedAtStatus
+        updatedAtStatusDeliveryCompany
         isAbandoned
         confirmed {
           id

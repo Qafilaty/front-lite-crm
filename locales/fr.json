@@ -1572,6 +1572,7 @@
       "confirmed_by": "Confirmé par",
       "financials": "Finances",
       "status": "Statut",
+      "delivery_status": "Dernier statut (Livreur)",
       "date": "Date de commande",
       "actions": "Actions"
     },
@@ -1584,6 +1585,7 @@
       "confirmedBy": "Confirmé par",
       "financials": "Finances",
       "status": "Statut",
+      "delivery_status": "Statut du livreur",
       "communication": "Communication"
     },
     "labels": {
@@ -1599,6 +1601,27 @@
       "track_btn": "Suivre",
       "empty_state": "Aucune expédition ne correspond aux critères de recherche",
       "whatsapp_msg": "Bonjour {name}, ici {storeName}. Concernant votre commande #{orderNumber} ({products}). Votre colis est en cours de livraison avec un total de {total}. Votre code de suivi est : {trackingCode}"
+    },
+    "delivery_timeline": "Historique de livraison",
+    "no_delivery_timeline": "Aucune mise à jour de livraison"
+  },
+  "subscription": {
+    "warning": {
+      "expired": {
+        "title": "Abonnement Expiré !",
+        "desc": "La création de commandes est arrêtée. Veuillez renouveler votre abonnement pour continuer.",
+        "btn": "Renouveler"
+      },
+      "expiring_soon": {
+        "title": "L'abonnement expire bientôt ({{days}} jours)",
+        "desc": "Renouvelez votre abonnement maintenant pour éviter toute interruption de service.",
+        "btn": "Renouveler"
+      },
+      "low_points": {
+        "title": "Solde de points faible ({{points}} points)",
+        "desc": "Rechargez votre compte maintenant pour garantir la continuité de la création de commandes.",
+        "btn": "Recharger"
+      }
     }
   }
 }

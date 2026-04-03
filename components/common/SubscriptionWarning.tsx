@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { AlertTriangle, Crown, Zap } from 'lucide-react';
+import { AlertTriangle, Zap, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const SubscriptionWarning: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     if (!user?.company?.plans) return null;
 
@@ -37,15 +39,15 @@ const SubscriptionWarning: React.FC = () => {
                             <AlertTriangle className="w-5 h-5" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-rose-700">اشتراكك منتهي الصلاحية!</h4>
-                            <p className="text-[11px] font-bold text-rose-500 mt-0.5">توقفت عملية إنشاء الطلبات. يرجى تجديد الاشتراك للمتابعة.</p>
+                            <h4 className="text-sm font-black text-rose-700">{t('subscription.warning.expired.title')}</h4>
+                            <p className="text-[11px] font-bold text-rose-500 mt-0.5">{t('subscription.warning.expired.desc')}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => navigate('/dashboard/subscriptions')}
                         className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all"
                     >
-                        تجديد الآن
+                        {t('subscription.warning.expired.btn')}
                     </button>
                 </div>
             ) : isExpiringSoon ? (
@@ -55,15 +57,15 @@ const SubscriptionWarning: React.FC = () => {
                             <Clock className="w-5 h-5" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-amber-700">اشتراكك ينتهي قريباً ({daysLeft} أيام)</h4>
-                            <p className="text-[11px] font-bold text-amber-500 mt-0.5">جدد اشتراكك الآن لتجنب انقطاع الخدمة.</p>
+                            <h4 className="text-sm font-black text-amber-700">{t('subscription.warning.expiring_soon.title', { days: daysLeft })}</h4>
+                            <p className="text-[11px] font-bold text-amber-500 mt-0.5">{t('subscription.warning.expiring_soon.desc')}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => navigate('/dashboard/subscriptions')}
                         className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-black shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all"
                     >
-                        تجديد الاشتراك
+                        {t('subscription.warning.expiring_soon.btn')}
                     </button>
                 </div>
             ) : isLowPoints ? (
@@ -73,22 +75,20 @@ const SubscriptionWarning: React.FC = () => {
                             <Zap className="w-5 h-5" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-rose-700">رصيد النقاط منخفض ({pointes} نقطة)</h4>
-                            <p className="text-[11px] font-bold text-rose-500 mt-0.5">اشحن رصيدك الآن لضمان استمرارية إنشاء الطلبات.</p>
+                            <h4 className="text-sm font-black text-rose-700">{t('subscription.warning.low_points.title', { points: pointes })}</h4>
+                            <p className="text-[11px] font-bold text-rose-500 mt-0.5">{t('subscription.warning.low_points.desc')}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => navigate('/dashboard/subscriptions')}
                         className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all"
                     >
-                        شحن الرصيد
+                        {t('subscription.warning.low_points.btn')}
                     </button>
                 </div>
             ) : null}
         </div>
     );
 };
-
-import { Clock } from 'lucide-react';
 
 export default SubscriptionWarning;

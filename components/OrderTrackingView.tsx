@@ -5,7 +5,7 @@ import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
   PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2, AlertTriangle,
-  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar, Copy, MessageSquare, MessageCircle
+  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar, Copy, MessageSquare, MessageCircle, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { statusLabels, statusColors } from '../constants/statusConstants';
@@ -51,13 +51,14 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
         confirmedBy: true,
         financials: true,
         status: true,
+        delivery_status: true,
         communication: true,
         actions: true
       };
     } catch {
       return {
         customerInfo: true, locationInfo: true, orderSummary: true, trackingInfo: true,
-        confirmedBy: true, financials: true, status: true, communication: true, actions: true
+        confirmedBy: true, financials: true, status: true, delivery_status: true, communication: true, actions: true
       };
     }
   });
@@ -326,6 +327,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         confirmedBy: t('tracking.columns_toggle.confirmedBy'),
                         financials: t('tracking.columns_toggle.financials'),
                         status: t('tracking.columns_toggle.status'),
+                        delivery_status: t('tracking.columns_toggle.delivery_status'),
                         communication: t('tracking.columns_toggle.communication')
                       };
                       return (
@@ -504,6 +506,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   {(visibleColumns as any).confirmedBy && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.confirmed_by')}</th>}
                   {(visibleColumns as any).financials && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.financials')}</th>}
                   {(visibleColumns as any).status && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.status')}</th>}
+                  {(visibleColumns as any).delivery_status && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.delivery_status')}</th>}
                   <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.date')}</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center w-[120px]">{t('tracking.table.actions')}</th>
                 </tr>
@@ -731,6 +734,25 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                             })()}
                             {statusLabel}
                           </span>
+                        </div>
+                      </td>}
+
+                      {(visibleColumns as any).delivery_status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black border border-slate-200 uppercase tracking-wider">
+                            {order.deliveryCompany?.status || '-'}
+                          </span>
+                          {order.updatedAtStatusDeliveryCompany && (
+                            <span className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {new Date(order.updatedAtStatusDeliveryCompany).toLocaleString(i18n.language, {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          )}
                         </div>
                       </td>}
 
