@@ -1619,8 +1619,9 @@
       "empty_state": "No shipments match the search criteria",
       "whatsapp_msg": "Hello {name}, this is {storeName}. Regarding your order #{orderNumber} ({products}). We are glad to inform you that your order is out for delivery with a total of {total}. Your tracking number is: {trackingCode}"
     },
-    "delivery_timeline": "Delivery Timeline",
-    "no_delivery_timeline": "No delivery updates yet"
+    "carrier_timeline": "Carrier Tracking Updates",
+    "internal_timeline": "Internal Delivery Logs",
+    "no_delivery_timeline": "No updates from the delivery company yet"
   },
   "subscription": {
     "warning": {

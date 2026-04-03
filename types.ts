@@ -122,6 +122,7 @@ export interface Order {
   history?: OrderLog[];
   confirmationTimeLine?: OrderLog[];
   deliveryTimeLine?: OrderLog[];
+  carrierTimeLine?: OrderLog[];
   trackingNumber?: string;
   postponementDate?: string;
   carrier?: string;

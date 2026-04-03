@@ -1602,8 +1602,9 @@
       "empty_state": "Aucune expédition ne correspond aux critères de recherche",
       "whatsapp_msg": "Bonjour {name}, ici {storeName}. Concernant votre commande #{orderNumber} ({products}). Votre colis est en cours de livraison avec un total de {total}. Votre code de suivi est : {trackingCode}"
     },
-    "delivery_timeline": "Historique de livraison",
-    "no_delivery_timeline": "Aucune mise à jour de livraison"
+    "carrier_timeline": "Suivi du Transporteur",
+    "internal_timeline": "Historique de Livraison Interne",
+    "no_delivery_timeline": "Aucun suivi de transporteur encore disponible"
   },
   "subscription": {
     "warning": {

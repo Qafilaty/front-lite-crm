@@ -134,6 +134,12 @@ export const GET_ORDER = gql`
         deleted
         createdAt
       }
+      carrierTimeLine {
+        id
+        status
+        note
+        createdAt
+      }
       createdAt
       updatedAt
       updatedAtStatus
@@ -250,6 +256,29 @@ export const GET_ALL_ORDERS = gql`
           }
           createdAt
         }
+        deliveryTimeLine {
+          id
+          status
+          oreginalStatus {
+            id
+            nameAR
+            nameFR
+            nameEN
+            color
+          }
+          note
+          user {
+            id
+            name
+          }
+          createdAt
+        }
+        carrierTimeLine {
+          id
+          status
+          note
+          createdAt
+        }
         isLocked
       }
       total
@@ -291,6 +320,29 @@ export const SEARCH_ORDER = gql`
         }
         deliveryCompany {
           trackingCode
+        }
+        deliveryTimeLine {
+          id
+          status
+          oreginalStatus {
+            id
+            nameAR
+            nameFR
+            nameEN
+            color
+          }
+          note
+          user {
+            id
+            name
+          }
+          createdAt
+        }
+        carrierTimeLine {
+          id
+          status
+          note
+          createdAt
         }
         isLocked
       }

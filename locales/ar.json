@@ -1653,7 +1653,8 @@
       "empty_state": "لا توجد شحنات تطابق معايير البحث",
       "whatsapp_msg": "السلام عليكم {name}، معك {storeName}. بخصوص طلبك رقم #{orderNumber} ({products}). يسعدنا إبلاغك بأن الطلبية قيد التوصيل بقيمة {total}. رقم التتبع الخاص بك هو: {trackingCode}"
     },
-    "delivery_timeline": "الخط الزمني للشحن",
+    "delivery_timeline": "تتبع شركة التوصيل",
+    "internal_timeline": "الخط الزمني الداخلي للشحن",
     "no_delivery_timeline": "لا يوجد سجل تحديثات من شركة التوصيل بعد"
   },
   "subscription": {

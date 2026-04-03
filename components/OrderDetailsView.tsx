@@ -11,7 +11,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   FileSpreadsheet,
-  UserCheck
+  UserCheck,
+  Activity
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
@@ -162,8 +163,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [deliveryErrors, setDeliveryErrors] = useState<any[]>([]);
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 
-  // Timeline accordion state: 'orderInfo' | 'confirmation' | 'delivery' | null
-  const [expandedTimeline, setExpandedTimeline] = useState<'orderInfo' | 'confirmation' | 'delivery' | null>('orderInfo');
+  // Timeline accordion state: 'orderInfo' | 'confirmation' | 'delivery' | 'carrier' | null
+  const [expandedTimeline, setExpandedTimeline] = useState<'orderInfo' | 'confirmation' | 'delivery' | 'carrier' | null>(
+    trackingMode ? 'carrier' : 'orderInfo'
+  );
 
   const [isPostponeModalOpen, setIsPostponeModalOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<any>(null);
@@ -1457,12 +1460,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         >
                           {getStatusLabel(log.status)}
                         </span>
-                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
+                          {(log as any).date || (log as any).createdAt || '-'}
+                        </span>
                       </div>
                       <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
                       <div className="flex items-center gap-1.5">
                         <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">{t('common.user_init')}</div>
-                        <span className="text-[8px] font-black text-slate-400">{log.user}</span>
+                        <span className="text-[8px] font-black text-slate-400">
+                          {typeof log.user === 'object' && log.user !== null ? (log.user as any).name : log.user}
+                        </span>
                       </div>
                     </div>
                   );
@@ -1471,27 +1478,25 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </div>
           </div>
 
-          {/* Delivery Timeline - Collapsible */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-            <button
-              onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
-              className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Truck className="w-5 h-5 text-emerald-500" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('tracking.delivery_timeline')}</h3>
-                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {editedOrder.deliveryTimeLine?.length || 0}
-                </span>
-              </div>
-              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
-            </button>
+          {/* Internal Delivery Logs - Only show if has data */}
+          {editedOrder.deliveryTimeLine && editedOrder.deliveryTimeLine.length > 0 && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-4">
+              <button
+                onClick={() => setExpandedTimeline(expandedTimeline === 'delivery' ? null : 'delivery')}
+                className="w-full p-5 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Activity className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('tracking.internal_timeline')}</h3>
+                  <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {editedOrder.deliveryTimeLine?.length || 0}
+                  </span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'delivery' ? 'rotate-180' : ''}`} />
+              </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'delivery' ? 'max-h-[350px]' : 'max-h-0'}`}>
                 <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
-                  {(!editedOrder.deliveryTimeLine || editedOrder.deliveryTimeLine.length === 0) && (
-                    <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('tracking.no_delivery_timeline')}</p>
-                  )}
-                  {editedOrder.deliveryTimeLine?.map((log, idx) => {
+                  {editedOrder.deliveryTimeLine.map((log, idx) => {
                     const logStyle = getStatusStyle(log.status);
                     const logKey = getStatusKey(log.status);
                     const logColors = statusColors[logKey] || statusColors.default;
@@ -1505,12 +1510,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           >
                             {getStatusLabel(log.status)}
                           </span>
-                          <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">{log.date}</span>
+                          <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
+                            {(log as any).date || (log as any).createdAt || '-'}
+                          </span>
                         </div>
                         <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
                         <div className="flex items-center gap-1.5">
                           <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[7px] font-black text-slate-500">{t('common.user_init')}</div>
-                          <span className="text-[8px] font-black text-slate-400">{log.user}</span>
+                          <span className="text-[8px] font-black text-slate-400">
+                            {typeof log.user === 'object' && log.user !== null ? (log.user as any).name : log.user}
+                          </span>
                         </div>
                       </div>
                     );
@@ -1518,6 +1527,54 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Carrier Tracking Timeline - Collapsible */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-4">
+            <button
+              onClick={() => setExpandedTimeline(expandedTimeline === 'carrier' ? null : 'carrier')}
+              className="w-full p-5 border-b border-slate-50 bg-indigo-50/30 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Truck className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('tracking.delivery_timeline')}</h3>
+                <span className="text-[9px] font-bold text-indigo-400 bg-indigo-100 px-2 py-0.5 rounded-full">
+                  {editedOrder.carrierTimeLine?.length || 0}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expandedTimeline === 'carrier' ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedTimeline === 'carrier' ? 'max-h-[350px]' : 'max-h-0'}`}>
+              <div className="overflow-y-auto max-h-[350px] p-5 space-y-3 custom-scrollbar">
+                {(!editedOrder.carrierTimeLine || editedOrder.carrierTimeLine.length === 0) && (
+                  <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('tracking.no_delivery_timeline')}</p>
+                )}
+                {editedOrder.carrierTimeLine?.map((log, idx) => {
+                  return (
+                    <div key={idx} className="bg-indigo-50/40 rounded-xl p-4 border border-indigo-100/50 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest bg-indigo-100 text-indigo-600 border-indigo-200">
+                          {log.status}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
+                          {(log as any).date || (log as any).createdAt || '-'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-[7px] font-black text-indigo-500">
+                          <Truck className="w-2 h-2" />
+                        </div>
+                        <span className="text-[8px] font-black text-slate-400">
+                          {t('orders.details.delivery_company')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
