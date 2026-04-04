@@ -1583,6 +1583,59 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           {t('orders.details.delivery_company')}
                         </span>
                       </div>
+
+                      {/* ✨ Metadata Display: Driver, Attempts, Location */}
+                      {log.metadata && Object.keys(log.metadata).length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/50 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+                          {log.metadata.driverName && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                                <User className="w-3 h-3" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-slate-400 uppercase leading-none mb-0.5">{t('tracking.driver')}</span>
+                                <span className="text-[9px] font-black text-slate-700 leading-none">{log.metadata.driverName}</span>
+                              </div>
+                            </div>
+                          )}
+                          {log.metadata.driverPhone && (
+                            <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors rounded-lg pr-2" 
+                                 onClick={() => window.open(`tel:${log.metadata.driverPhone}`)}>
+                              <div className="w-5 h-5 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-400">
+                                <Phone className="w-3 h-3" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-indigo-300 uppercase leading-none mb-0.5">{t('tracking.phone')}</span>
+                                <span className="text-[9px] font-black text-indigo-600 leading-none font-mono tracking-tighter" dir="ltr">{log.metadata.driverPhone}</span>
+                              </div>
+                            </div>
+                          )}
+                          {log.metadata.attempts !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-400">
+                                <RefreshCcw className="w-3 h-3" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-emerald-300 uppercase leading-none mb-0.5">{t('tracking.attempts')}</span>
+                                <span className="text-[9px] font-black text-emerald-600 leading-none">{log.metadata.attempts}</span>
+                              </div>
+                            </div>
+                          )}
+                          {(log.metadata.wilaya || log.metadata.commune) && (
+                            <div className="flex items-center gap-2 col-span-1 sm:col-span-2">
+                              <div className="w-5 h-5 rounded-lg bg-amber-50 flex items-center justify-center text-amber-400">
+                                <MapPin className="w-3 h-3" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-amber-300 uppercase leading-none mb-0.5">{t('tracking.location')}</span>
+                                <span className="text-[9px] font-black text-amber-700 leading-none">
+                                  {[log.metadata.wilaya, log.metadata.commune].filter(Boolean).join(' - ')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -138,6 +138,7 @@ export const GET_ORDER = gql`
         id
         status
         color
+        metadata
         note
         createdAt
       }
@@ -278,6 +279,7 @@ export const GET_ALL_ORDERS = gql`
           id
           status
           color
+          metadata
           note
           createdAt
         }
@@ -344,6 +346,7 @@ export const SEARCH_ORDER = gql`
           id
           status
           color
+          metadata
           note
           createdAt
         }
