@@ -976,7 +976,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               )}
             </div>
 
-            <div className="p-5 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <div className="p-5 space-y-4">
               {editedOrder.items?.map((item, idx) => (
                 <div key={idx} className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-3 group relative">
                   {/* Delete button - top right */}

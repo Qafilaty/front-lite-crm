@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useInventory } from './hooks/useInventory';
 import { ProductModal } from './components/ProductModal';
@@ -7,6 +8,7 @@ import { ConfirmDialog } from '../../components/common';
 import type { Product } from '../../types';
 
 const InventoryPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { inventory, loading, error, loadInventory, deleteProduct, total } = useInventory(user?.company?.id);
 
@@ -54,9 +56,9 @@ const InventoryPage: React.FC = () => {
       await deleteProduct(selectedProduct.id);
       setIsDeleteDialogOpen(false);
       setSelectedProduct(null);
-      alert('تم حذف المنتج بنجاح!');
+      alert(t('inventory.toast.delete_success'));
     } catch (error) {
-      alert('حدث خطأ أثناء حذف المنتج');
+      alert(t('inventory.toast.delete_error'));
     } finally {
       setDeleteLoading(false);
     }
@@ -154,9 +156,9 @@ const InventoryPage: React.FC = () => {
           setSelectedProduct(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="تأكيد الحذف"
-        message={`هل أنت متأكد من حذف المنتج "${selectedProduct?.name}"؟ هذا الإجراء لا يمكن التراجع عنه.`}
-        confirmText="حذف المنتج"
+        title={t('common.confirm_delete')}
+        message={t('inventory.delete_modal.desc')}
+        confirmText={t('common.delete')}
         loading={deleteLoading}
       />
     </>
