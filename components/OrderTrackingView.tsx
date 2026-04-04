@@ -232,7 +232,6 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
   const totalPages = ordersData?.allOrder?.total ? Math.ceil(ordersData.allOrder.total / itemsPerPage) : 0;
 
-  // Helper to get status color (dynamic)
   const getStatusStyle = (s: any) => {
     if (typeof s === 'object' && s !== null && s.color) {
       return {
@@ -241,6 +240,34 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
         borderColor: `${s.color}30`
       };
     }
+    return null;
+  };
+
+  const getDeliveryStatusStyle = (order: any) => {
+    const dStatus = order.deliveryCompany?.status;
+    const dColor = order.deliveryCompany?.color;
+
+    if (!dStatus || dStatus === '-') return null;
+
+    if (dColor) {
+      return {
+        backgroundColor: `${dColor}15`,
+        color: dColor,
+        borderColor: `${dColor}30`
+      };
+    }
+    
+    // Fallback to matching status object
+    const matchedStatus = trackingStatuses.find((s: any) => 
+      s.id === dStatus ||
+      s.nameEN?.toLowerCase() === dStatus.toLowerCase() ||
+      s.nameAR === dStatus
+    );
+
+    if (matchedStatus) {
+      return getStatusStyle(matchedStatus);
+    }
+
     return null;
   };
 
@@ -739,9 +766,26 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
 
                       {(visibleColumns as any).delivery_status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1 items-start">
-                          <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black border border-slate-200 uppercase tracking-wider">
-                            {order.deliveryCompany?.status || '-'}
-                          </span>
+                          {(() => {
+                            const dStatus = order.deliveryCompany?.status || '-';
+                            const dStyle = getDeliveryStatusStyle(order);
+                            return (
+                              <span 
+                                className="px-2 py-1 rounded-md text-[10px] font-black border uppercase tracking-wider"
+                                style={dStyle ? {
+                                  backgroundColor: dStyle.backgroundColor,
+                                  color: dStyle.color,
+                                  borderColor: dStyle.borderColor
+                                } : {
+                                  backgroundColor: '#f1f5f9', // slate-100
+                                  color: '#475569', // slate-600
+                                  borderColor: '#e2e8f0' // slate-200
+                                }}
+                              >
+                                {dStatus}
+                              </span>
+                            );
+                          })()}
                           {order.updatedAtStatusDeliveryCompany && (
                             <span className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" />

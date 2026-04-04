@@ -44,6 +44,7 @@ export interface OrderItem {
 
 export interface OrderLog {
   status: OrderStatus;
+  color?: string;
   date: string;
   note: string;
   user: string;

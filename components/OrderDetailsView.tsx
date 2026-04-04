@@ -1550,10 +1550,24 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <p className="text-center py-8 text-[10px] text-slate-300 font-bold uppercase">{t('tracking.no_delivery_timeline')}</p>
                 )}
                 {editedOrder.carrierTimeLine?.map((log, idx) => {
+                  const logColor = log.color || '#6366f1'; // fallback to indigo-500
                   return (
-                    <div key={idx} className="bg-indigo-50/40 rounded-xl p-4 border border-indigo-100/50 space-y-2">
+                    <div key={idx} 
+                      className="rounded-xl p-4 border space-y-2 transition-all hover:shadow-md"
+                      style={{ 
+                        backgroundColor: `${logColor}08`,
+                        borderColor: `${logColor}20`
+                      }}
+                    >
                       <div className="flex justify-between items-start">
-                        <span className="text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest bg-indigo-100 text-indigo-600 border-indigo-200">
+                        <span 
+                          className="text-[8px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest"
+                          style={{
+                            backgroundColor: `${logColor}15`,
+                            color: logColor,
+                            borderColor: `${logColor}30`
+                          }}
+                        >
                           {log.status}
                         </span>
                         <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">

@@ -718,7 +718,11 @@
     "actions": "الإجراءات",
     "toast": {
       "delete_success": "تم حذف المنتج بنجاح",
-      "delete_error": "فشل حذف المنتج"
+      "delete_error": "فشل حذف المنتج",
+      "add_success": "تم إضافة المنتج بنجاح!",
+      "update_success": "تم تحديث المنتج بنجاح!",
+      "save_error": "حدث خطأ أثناء حفظ المنتج",
+      "company_not_found": "خطأ: معرف الشركة غير موجود"
     },
     "empty_state": {
       "no_results": "لا توجد نتائج",

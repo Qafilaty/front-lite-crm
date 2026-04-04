@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Modal, Button } from '../../../components/common';
 import { productService } from '../../../services/apiService';
 import { Save, Plus, Trash2 } from 'lucide-react';
@@ -20,6 +22,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   product,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -101,7 +104,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     e.preventDefault();
 
     if (!user?.company?.id) {
-      alert('خطأ: معرف الشركة غير موجود');
+      toast.error(t('inventory.toast.company_not_found'));
       return;
     }
 
@@ -136,13 +139,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       if (result.success) {
         onSuccess();
         onClose();
-        alert(mode === 'add' ? 'تم إضافة المنتج بنجاح!' : 'تم تحديث المنتج بنجاح!');
+        toast.success(mode === 'add' ? t('inventory.toast.add_success') : t('inventory.toast.update_success'));
       } else {
-        alert(result.error || 'حدث خطأ أثناء حفظ المنتج');
+        toast.error(result.error || t('inventory.toast.save_error'));
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('حدث خطأ أثناء حفظ المنتج');
+      toast.error(t('inventory.toast.save_error'));
     } finally {
       setLoading(false);
     }

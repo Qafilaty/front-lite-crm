@@ -633,7 +633,11 @@
     "actions": "Actions",
     "toast": {
       "delete_success": "Product deleted successfully",
-      "delete_error": "Failed to delete product"
+      "delete_error": "Failed to delete product",
+      "add_success": "Product added successfully!",
+      "update_success": "Product updated successfully!",
+      "save_error": "Error occurred while saving product",
+      "company_not_found": "Error: Company ID not found"
     },
     "empty_state": {
       "no_results": "No results found",

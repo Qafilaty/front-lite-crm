@@ -137,6 +137,7 @@ export const GET_ORDER = gql`
       carrierTimeLine {
         id
         status
+        color
         note
         createdAt
       }
@@ -276,6 +277,7 @@ export const GET_ALL_ORDERS = gql`
         carrierTimeLine {
           id
           status
+          color
           note
           createdAt
         }
@@ -341,6 +343,7 @@ export const SEARCH_ORDER = gql`
         carrierTimeLine {
           id
           status
+          color
           note
           createdAt
         }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useInventory } from './hooks/useInventory';
 import { ProductModal } from './components/ProductModal';
@@ -56,9 +57,9 @@ const InventoryPage: React.FC = () => {
       await deleteProduct(selectedProduct.id);
       setIsDeleteDialogOpen(false);
       setSelectedProduct(null);
-      alert(t('inventory.toast.delete_success'));
+      toast.success(t('inventory.toast.delete_success'));
     } catch (error) {
-      alert(t('inventory.toast.delete_error'));
+      toast.error(t('inventory.toast.delete_error'));
     } finally {
       setDeleteLoading(false);
     }

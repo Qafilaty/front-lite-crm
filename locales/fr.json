@@ -630,7 +630,11 @@
     "actions": "Actions",
     "toast": {
       "delete_success": "Produit supprimé avec succès",
-      "delete_error": "Échec de la suppression du produit"
+      "delete_error": "Échec de la suppression du produit",
+      "add_success": "Produit ajouté avec succès !",
+      "update_success": "Produit mis à jour avec succès !",
+      "save_error": "Une erreur s'est produite lors de l'enregistrement du produit",
+      "company_not_found": "Erreur : ID de la société introuvable"
     },
     "empty_state": {
       "no_results": "Aucun résultat",
