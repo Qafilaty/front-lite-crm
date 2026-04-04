@@ -95,6 +95,25 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const { data: deliveryCompaniesData } = useQuery(GET_ALL_DELIVERY_COMPANIES);
   const [getCenters, { data: centersData, loading: loadingCenters }] = useLazyQuery(GET_DELIVERY_COMPANY_CENTER);
 
+  const formatLogDate = (date: any) => {
+    if (!date) return '-';
+    // Handle Unix Timestamp (number or string-number)
+    const normalizedDate = typeof date === 'number' || (!isNaN(Number(date)) && !isNaN(parseFloat(date))) 
+      ? new Date(Number(date)) 
+      : new Date(date);
+    
+    if (isNaN(normalizedDate.getTime())) return date;
+
+    return normalizedDate.toLocaleString(i18n.language === 'ar' ? 'ar-DZ' : i18n.language === 'fr' ? 'fr-FR' : 'en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
   // Fetch centers if we have a company and office delivery
   useEffect(() => {
     // Only fetch if office and we have basic info
@@ -1461,7 +1480,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           {getStatusLabel(log.status)}
                         </span>
                         <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
-                          {(log as any).date || (log as any).createdAt || '-'}
+                          {formatLogDate((log as any).date || (log as any).createdAt)}
                         </span>
                       </div>
                       <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
@@ -1511,7 +1530,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                             {getStatusLabel(log.status)}
                           </span>
                           <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
-                            {(log as any).date || (log as any).createdAt || '-'}
+                            {formatLogDate((log as any).date || (log as any).createdAt)}
                           </span>
                         </div>
                         <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
@@ -1571,7 +1590,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           {log.status}
                         </span>
                         <span className="text-[8px] font-bold text-slate-400 font-mono" dir="ltr">
-                          {(log as any).date || (log as any).createdAt || '-'}
+                          {formatLogDate((log as any).date || (log as any).createdAt)}
                         </span>
                       </div>
                       <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{log.note}</p>
