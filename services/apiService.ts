@@ -70,9 +70,7 @@ import {
 import {
   GET_INVOICE,
   GET_ALL_INVOICES,
-  GET_COUPON,
   GET_COUPON_BY_CODE,
-  GET_ALL_COUPONS,
 } from '../graphql/queries';
 import {
   CREATE_INVOICE,
@@ -1006,38 +1004,6 @@ export const invoiceService = {
 
 // Coupon Service
 export const couponService = {
-  async getAllCoupons(options?: { pagination?: { limit: number; page: number } }) {
-    try {
-      const { data } = await apolloClient.query({
-        query: GET_ALL_COUPONS,
-        variables: { ...options },
-        fetchPolicy: 'network-only',
-      });
-      return {
-        success: true,
-        coupons: data?.allCoupon?.data || [],
-        total: data?.allCoupon?.total || 0,
-      };
-    } catch (error: any) {
-      console.error('Get all coupons error:', error);
-      return { success: false, error: error.message, coupons: [] };
-    }
-  },
-
-  async getCoupon(id: string) {
-    try {
-      const { data } = await apolloClient.query({
-        query: GET_COUPON,
-        variables: { id },
-        fetchPolicy: 'network-only',
-      });
-      return { success: true, coupon: data?.coupon };
-    } catch (error: any) {
-      console.error('Get coupon error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
   async getCouponByCode(code: string) {
     try {
       const { data } = await apolloClient.query({

@@ -55,9 +55,7 @@ export {
 
 // Coupon Queries
 export {
-  GET_COUPON,
   GET_COUPON_BY_CODE,
-  GET_ALL_COUPONS,
 } from './couponQueries';
 
 // General Queries

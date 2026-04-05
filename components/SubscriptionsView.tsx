@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { useMutation } from '@apollo/client';
-import { invoiceService } from '../services/apiService';
+import { useMutation, useLazyQuery } from '@apollo/client';
+import { invoiceService, couponService } from '../services/apiService';
 import type { Invoice } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { History, Filter, Download, CreditCard, ArrowRight, Loader2 } from 'lucide-react';
+import { History, Filter, Download, CreditCard, ArrowRight, Loader2, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { SINGLE_UPLOAD } from '../graphql/mutations/uploadMutations';
 import { CREATE_INVOICE } from '../graphql/mutations/invoiceMutations';
+import { GET_COUPON_BY_CODE } from '../graphql/queries/couponQueries';
 import { formatCurrency } from '../utils/formatters';
 
 // New Plans Data (from PricingPlans.tsx)
@@ -260,20 +261,29 @@ const SubscriptionsView: React.FC = () => {
   };
 
   const handleApplyCoupon = async () => {
-    // Mock logic for demo since import couponService is available but not fully integrated
     if (!couponCode.trim()) return;
     setCouponLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      if (couponCode === 'PRO20') {
-        setAppliedCoupon({ code: 'PRO20', discount: 20 });
-        setCouponMsg({ type: 'success', text: t('subscriptions.toast.coupon_applied', { discount: 20 }) });
+    setCouponMsg(null);
+    
+    try {
+      const result = await couponService.getCouponByCode(couponCode.trim().toUpperCase());
+      if (result.success && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        setCouponMsg({ 
+          type: 'success', 
+          text: t('subscriptions.toast.coupon_applied', { discount: result.coupon.discount }) 
+        });
       } else {
         setAppliedCoupon(null);
         setCouponMsg({ type: 'error', text: t('subscriptions.toast.coupon_invalid') });
       }
+    } catch (error) {
+      console.error(error);
+      setAppliedCoupon(null);
+      setCouponMsg({ type: 'error', text: t('subscriptions.toast.coupon_invalid') });
+    } finally {
       setCouponLoading(false);
-    }, 800);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,7 +332,7 @@ const SubscriptionsView: React.FC = () => {
         paymentMethod: paymentMethod,
         currency: currency,
         pointes: selectedPoints || 0,
-        idCoupon: appliedCoupon ? appliedCoupon.id : null // Assuming coupon object has id if from DB, or just null for now
+        idCoupon: appliedCoupon ? appliedCoupon.id : null
       };
 
       const result = await createInvoice({
@@ -617,7 +627,15 @@ const SubscriptionsView: React.FC = () => {
                   <tr key={inv.id} className="hover:bg-slate-50/50 transition-all">
                     <td className="px-8 py-4 font-black text-indigo-600 text-[11px] font-mono tracking-widest">#{inv.id}</td>
                     <td className="px-8 py-4 text-[11px] font-bold text-slate-500">{new Date(inv.createdAt).toLocaleDateString(i18n.language)}</td>
-                    <td className="px-8 py-4 text-[11px] font-black text-slate-700">{inv.plan}</td>
+                    <td className="px-8 py-4 text-[11px] font-black text-slate-700">
+                      {inv.plan}
+                      {inv.couponInfo && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Tag className="w-2.5 h-2.5 text-indigo-500" />
+                          <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 rounded">{inv.couponInfo.code}</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-8 py-4 text-[11px] font-black text-slate-800">{inv.price} {inv.currency}</td>
                     <td className="px-8 py-4 text-[11px] font-bold text-slate-400">{inv.paymentMethod}</td>
                     <td className="px-8 py-4">
@@ -817,19 +835,31 @@ const SubscriptionsView: React.FC = () => {
               {/* Step 3: Confirmation & Proof */}
               {step === 3 && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                  <div className="bg-slate-50 p-5 rounded-md border border-slate-200 text-center">
-                    <p className="text-xs font-bold text-slate-500 mb-2">{t('subscriptions.send_amount')}: <span className="text-slate-900 font-black">{getDisplayPrice()} {currency}</span> {t('common.to')}:</p>
-                    <div className="bg-white p-3 rounded-sm border border-slate-200 font-mono font-bold text-indigo-600 select-all cursor-pointer text-center" onClick={() => {
-                      // @ts-ignore
-                      navigator.clipboard.writeText(
-                        paymentMethod === 'ccp' ? '0023555199 79' :
+                  <div className="bg-slate-50 p-6 rounded-md border border-slate-200 text-center space-y-4">
+                    <p className="text-xs font-bold text-slate-500">
+                      {t('subscriptions.send_amount')}: <span className="text-slate-900 font-black tracking-tight">{getDisplayPrice()} {currency}</span> {t('common.to')}:
+                    </p>
+                    <div
+                      className="bg-white p-4 rounded-lg border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all font-mono font-bold text-indigo-600 select-all cursor-pointer group relative"
+                      onClick={() => {
+                        const text = paymentMethod === 'ccp' ? '0023555199 79' :
                           paymentMethod === 'baridimob' ? '00799999002355519979' :
-                            paymentMethod === 'redotpay' ? '1484831242' : ''
-                      )
-                    }}>
-                      {paymentMethod === 'ccp' && <>0023555199 79 <br /><span className="text-xs text-slate-400">{t('subscriptions.ccp_name')}</span></>}
-                      {paymentMethod === 'baridimob' && '00799999002355519979'}
-                      {paymentMethod === 'redotpay' && '1484831242'}
+                            paymentMethod === 'redotpay' ? '1484831242' : '';
+                        navigator.clipboard.writeText(text);
+                        // Optional: Add a toast notification here
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-lg">
+                          {paymentMethod === 'ccp' && '0023555199 79'}
+                          {paymentMethod === 'baridimob' && '00799999002355519979'}
+                          {paymentMethod === 'redotpay' && '1484831242'}
+                        </span>
+                        {paymentMethod === 'ccp' && (
+                          <span className="text-xs text-slate-400 font-sans">{t('subscriptions.ccp_name')}</span>
+                        )}
+                        <i className="fa-solid fa-copy absolute top-2 right-2 text-slate-300 group-hover:text-indigo-400 transition-colors text-xs"></i>
+                      </div>
                     </div>
                   </div>
 

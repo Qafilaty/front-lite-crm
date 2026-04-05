@@ -10,6 +10,11 @@ export const CREATE_INVOICE = gql`
       paymentMethod
       currency
       createdAt
+      idCoupon
+      couponInfo {
+        code
+        discount
+      }
     }
   }
 `;

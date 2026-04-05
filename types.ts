@@ -335,7 +335,11 @@ export interface Invoice {
   createdAt: string;
   paymentMethod: string;
   proof?: string;
-  coupon?: Coupon;
+  idCoupon?: string;
+  couponInfo?: {
+    code: string;
+    discount: number;
+  };
   pointes?: number;
 }
 

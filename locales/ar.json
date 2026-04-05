@@ -83,6 +83,7 @@
     "standard": "قياسي",
     "visitor": "زائر",
     "manual": "يدوي",
+    "to": "إلى",
     "date_ranges": {
       "all_time": "كل الأوقات",
       "today": "اليوم",
@@ -672,7 +673,7 @@
       "coupon_invalid": "كود الكوبون غير صالح"
     },
     "ccp_title": "CCP البريد الجزائري",
-    "ccp_name": "هشام لهودج - الجديدة",
+    "ccp_name": "HICHAM LEHOUEDJ - DJEDEIDA",
     "send_amount": "يرجى إرسال المبلغ",
     "upload_proof": "اضغط لرفع صورة الوصل",
     "upload_proof_desc": "تأكد من وضوح الصورة والمعلومات",

@@ -14,8 +14,7 @@ export const GET_INVOICE = gql`
       dateExpiry
       createdAt
       updatedAt
-      coupon {
-        id
+      couponInfo {
         code
         discount
       }
@@ -38,8 +37,7 @@ export const GET_ALL_INVOICES = gql`
         dateExpiry
         createdAt
         updatedAt
-        coupon {
-          id
+        couponInfo {
           code
           discount
         }
