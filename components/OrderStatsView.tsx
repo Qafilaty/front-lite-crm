@@ -38,7 +38,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     const [type, setType] = useState<'orders' | 'abandoned'>('orders');
 
     // Auth logic for initial states
-    const isRestricted = !['owner', 'admin'].includes(currentUser.role);
+    const isRestricted = !['owner', 'admin', 'supervisor'].includes(currentUser.role);
     const initialEmployee = isRestricted ? currentUser.id : '';
 
     const [idEmployee, setIdEmployee] = useState<string>(initialEmployee);
@@ -76,7 +76,14 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
     const [getUsers, { data: usersData, loading: usersLoading }] = useLazyQuery(GET_ALL_USERS);
     const allUsers = usersData?.allUser || [];
 
-    const confirmersList = allUsers.filter((u: any) => ['confirmed_orders', 'admin', 'confirmed'].includes(u.role));
+    const confirmersList = allUsers.filter((u: any) => {
+        const isConfirmerRole = ['confirmed_orders', 'admin', 'confirmed'].includes(u.role);
+        // If supervisor, only show users in their teamIds
+        if (currentUser.role === 'supervisor') {
+            return isConfirmerRole && currentUser.teamIds?.includes(u.id);
+        }
+        return isConfirmerRole;
+    });
     const productsList = productsData?.allProduct?.data || [];
 
 

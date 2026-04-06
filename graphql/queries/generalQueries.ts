@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_BASIC_STATISTICS = gql`
-  query GetBasicStatistics($startDate: Date, $endDate: Date) {
-    basicStatistics(startDate: $startDate, endDate: $endDate) {
+  query GetBasicStatistics($startDate: Date, $endDate: Date, $idConfirmer: ID) {
+    basicStatistics(startDate: $startDate, endDate: $endDate, idConfirmer: $idConfirmer) {
       totalUsers
       totalOrders
       lowStockItems

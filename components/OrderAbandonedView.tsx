@@ -231,7 +231,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                     <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('abandoned_orders.title')}</h2>
                     <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('abandoned_orders.subtitle')}</p>
                 </div>
-                {selectedOrderIds.length > 0 && (user?.role === 'admin' || user?.role === 'owner') && (
+                {selectedOrderIds.length > 0 && (user?.role === 'admin' || user?.role === 'owner' || user?.role === 'supervisor') && (
                     <div className="flex items-center gap-3 w-full lg:w-auto animate-in fade-in zoom-in">
                         <button
                             onClick={() => setIsAssignModalOpen(true)}
@@ -345,7 +345,16 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                 <ModernSelect
                                     value={confirmerFilter}
                                     onChange={setConfirmerFilter}
-                                    options={[{ value: 'all', label: t('orders.all_confirmers') }, ...(usersData?.allUser?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation').map((u: any) => ({ value: u.id, label: u.name })) || [])]}
+                                    options={[
+                                        { value: 'all', label: t('orders.all_confirmers') }, 
+                                        ...(usersData?.allUser?.filter((u: any) => {
+                                            const isAllowedRole = u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation' || u.role === 'supervisor';
+                                            if (user?.role === 'supervisor') {
+                                                return isAllowedRole && user.teamIds?.includes(u.id);
+                                            }
+                                            return isAllowedRole;
+                                        }).map((u: any) => ({ value: u.id, label: u.name })) || [])
+                                    ]}
                                     className="w-full"
                                     onOpen={() => getUsers()}
                                     isLoading={usersLoading}

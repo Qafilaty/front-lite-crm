@@ -57,8 +57,14 @@ export const GET_CURRENT_USER = gql`
           referralDiscount
         }
       }
+      teamIds
       createdAt
       updatedAt
+      team {
+        id
+        name
+        role
+      }
     }
   }
 `;
@@ -76,6 +82,7 @@ export const GET_ALL_USERS = gql`
       numberDeliveredOrder
       numberDeliveredOrderNotPaid
       orderPrice
+      teamIds
     }
   }
 `;
@@ -90,6 +97,7 @@ export const GET_USER = gql`
       role
       activation
       createdAt
+      teamIds
     }
   }
 `;

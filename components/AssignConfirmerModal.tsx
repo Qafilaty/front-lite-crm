@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
+import { useAuth } from '../contexts/AuthContext';
 import { X, UserCheck, Loader2 } from 'lucide-react';
 import { GET_ALL_USERS } from '../graphql/queries/userQueries';
 import { gql } from '@apollo/client';
@@ -23,12 +24,19 @@ interface AssignConfirmerModalProps {
 
 export const AssignConfirmerModal: React.FC<AssignConfirmerModalProps> = ({ isOpen, onClose, selectedIds, onSuccess }) => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const [selectedUserId, setSelectedUserId] = useState('');
     const { data: usersData, loading: usersLoading } = useQuery(GET_ALL_USERS);
     const [assignOrders, { loading: assigning }] = useMutation(CHANGE_CONFIRMED_ORDERS);
 
-    // Filter for confirmed users only
-    const confirmedUsers = usersData?.allUser?.filter((u: any) => u.role === 'confirmed') || [];
+    // Filter for confirmed users and supervisors
+    const confirmedUsers = usersData?.allUser?.filter((u: any) => {
+        const isAllowedRole = u.role === 'confirmed' || u.role === 'supervisor';
+        if (user?.role === 'supervisor') {
+            return isAllowedRole && user.teamIds?.includes(u.id);
+        }
+        return isAllowedRole;
+    }) || [];
 
     const handleAssign = async () => {
         if (!selectedUserId) return;

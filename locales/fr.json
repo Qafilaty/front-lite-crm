@@ -787,6 +787,7 @@
     },
     "roles": {
       "admin": "Admin",
+      "supervisor": "Superviseur",
       "confirmed": "Confirmateur"
     },
     "status": {
@@ -804,6 +805,8 @@
       "password_change": "Changer le mot de passe",
       "password_placeholder": "Laisser vide pour garder l'actuel",
       "type": "Type",
+      "supervisor_label": "Superviseur Désigné",
+      "no_supervisor": "Aucun (Indépendant)",
       "commission_label": "Commission (DZD)",
       "assignment_title": "Assigner des produits à {{name}}",
       "assignment_subtitle": "Sélectionner les produits à diriger vers cet employé",

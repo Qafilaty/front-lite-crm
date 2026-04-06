@@ -45,13 +45,14 @@ const UsersView: React.FC<UsersViewProps> = ({
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [newUser, setNewUser] = useState<{ name: string; email: string; phone: string; role: 'admin' | 'confirmed'; password: string; orderPrice?: number }>({
+  const [newUser, setNewUser] = useState<{ name: string; email: string; phone: string; role: 'admin' | 'confirmed' | 'supervisor'; password: string; orderPrice?: number; teamIds?: string[] }>({
     name: '',
     email: '',
     phone: '',
     role: 'confirmed',
     password: '',
-    orderPrice: 0
+    orderPrice: 0,
+    teamIds: []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -116,7 +117,8 @@ const UsersView: React.FC<UsersViewProps> = ({
         phone: newUser.phone,
         role: newUser.role,
         password: newUser.password,
-        orderPrice: newUser.role === 'confirmed' ? Number(newUser.orderPrice) : 0
+        orderPrice: (newUser.role === 'confirmed' || newUser.role === 'supervisor') ? Number(newUser.orderPrice) : 0,
+        teamIds: newUser.role === 'supervisor' ? newUser.teamIds : undefined
       });
 
       if (success) {
@@ -187,7 +189,8 @@ const UsersView: React.FC<UsersViewProps> = ({
         email: editingUser.email,
         phone: editingUser.phone,
         role: editingUser.role, // Added role
-        orderPrice: editingUser.role === 'confirmed' ? Number(editingUser.orderPrice) : 0
+        orderPrice: (editingUser.role === 'confirmed' || editingUser.role === 'supervisor') ? Number(editingUser.orderPrice) : 0,
+        teamIds: editingUser.role === 'supervisor' ? editingUser.teamIds : undefined
       };
 
       // Only include password if it's not empty (meaning user wants to change it)
@@ -217,7 +220,8 @@ const UsersView: React.FC<UsersViewProps> = ({
       email: user.email,
       phone: user.phone || '',
       role: user.role,
-      orderPrice: user.orderPrice || 0
+      orderPrice: user.orderPrice || 0,
+      teamIds: user.teamIds || []
     });
     setShowModal(true);
   };
@@ -397,11 +401,11 @@ const UsersView: React.FC<UsersViewProps> = ({
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-widest ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                        {user.role === 'admin' ? t('users.roles.admin') : t('users.roles.confirmed')}
+                        {user.role === 'admin' ? t('users.roles.admin') : user.role === 'supervisor' ? t('users.roles.supervisor') : t('users.roles.confirmed')}
                       </span>
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {user.role === 'confirmed' ? (
+                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <Coins className="w-3.5 h-3.5 text-amber-500" />
                           <span>{formatCurrency(user.orderPrice || 0)}</span>
@@ -411,7 +415,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {user.role === 'confirmed' ? (
+                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <ShoppingBag className="w-3.5 h-3.5 text-amber-500" />
                           <span>{user.numberDeliveredOrderNotPaid || 0}</span>
@@ -421,7 +425,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {user.role === 'confirmed' ? (
+                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
                           <span>{user.numberDeliveredOrder || 0}</span>
@@ -431,7 +435,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {user.role === 'confirmed' ? (
+                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
                         <button
                           onClick={() => toggleOrderLock(user.id, user.activation || false)}
                           disabled={togglingId === user.id}
@@ -453,7 +457,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center justify-center gap-2">
-                        {user.role === 'confirmed' && (
+                        {(user.role === 'confirmed' || user.role === 'supervisor') && (
                           <button
                             onClick={() => openAssignmentModal(user)}
                             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
@@ -578,6 +582,13 @@ const UsersView: React.FC<UsersViewProps> = ({
                       </button>
                       <button
                         type="button"
+                        onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'supervisor' }) : setEditingUser({ ...editingUser, role: 'supervisor' })}
+                        className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'supervisor' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
+                      >
+                        {t('users.roles.supervisor')}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'admin' }) : setEditingUser({ ...editingUser, role: 'admin' })}
                         className={`py-2 px-3 rounded-lg border-2 text-[10px] font-black transition-all ${(modalMode === 'add' ? newUser.role : editingUser?.role) === 'admin' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
                       >
@@ -586,8 +597,56 @@ const UsersView: React.FC<UsersViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Team Selection Field for Supervisors */}
+                  {((modalMode === 'add' && (modalMode === 'add' ? newUser.role : editingUser?.role) === 'supervisor') || (modalMode === 'edit' && editingUser?.role === 'supervisor')) && (
+                    <div className="space-y-1.5 animate-in slide-in-from-top-2 col-span-2">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.team_selection_label') || 'Team Selection'}</label>
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                        {users
+                          .filter(u => u.role === 'confirmed')
+                          .map(u => {
+                            const isSelected = modalMode === 'add' 
+                              ? newUser.teamIds?.includes(u.id)
+                              : editingUser?.teamIds?.includes(u.id);
+                            
+                            return (
+                              <label key={u.id} className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    if (modalMode === 'add') {
+                                      const currentIds = newUser.teamIds || [];
+                                      setNewUser({
+                                        ...newUser,
+                                        teamIds: checked 
+                                          ? [...currentIds, u.id]
+                                          : currentIds.filter(id => id !== u.id)
+                                      });
+                                    } else {
+                                      const currentIds = editingUser?.teamIds || [];
+                                      setEditingUser({
+                                        ...editingUser,
+                                        teamIds: checked
+                                          ? [...currentIds, u.id]
+                                          : currentIds.filter(id => id !== u.id)
+                                      });
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{u.name}</span>
+                              </label>
+                            );
+                          })
+                        }
+                      </div>
+                    </div>
+                  )}
+
                   {/* Conditional Commission Field - Row 4 */}
-                  {((modalMode === 'add' && newUser.role === 'confirmed') || (modalMode === 'edit' && editingUser?.role === 'confirmed')) && (
+                  {((modalMode === 'add' && (newUser.role === 'confirmed' || newUser.role === 'supervisor')) || (modalMode === 'edit' && (editingUser?.role === 'confirmed' || editingUser?.role === 'supervisor'))) && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 col-span-2">
                       <label className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-1 flex items-center gap-1">
                         <Coins className="w-3 h-3" /> {t('users.modal.commission_label')}

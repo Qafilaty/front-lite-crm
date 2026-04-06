@@ -268,7 +268,13 @@ const Header: React.FC<HeaderProps> = ({
           >
             <div className={`text-right hidden sm:block ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
               <p className="text-[11px] font-black text-slate-800 leading-none mb-0.5 group-hover:text-indigo-600 transition-colors uppercase">{currentUser.name}</p>
-              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{["admin", "owner"].includes(currentUser.role) ? t('users.roles.admin') : t('users.roles.confirmed')}</p>
+              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">
+                {currentUser.role === 'admin' || currentUser.role === 'owner' 
+                  ? t('users.roles.admin') 
+                  : currentUser.role === 'supervisor' 
+                    ? t('users.roles.supervisor') 
+                    : t('users.roles.confirmed')}
+              </p>
             </div>
             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-sm ring-2 ring-transparent group-hover:ring-indigo-100 transition-all font-sans uppercase">
               {currentUser.name.charAt(0)}
@@ -408,7 +414,13 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-2 text-center">
                       <Shield className="w-5 h-5 text-indigo-500" />
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('header.permissions')}</span>
-                      <span className="text-[10px] sm:text-[11px] font-black text-slate-800 truncate w-full">{["admin", "owner"].includes(currentUser.role) ? t('users.roles.admin') : t('users.roles.confirmed')}</span>
+                      <span className="text-[10px] sm:text-[11px] font-black text-slate-800 truncate w-full">
+                        {currentUser.role === 'admin' || currentUser.role === 'owner' 
+                          ? t('users.roles.admin') 
+                          : currentUser.role === 'supervisor' 
+                            ? t('users.roles.supervisor') 
+                            : t('users.roles.confirmed')}
+                      </span>
                     </div>
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-2 text-center">
                       <Calendar className="w-5 h-5 text-emerald-500" />

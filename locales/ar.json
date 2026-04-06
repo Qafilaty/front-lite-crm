@@ -866,6 +866,7 @@
     "search_placeholder": "بحث عن مستخدم (الاسم أو البريد)...",
     "roles": {
       "admin": "مدير",
+      "supervisor": "مشرف",
       "confirmed": "مؤكد طلبات"
     },
     "status": {
@@ -892,6 +893,9 @@
       "password_change": "تغيير كلمة المرور",
       "password_placeholder": "اتركه فارغاً للحفاظ على الحالية",
       "type": "نوع الحساب",
+      "supervisor_label": "المشرف",
+      "team_selection_label": "تحديد الفريق (المؤكدين التابعين)",
+      "no_supervisor": "بدون مشرف (مستقل)",
       "commission_label": "العمولة لكل طلب مؤكد",
       "assignment_title": "تخصيص منتجات لـ {{name}}",
       "assignment_subtitle": "اختر المنتجات التي سيتم توجيهها لهذا الموظف",
@@ -1394,7 +1398,8 @@
     "conf_lifecycle": "1. دورة حياة التأكيد",
     "logistics_path": "2. المسار اللوجستي",
     "no_data": "لا توجد بيانات",
-    "fetch_error": "حدث خطأ أثناء جلب الإحصائيات. يرجى المحاولة مرة أخرى."
+    "fetch_error": "حدث خطأ أثناء جلب الإحصائيات. يرجى المحاولة مرة أخرى.",
+    "filter_team_select": "فلترة بالموظف"
   },
   "confirmer_stats": {
     "title": "ملخص الأداء والمالية",

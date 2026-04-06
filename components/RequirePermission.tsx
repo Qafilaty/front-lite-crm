@@ -29,8 +29,8 @@ export const RequirePermission: React.FC<RequirePermissionProps> = ({ children, 
         return <>{children}</>;
     }
 
-    // 2. Confirmed Access: Restricted List
-    if (user.role === 'confirmed') {
+    // 2. Confirmed & Supervisor Access: Restricted List
+    if (user.role === 'confirmed' || user.role === 'supervisor') {
         const allowedForConfirmed = [
             View.DASHBOARD,
             View.ORDER_CONFIRMATION,

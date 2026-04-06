@@ -394,7 +394,13 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   options={[
                     { value: 'all', label: t('tracking.all_confirmers') },
                     ...(usersData?.allUser
-                      ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation')
+                      ?.filter((u: any) => {
+                        const isAllowedRole = u.role === 'confirmed' || u.role === 'admin' || u.role === 'confirmation' || u.role === 'supervisor';
+                        if (user?.role === 'supervisor') {
+                          return isAllowedRole && user.teamIds?.includes(u.id);
+                        }
+                        return isAllowedRole;
+                      })
                       ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
                   ]}
                   className="w-full"

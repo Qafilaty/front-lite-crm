@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Stats, Order, Product, OrderStatus, SubscriptionTier } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { Stats, Order, Product, OrderStatus, SubscriptionTier, User } from '../types';
 import {
   TrendingUp, Truck, Package, CheckCircle2,
   Sparkles, LineChart, Wallet, Star,
@@ -26,10 +27,18 @@ interface DashboardViewProps {
   backendStats?: any;
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
+  idConfirmer?: string | null;
+  onIdConfirmerChange?: (id: string | null) => void;
+  teamMembers?: User[];
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, backendStats, dateRange, onDateRangeChange }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ 
+  stats, orders, inventory, subscriptionTier, onUpgrade, isLoading = false, 
+  backendStats, dateRange, onDateRangeChange,
+  idConfirmer, onIdConfirmerChange, teamMembers = []
+}) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   // 1. Calculate Metrics (Prefer backendStats if available)
   const metrics = useMemo(() => {
@@ -147,6 +156,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, orders, inventory,
               value={dateRange}
               onChange={onDateRangeChange}
             />
+
+            {/* Team Member Filter (for Supervisors/Admins) */}
+            {(user?.role === 'supervisor' || user?.role === 'admin') && teamMembers.length > 0 && (
+              <div className="min-w-[180px]">
+                <ModernSelect
+                  options={[
+                    { value: '', label: t('order_stats.filter_team') },
+                    ...teamMembers.map(m => ({ value: m.id, label: m.name }))
+                  ]}
+                  value={idConfirmer || ''}
+                  onChange={(val) => onIdConfirmerChange?.(val || null)}
+                />
+              </div>
+            )}
             <button
               className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
             >

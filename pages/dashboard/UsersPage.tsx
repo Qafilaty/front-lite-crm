@@ -20,9 +20,9 @@ const UsersPage: React.FC = () => {
           name: u.name || '',
           email: u.email || '',
           phone: u.phone,
-          role: u.role === 'admin' || u.role === 'owner' || u.role === 'superAdmin' ? 'admin' : 'confirmed',
+          role: u.role === 'admin' || u.role === 'owner' || u.role === 'superAdmin' ? 'admin' : (u.role === 'supervisor' ? 'supervisor' : 'confirmed'),
           joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar') : new Date().toLocaleDateString('ar'),
-          ordersLocked: u.role === 'confirmed' ? false : undefined,
+          ordersLocked: (u.role === 'confirmed' || u.role === 'supervisor') ? false : undefined,
           activation: u.activation,
           numberDeliveredOrder: u.numberDeliveredOrder || 0,
           orderPrice: u.orderPrice || 0

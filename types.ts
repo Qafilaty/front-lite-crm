@@ -157,7 +157,10 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'confirmed' | 'owner';
+  role: 'admin' | 'confirmed' | 'owner' | 'supervisor';
+  teamIds?: string[];
+  supervisors?: User[];
+  team?: User[];
   joinedDate: string;
   ordersLocked?: boolean;
   activation?: boolean;

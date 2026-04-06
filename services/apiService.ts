@@ -703,11 +703,11 @@ export const deliveryCompanyService = {
 
 // General Service
 export const generalService = {
-  async getBasicStatistics(startDate?: string | null, endDate?: string | null) {
+  async getBasicStatistics(startDate?: string | null, endDate?: string | null, idConfirmer?: string | null) {
     try {
       const { data } = await apolloClient.query({
         query: GET_BASIC_STATISTICS,
-        variables: { startDate, endDate },
+        variables: { startDate, endDate, idConfirmer },
         fetchPolicy: 'network-only',
       });
       return { success: true, stats: data?.basicStatistics };

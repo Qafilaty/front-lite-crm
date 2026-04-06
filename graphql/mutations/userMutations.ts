@@ -13,6 +13,7 @@ export const CREATE_USER = gql`
       phone
       role
       createdAt
+      teamIds
     }
   }
 `;
@@ -26,6 +27,7 @@ export const UPDATE_USER = gql`
         name
         email
         phone
+        teamIds
       }
     }
   }

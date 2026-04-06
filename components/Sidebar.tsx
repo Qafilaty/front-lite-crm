@@ -137,7 +137,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
         View.SHIPPING_PRICING,
         // View.PROFIT_SIMULATOR
       ];
-      return allowed.includes(item.id);
+      if (user?.role === 'confirmed' || user?.role === 'supervisor') {
+        return allowed.includes(item.id);
+      }
+      return false;
     })
   })).filter(section => section.items.length > 0);
 

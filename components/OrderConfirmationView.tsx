@@ -401,7 +401,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   <Truck className="w-4 h-4" /> {t('orders.send_orders', { count: selectedOrderIds.length })}
                 </button>
               ) : (
-                (user?.role === 'admin' || user?.role === 'owner') && (
+                (user?.role === 'admin' || user?.role === 'owner' || user?.role === 'supervisor') && (
                   <button
                     onClick={() => setIsAssignModalOpen(true)}
                     className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 transition-all flex-1 lg:flex-none animate-in fade-in zoom-in"
@@ -545,7 +545,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                     isLoading={productsLoading}
                   />
                 </div>
-                {(user?.role === 'admin' || user?.role === 'owner') && (
+                {(user?.role === 'admin' || user?.role === 'owner' || user?.role === 'supervisor') && (
                   <div className="space-y-1">
                     <span className="text-[9px] font-black text-slate-400 px-2">{t('sidebar.items.users')}</span>
                     <ModernSelect
@@ -554,7 +554,13 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       options={[
                         { value: 'all', label: t('orders.all_confirmers') },
                         ...(usersData?.allUser
-                          ?.filter((u: any) => u.role === 'confirmed' || u.role === 'admin')
+                          ?.filter((u: any) => {
+                            const isAllowedRole = u.role === 'confirmed' || u.role === 'admin' || u.role === 'supervisor';
+                            if (user?.role === 'supervisor') {
+                              return isAllowedRole && user.teamIds?.includes(u.id);
+                            }
+                            return isAllowedRole;
+                          })
                           ?.map((u: any) => ({ value: u.id, label: u.name })) || [])
                       ]}
                       className="w-full"
