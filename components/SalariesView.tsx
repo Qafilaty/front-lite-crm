@@ -61,7 +61,7 @@ const SalariesView: React.FC<SalariesViewProps> = () => {
 
     const usersResult = await userService.getAllUsers();
     if (usersResult.success) {
-      setUsers(usersResult.users.filter((u: any) => u.role === 'confirmed' || u.role === 'user' || u.role === 'supervisor'));
+      setUsers(usersResult.users.filter((u: any) => u.role === 'confirmed' || u.role === 'user'));
     }
   };
 

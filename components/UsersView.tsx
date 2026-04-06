@@ -405,7 +405,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       </span>
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
+                      {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <Coins className="w-3.5 h-3.5 text-amber-500" />
                           <span>{formatCurrency(user.orderPrice || 0)}</span>
@@ -415,7 +415,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
+                      {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <ShoppingBag className="w-3.5 h-3.5 text-amber-500" />
                           <span>{user.numberDeliveredOrderNotPaid || 0}</span>
@@ -425,7 +425,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
+                      {user.role === 'confirmed' ? (
                         <div className="flex items-center gap-1 text-slate-700 font-black text-[11px]">
                           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
                           <span>{user.numberDeliveredOrder || 0}</span>
@@ -435,7 +435,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       )}
                     </td>
                     <td className={`px-6 py-3.5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      {(user.role === 'confirmed' || user.role === 'supervisor') ? (
+                      {user.role === 'confirmed' ? (
                         <button
                           onClick={() => toggleOrderLock(user.id, user.activation || false)}
                           disabled={togglingId === user.id}
@@ -572,7 +572,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                   {/* Row 3: Role (Enabled for both Add and Edit) */}
                   <div className="space-y-1.5 col-span-2">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{t('users.modal.type')}</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => modalMode === 'add' ? setNewUser({ ...newUser, role: 'confirmed' }) : setEditingUser({ ...editingUser, role: 'confirmed' })}
@@ -646,7 +646,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                   )}
 
                   {/* Conditional Commission Field - Row 4 */}
-                  {((modalMode === 'add' && (newUser.role === 'confirmed' || newUser.role === 'supervisor')) || (modalMode === 'edit' && (editingUser?.role === 'confirmed' || editingUser?.role === 'supervisor'))) && (
+                  {((modalMode === 'add' && newUser.role === 'confirmed') || (modalMode === 'edit' && editingUser?.role === 'confirmed')) && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 col-span-2">
                       <label className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-1 flex items-center gap-1">
                         <Coins className="w-3 h-3" /> {t('users.modal.commission_label')}

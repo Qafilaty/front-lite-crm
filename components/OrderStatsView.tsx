@@ -33,8 +33,7 @@ const OrderStatsView: React.FC<OrderStatsViewProps> = ({ currentUser }) => {
         return <ConfirmerStatsView />;
     }
 
-    const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null, key: 'month' });
-    const [period, setPeriod] = useState<'all' | 'month' | 'year' | 'week'>('month');
+    const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null, key: 'all' });
     const [type, setType] = useState<'orders' | 'abandoned'>('orders');
 
     // Auth logic for initial states
