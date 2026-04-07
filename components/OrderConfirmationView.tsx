@@ -117,6 +117,16 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
+  // Table Theme State
+  const [tableTheme, setTableTheme] = useState<'clean' | 'vivid'>(() => {
+    return (localStorage.getItem('ordersTableTheme') as 'clean' | 'vivid') || 'vivid';
+  });
+
+  const toggleTheme = (theme: 'clean' | 'vivid') => {
+    setTableTheme(theme);
+    localStorage.setItem('ordersTableTheme', theme);
+  };
+
   // Bulk Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkDeliveryModalOpen, setIsBulkDeliveryModalOpen] = useState(false);
@@ -504,6 +514,24 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                   </div>
                 )}
               </div>
+
+              {/* Theme Switcher */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+                <button
+                  onClick={() => toggleTheme('clean')}
+                  className={`p-2 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'clean' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  title={t('orders.theme.clean')}
+                >
+                  <LayoutList className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => toggleTheme('vivid')}
+                  className={`p-2 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'vivid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  title={t('orders.theme.vivid')}
+                >
+                  <div className={`w-4 h-4 rounded-sm border-2 ${tableTheme === 'vivid' ? 'bg-indigo-600 border-indigo-600' : 'bg-transparent border-slate-400'}`} />
+                </button>
+              </div>
             </div>
 
             {/* Collapsible Filters Area */}
@@ -725,9 +753,11 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                       <tr
                         key={order.id}
                         onClick={() => navigate(`/dashboard/orders/${order.id}`)}
-                        className={`group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95 ${isSelected ? 'brightness-90' : ''}`}
+                        className={`group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95 ${isSelected ? 'brightness-90' : ''} ${tableTheme === 'clean' ? 'hover:bg-slate-50' : ''}`}
                         style={{
-                          backgroundColor: isSelected ? `${hexColor}25` : (isNew ? '#10b98115' : `${hexColor}08`)
+                          backgroundColor: tableTheme === 'vivid'
+                            ? (isSelected ? `${hexColor}50` : (isNew ? '#10b98140' : `${hexColor}25`))
+                            : (isSelected ? `${hexColor}20` : (isNew ? '#10b98115' : 'white'))
                         }}
                       >
                         <td className="px-6 py-5 text-center animate-in slide-in-from-right-4 fade-in" onClick={(e) => e.stopPropagation()}>
@@ -917,12 +947,22 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                         )}
 
                         {(visibleColumns as any).status && (
-                          <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                          <td className={`relative ${tableTheme === 'vivid' ? 'p-0 w-[120px]' : 'px-6 py-5'}`}>
                             <span
-                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black border uppercase tracking-widest flex items-center justify-center gap-2 w-fit min-w-[100px] ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}`}
-                              style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
+                              className={`
+                                ${tableTheme === 'vivid'
+                                  ? 'absolute inset-0 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white shadow-inner'
+                                  : 'px-3 py-1.5 rounded-lg text-[9px] font-black border uppercase tracking-widest flex items-center justify-center gap-2 w-fit min-w-[100px]'
+                                }
+                                ${!statusStyle ? `${fallbackColors.bg} ${fallbackColors.text} ${fallbackColors.border}` : ''}
+                              `}
+                              style={statusStyle ? (
+                                tableTheme === 'vivid'
+                                  ? { backgroundColor: hexColor, color: '#fff' }
+                                  : { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor }
+                              ) : {}}
                             >
-                              {(() => {
+                              {tableTheme === 'clean' && (() => {
                                 const statusKey = typeof order?.status === 'string' ? order?.status : order?.status?.nameEN?.toLowerCase();
                                 let Icon = AlertOctagon;
                                 if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;

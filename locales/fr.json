@@ -121,6 +121,7 @@
     "dear_customer": "Cher Client",
     "delete_confirm_desc": "Êtes-vous sûr de vouloir supprimer ? Cette action est irréversible.",
     "delivery_instructions": "Instructions de livraison",
+    "confirmer": "Confirmateur",
     "curr": "DA",
     "manual": "Manuel",
     "date_ranges": {
@@ -156,6 +157,10 @@
   "orders": {
     "title": "Gestion des Commandes",
     "subtitle": "Suivi précis des commandes clients et des statuts d'expédition",
+    "theme": {
+      "clean": "Thème Épuré",
+      "vivid": "Thème Coloré"
+    },
     "search_placeholder": "Recherche rapide... (Nom, Tel, ID)",
     "send_orders": "Envoyer ({{count}})",
     "assign_orders": "Assigner ({{count}})",
@@ -1558,7 +1563,11 @@
   "tracking": {
     "title": "Suivi des Colis",
     "subtitle": "Mise à jour des itinéraires d'expédition et de livraison",
-    "search_placeholder": "Recherche... (Code, Nom, Téléphone)",
+    "theme": {
+      "clean": "Thème Épuré",
+      "vivid": "Thème Coloré"
+    },
+    "search_placeholder": "Recherche rapide... (Code, Nom, Tel)",
     "abandoned_only": "Abandonnés",
     "filter": "Filtrer",
     "columns": "Colonnes",

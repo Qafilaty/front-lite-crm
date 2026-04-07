@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { Order, OrderItem, DeliveryCompany } from '../types';
-import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3, Truck, Copy, AlertCircle, Lock } from 'lucide-react';
+import { Package, CheckCircle, Clock, XCircle, Search, Filter, Download, Plus, ShoppingBag, User, Phone, MapPin, Building2, Home, Trash2, X, Save, Edit3, Truck, Copy, AlertCircle, Lock, LayoutList } from 'lucide-react';
 import { deliveryCompanyService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './common/LoadingSpinner';
@@ -52,6 +52,16 @@ const OrdersView: React.FC<OrdersViewProps> = ({
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successTrackingCode, setSuccessTrackingCode] = useState<string | null>(null);
   const [successCompanyName, setSuccessCompanyName] = useState<string | null>(null);
+
+  // Table Theme State
+  const [tableTheme, setTableTheme] = useState<'clean' | 'vivid'>(() => {
+    return (localStorage.getItem('ordersTableTheme') as 'clean' | 'vivid') || 'vivid';
+  });
+
+  const toggleTheme = (theme: 'clean' | 'vivid') => {
+    setTableTheme(theme);
+    localStorage.setItem('ordersTableTheme', theme);
+  };
 
   // ... (rest of state items are unchanged, skipping them in replacement chunk if possible? No, replace tool needs contiguous block. I'll include state definitions or use larger context if needed, but wait, I can just replace the interface and destructuring first, then the render part separately.)
 
@@ -280,6 +290,23 @@ const OrdersView: React.FC<OrdersViewProps> = ({
         </div>
       </div>
 
+      <div className="flex items-center justify-end mb-2 gap-2">
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1 scale-90 origin-right">
+          <button
+            onClick={() => toggleTheme('clean')}
+            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'clean' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <LayoutList className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => toggleTheme('vivid')}
+            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'vivid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <div className={`w-4 h-4 rounded-sm border-2 ${tableTheme === 'vivid' ? 'bg-indigo-600 border-indigo-600' : 'bg-transparent border-slate-400'}`} />
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         {isLoading ? (
           <div className="p-6">
@@ -300,47 +327,76 @@ const OrdersView: React.FC<OrdersViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50/50 transition-all group">
-                    <td className={`px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      <div className="flex items-center gap-2">
-                        #{order.id}
-                        {order.isLocked && (
-                          <div className="group/lock relative">
-                            <Lock className="w-3 h-3 text-rose-500" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none">
-                              {t('orders.status.locked')}
+                {orders.map((order) => {
+                  let hexColor = '#64748b';
+                  const statusKey = typeof order.status === 'string' ? order.status : (order.status as any)?.nameEN?.toLowerCase();
+
+                  const statusColors: Record<string, string> = {
+                    confirmed: '#4f46e5',
+                    delivered: '#10b981',
+                    pending: '#64748b',
+                    cancelled: '#e11d48',
+                    postponed: '#d97706',
+                    shipped: '#8b5cf6',
+                    processing: '#2563eb',
+                  };
+
+                  if (statusColors[statusKey]) hexColor = statusColors[statusKey];
+                  else if ((order.status as any)?.color) hexColor = (order.status as any).color;
+
+                  return (
+                    <tr
+                      key={order.id}
+                      className={`hover:bg-slate-50/50 transition-all group border-b border-slate-50 ${tableTheme === 'clean' ? 'hover:bg-slate-100' : ''}`}
+                      style={tableTheme === 'vivid' ? { backgroundColor: `${hexColor}25` } : {}}
+                    >
+                      <td className={`px-6 py-4 font-black text-indigo-600 text-[11px] tracking-widest uppercase ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
+                        <div className="flex items-center gap-2">
+                          #{order.id}
+                          {order.isLocked && (
+                            <div className="group/lock relative">
+                              <Lock className="w-3 h-3 text-rose-500" />
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none">
+                                {t('orders.status.locked')}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className={`px-6 py-4 text-[12px] text-slate-800 font-black ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.customer}</td>
-                    <td className={`px-6 py-4 text-[11px] text-slate-500 font-medium ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.product}</td>
-                    <td className={`px-6 py-4 text-[11px] font-black text-slate-800 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{formatCurrency(order.amount)}</td>
-                    <td className={`px-6 py-4 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${getStatusStyle(order.status)}`}>
-                        {getStatusLabel(order.status)}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 text-[10px] text-slate-400 font-bold ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.date}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => openDeliveryModal(order.id)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        title={t('orders.actions.send_delivery')}
-                      >
-                        <Truck className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => confirmDelete(order.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                          )}
+                        </div>
+                      </td>
+                      <td className={`px-6 py-4 text-[12px] text-slate-800 font-black ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.customer}</td>
+                      <td className={`px-6 py-4 text-[11px] text-slate-500 font-medium ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.product}</td>
+                      <td className={`px-6 py-4 text-[11px] font-black text-slate-800 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{formatCurrency(order.amount)}</td>
+                      <td className={`relative ${tableTheme === 'vivid' ? 'p-0 w-[120px]' : 'px-6 py-4'}`}>
+                        <span
+                          className={`
+                            ${tableTheme === 'vivid'
+                              ? 'absolute inset-0 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white shadow-inner'
+                              : `px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center gap-2 ${getStatusStyle(order.status)}`
+                            }
+                          `}
+                          style={tableTheme === 'vivid' ? { backgroundColor: hexColor } : {}}
+                        >
+                          {getStatusLabel(order.status)}
+                        </span>
+                      </td>
+                      <td className={`px-6 py-4 text-[10px] text-slate-400 font-bold ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{order.date}</td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => openDeliveryModal(order.id)}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          title={t('orders.actions.send_delivery')}
+                        >
+                          <Truck className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(order.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  )})}
                 {orders.length === 0 && (
                   <tr>
                     <td colSpan={7} className="text-center py-10 text-slate-400 text-xs font-bold">{t('orders.empty')}</td>

@@ -121,6 +121,7 @@
     "dear_customer": "Dear Customer",
     "delete_confirm_desc": "Are you sure you want to delete? This action cannot be undone.",
     "delivery_instructions": "Delivery Instructions",
+    "confirmer": "Confirmer",
     "curr": "DA",
     "manual": "Manual",
     "date_ranges": {
@@ -156,6 +157,10 @@
   "orders": {
     "title": "Order Management",
     "subtitle": "Accurate tracking of client orders and shipping statuses",
+    "theme": {
+      "clean": "Clean Theme",
+      "vivid": "Vivid Theme"
+    },
     "search_placeholder": "Quick search... (Name, Phone, ID)",
     "send_orders": "Send ({{count}})",
     "assign_orders": "Assign ({{count}})",
@@ -1359,7 +1364,6 @@
       "note_error": "Please write an explanatory note"
     }
   },
-
   "header": {
     "welcome": "Welcome",
     "logout": "Logout",
@@ -1577,6 +1581,10 @@
   "tracking": {
     "title": "Packet Tracking",
     "subtitle": "Update shipping and delivery routes",
+    "theme": {
+      "clean": "Clean Theme",
+      "vivid": "Vivid Theme"
+    },
     "search_placeholder": "Quick search... (Code, Name, Phone)",
     "abandoned_only": "Abandoned",
     "filter": "Filter",

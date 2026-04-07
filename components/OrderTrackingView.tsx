@@ -91,6 +91,16 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
+  // Table Theme State
+  const [tableTheme, setTableTheme] = useState<'clean' | 'vivid'>(() => {
+    return (localStorage.getItem('ordersTableTheme') as 'clean' | 'vivid') || 'vivid';
+  });
+
+  const toggleTheme = (theme: 'clean' | 'vivid') => {
+    setTableTheme(theme);
+    localStorage.setItem('ordersTableTheme', theme);
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setStartX(e.pageX - (scrollContainerRef.current?.offsetLeft || 0));
@@ -358,7 +368,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         communication: t('tracking.columns_toggle.communication')
                       };
                       return (
-                        <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                        <label key={key} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={(visibleColumns as any)[key]}
@@ -372,6 +382,24 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Theme Switcher */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+              <button
+                onClick={() => toggleTheme('clean')}
+                className={`p-2 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'clean' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                title={t('orders.theme.clean')}
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => toggleTheme('vivid')}
+                className={`p-2 rounded-lg transition-all flex items-center gap-2 ${tableTheme === 'vivid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                title={t('orders.theme.vivid')}
+              >
+                <div className={`w-4 h-4 rounded-sm border-2 ${tableTheme === 'vivid' ? 'bg-indigo-600 border-indigo-600' : 'bg-transparent border-slate-400'}`} />
+              </button>
             </div>
           </div>
 
@@ -568,8 +596,12 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                     <tr
                       key={order.id}
                       onClick={() => navigate(`/dashboard/tracking/${order.id}`)}
-                      className="group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95"
-                      style={{ backgroundColor: `${hexColor}08` }}
+                      className={`group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95 ${tableTheme === 'clean' ? 'hover:bg-slate-50' : ''}`}
+                      style={{
+                        backgroundColor: tableTheme === 'vivid'
+                          ? `${hexColor}25`
+                          : 'white'
+                      }}
                     >
 
                       {(visibleColumns as any).customerInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
@@ -733,42 +765,54 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                         </div>
                       </td>}
 
-                      {(visibleColumns as any).status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
-                        <div className="flex flex-col gap-1 items-start">
-                          {order.isAbandoned && (
-                            <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1">
-                              <AlertTriangle className="w-2.5 h-2.5" />
-                              {t('tracking.labels.abandoned_badge')}
+                      {(visibleColumns as any).status && (
+                        <td className={`relative ${tableTheme === 'vivid' ? 'p-0 w-[120px]' : 'px-6 py-5'}`}>
+                          <div className="flex flex-col gap-1 items-start w-full h-full">
+                            {tableTheme === 'clean' && order.isAbandoned && (
+                              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black border border-rose-100 flex items-center gap-1 mb-1">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                {t('tracking.labels.abandoned_badge')}
+                              </span>
+                            )}
+                            <span
+                              className={`
+                                ${tableTheme === 'vivid'
+                                  ? 'absolute inset-0 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white shadow-inner'
+                                  : 'px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center justify-center gap-2 w-fit min-w-[100px]'
+                                }
+                              `}
+                              style={statusStyle ? (
+                                tableTheme === 'vivid'
+                                  ? { backgroundColor: hexColor, color: '#fff' }
+                                  : { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor }
+                              ) : {}}
+                            >
+                              {tableTheme === 'clean' && (() => {
+                                const statusKey = typeof order?.status === 'string' ? order?.status : (order?.status as any)?.nameEN?.toLowerCase();
+                                let Icon = AlertOctagon;
+                                if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
+                                else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
+                                else if (statusKey?.includes('deliver')) Icon = Truck;
+                                else if (statusKey?.includes('cancel') || statusKey?.includes('fail') || statusKey?.includes('wrong')) Icon = X;
+                                else if (statusKey?.includes('postpone')) Icon = Calendar;
+                                else if (statusKey?.includes('ramasse') || statusKey?.includes('shipped')) Icon = ShoppingBag;
+                                else if (statusKey?.includes('out')) Icon = AlertTriangle;
+                                else if (statusKey?.includes('paid')) Icon = DollarSign;
+                                else if (statusKey?.includes('return')) Icon = ArrowLeft;
+
+                                if (statusKey === 'pending') Icon = RefreshCw;
+                                if (statusKey === 'confirmed') Icon = CheckCircle2;
+                                if (statusKey === 'delivered') Icon = CheckSquare;
+                                if (statusKey === 'cancelled') Icon = X;
+                                if (statusKey === 'postponed') Icon = Calendar;
+
+                                return <Icon className="w-3.5 h-3.5" />;
+                              })()}
+                              {statusLabel}
                             </span>
-                          )}
-                          <span className={`px-3 py-1.5 rounded-md text-[9px] font-black border uppercase tracking-widest flex items-center gap-2`}
-                            style={statusStyle ? { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, borderColor: statusStyle.borderColor } : {}}
-                          >
-                            {(() => {
-                              const statusKey = typeof order?.status === 'string' ? order?.status : (order?.status as any)?.nameEN?.toLowerCase();
-                              let Icon = AlertOctagon;
-                              if (statusKey?.includes('pending') || statusKey?.includes('processing')) Icon = RefreshCw;
-                              else if (statusKey?.includes('confirm')) Icon = CheckCircle2;
-                              else if (statusKey?.includes('deliver')) Icon = Truck;
-                              else if (statusKey?.includes('cancel') || statusKey?.includes('fail') || statusKey?.includes('wrong')) Icon = X;
-                              else if (statusKey?.includes('postpone')) Icon = Calendar;
-                              else if (statusKey?.includes('ramasse') || statusKey?.includes('shipped')) Icon = ShoppingBag;
-                              else if (statusKey?.includes('out')) Icon = AlertTriangle;
-                              else if (statusKey?.includes('paid')) Icon = DollarSign;
-                              else if (statusKey?.includes('return')) Icon = ArrowLeft;
-
-                              if (statusKey === 'pending') Icon = RefreshCw;
-                              if (statusKey === 'confirmed') Icon = CheckCircle2;
-                              if (statusKey === 'delivered') Icon = CheckSquare;
-                              if (statusKey === 'cancelled') Icon = X;
-                              if (statusKey === 'postponed') Icon = Calendar;
-
-                              return <Icon className="w-3.5 h-3.5" />;
-                            })()}
-                            {statusLabel}
-                          </span>
-                        </div>
-                      </td>}
+                          </div>
+                        </td>
+                      )}
 
                       {(visibleColumns as any).delivery_status && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-col gap-1 items-start">

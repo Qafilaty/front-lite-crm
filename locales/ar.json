@@ -158,11 +158,16 @@
     "our_store": "متجرنا",
     "dear_customer": "عزيزي العميل",
     "delete_confirm_desc": "هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذا الإجراء.",
-    "delivery_instructions": "تعليمات التوصيل"
+    "delivery_instructions": "تعليمات التوصيل",
+    "confirmer": "المؤكد"
   },
   "orders": {
     "title": "إدارة الطلبات",
     "subtitle": "متابعة دقيقة لطلبات العملاء وحالات الشحن",
+    "theme": {
+      "clean": "ثيم بسيط",
+      "vivid": "ثيم ملون"
+    },
     "search_placeholder": "بحث سريع... (الاسم، الهاتف، المعرف)",
     "send_orders": "إرسال ({{count}})",
     "assign_orders": "إسناد ({{count}})",
@@ -1612,6 +1617,10 @@
   "tracking": {
     "title": "تتبع الطرود",
     "subtitle": "تحديث مسارات الشحن والتسليم",
+    "theme": {
+      "clean": "ثيم بسيط",
+      "vivid": "ثيم ملون"
+    },
     "search_placeholder": "بحث سريع... (الكود، الاسم، الهاتف)",
     "abandoned_only": "المتروكة",
     "filter": "تصفية",
