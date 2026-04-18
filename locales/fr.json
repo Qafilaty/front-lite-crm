@@ -1034,6 +1034,9 @@
       },
       "smartfunnel": {
         "description": "Créez des pages de destination professionnelles et des tunnels de vente intelligents"
+      },
+      "okwin": {
+        "description": "Plateforme e-commerce Okwin pour une liaison avancée et synchronisation automatique"
       }
     },
     "modal": {

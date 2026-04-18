@@ -55,6 +55,13 @@ const SUPPORTED_STORES = [
     logo: 'https://funnels.wilo.site/logo.png',
     color: '#8b5cf6',
     descriptionKey: 'store_linking.platforms.smartfunnel.description'
+  },
+  {
+    key: 'okwin',
+    name: 'Okwin',
+    logo: 'https://wilo-images-uploaded.s3.eu-central-1.amazonaws.com/okwin-logo.png', // User to update this URL
+    color: '#1363df',
+    descriptionKey: 'store_linking.platforms.okwin.description'
   }
 ];
 //https://api.wilo.site/api/hooks/hanotify/createdOrder/ew9T0P8jI0
@@ -285,7 +292,12 @@ const StoreLinkingView: React.FC = () => {
     return <CardGridSkeleton count={3} />;
   }
 
-  const filteredSupportedStores = SUPPORTED_STORES;
+  const filteredSupportedStores = SUPPORTED_STORES.filter(store => {
+    if (store.key === 'okwin') {
+      return user?.email === 'wilo@gmail.com';
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
