@@ -292,12 +292,7 @@ const StoreLinkingView: React.FC = () => {
     return <CardGridSkeleton count={3} />;
   }
 
-  const filteredSupportedStores = SUPPORTED_STORES.filter(store => {
-    if (store.key === 'okwin') {
-      return user?.email === 'wilo@gmail.com';
-    }
-    return true;
-  });
+  const filteredSupportedStores = SUPPORTED_STORES;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
