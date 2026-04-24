@@ -747,7 +747,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                               <UserCheck className="w-3 h-3" />
                             </div>
                             <span className="text-[10px] font-bold text-slate-600">
-                              {order.confirmationTimeLine[0].user?.name || 'غير معروف'}
+                                {order.confirmed?.name || order.confirmationTimeLine?.[0]?.user?.name || t('common.unknown')}
                             </span>
                           </div>
                         ) : (
