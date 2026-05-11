@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
 import { formatCurrency } from '../utils/formatters';
 import { useTranslation } from 'react-i18next';
-import { getTranslatedName } from '../utils/i18nUtils';
+import { getTranslatedName, getWilayaName } from '../utils/i18nUtils';
 
 interface OrderTrackingViewProps {
   orders?: Order[];
@@ -709,7 +709,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                           <div className="flex items-center gap-1.5 ">
                             <MapPin className="w-3 h-3 text-slate-300" />
                             <span className="text-[10px] font-bold text-slate-700">
-                              {order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}
+                              {getWilayaName(order.state, wilayasData, i18n.language)}
                               {order.city && ` - ${order.city}`}
                             </span>
                           </div>

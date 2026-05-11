@@ -18,7 +18,7 @@ import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import { AssignConfirmerModal } from './AssignConfirmerModal';
-import { getTranslatedName } from '../utils/i18nUtils';
+import { getTranslatedName, getWilayaName } from '../utils/i18nUtils';
 import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 
@@ -545,7 +545,7 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
 
                                             {(visibleColumns as any).locationInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                                                 <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-1.5 "><MapPin className="w-3 h-3 text-slate-300" /><span className="text-[10px] font-bold text-slate-700">{order.state ? (typeof order.state === 'object' ? (order.state as any).name : order.state) : '-'}{order.city && ` - ${order.city}`}</span></div>
+                                                    <div className="flex items-center gap-1.5 "><MapPin className="w-3 h-3 text-slate-300" /><span className="text-[10px] font-bold text-slate-700">{getWilayaName(order.state, wilayasData, i18n.language)}{order.city && ` - ${order.city}`}</span></div>
                                                     {order.address && <p className={`text-[9px] text-slate-400 font-bold truncate max-w-[150px] ${i18n.dir() === 'rtl' ? 'pr-5' : 'pl-5'}`} title={order.address}>{order.address}</p>}
                                                 </div>
                                             </td>}

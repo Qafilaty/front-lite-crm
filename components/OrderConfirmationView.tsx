@@ -26,7 +26,7 @@ import { BulkDeliveryModal } from './BulkDeliveryModal';
 import { AssignConfirmerModal } from './AssignConfirmerModal';
 import { formatCurrency } from '../utils/formatters';
 import { useTranslation } from 'react-i18next';
-import { getTranslatedName } from '../utils/i18nUtils';
+import { getTranslatedName, getWilayaName } from '../utils/i18nUtils';
 
 interface OrderConfirmationViewProps {
   orders?: Order[];
@@ -870,7 +870,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ orders: i
                               <div className="flex items-center gap-1.5">
                                 <MapPin className="w-3 h-3 text-slate-300" />
                                 <span className="text-[10px] font-bold text-slate-700">
-                                  {order.state ? (typeof order.state === 'object' ? getTranslatedName(order.state, i18n.language) : order.state) : (order.wilaya ? (typeof order.wilaya === 'object' ? getTranslatedName(order.wilaya, i18n.language) : order.wilaya) : '-')}
+                                  {getWilayaName(order.state || order.wilaya, wilayasData, i18n.language)}
                                   {(order.city || order.commune) && ` - ${typeof order.city === 'object' ? getTranslatedName(order.city, i18n.language) : (typeof order.commune === 'object' ? getTranslatedName(order.commune, i18n.language) : (order.city || order.commune))}`}
                                 </span>
                               </div>

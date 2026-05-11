@@ -795,9 +795,17 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <ModernSelect
                   disabled={readOnly}
                   value={(() => {
-                    const currentVal = typeof editedOrder.state === 'object' && editedOrder.state !== null
+                    let currentVal = typeof editedOrder.state === 'object' && editedOrder.state !== null
                       ? (editedOrder.state as any).name
                       : editedOrder.state;
+                      
+                    if (currentVal && wilayasData?.allWilayas) {
+                      const wilaya = wilayasData.allWilayas.find((w: any) => 
+                        w.code == currentVal || w.name?.toLowerCase() === String(currentVal).toLowerCase()
+                      );
+                      if (wilaya) currentVal = wilaya.name;
+                    }
+                    
                     return currentVal || '';
                   })()}
                   onChange={(val) => {
