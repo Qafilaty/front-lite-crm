@@ -274,8 +274,9 @@ const UsersView: React.FC<UsersViewProps> = ({
   const openAssignmentModal = (user: User) => {
     setAssignmentUser(user);
     const existing = staffQueue.productAssignments
-      ?.filter((a: any) => a.user.id === user.id)
-      ?.map((a: any) => a.product.id) || [];
+      ?.filter((a: any) => a.user?.id === user.id)
+      ?.map((a: any) => a.product?.id)
+      ?.filter(Boolean) || [];
     setSelectedProductIds(existing);
     setAssignmentSearchTerm('');
   };
@@ -287,11 +288,12 @@ const UsersView: React.FC<UsersViewProps> = ({
     try {
       // 1. Get assignments for OTHER users (Don't filter out products anymore)
       const otherUserAssignments = staffQueue.productAssignments
-        ?.filter((a: any) => a.user.id !== assignmentUser.id)
+        ?.filter((a: any) => a.user?.id !== assignmentUser.id)
         ?.map((a: any) => ({
-          idProduct: a.product.id,
-          idUser: a.user.id
-        })) || [];
+          idProduct: a.product?.id,
+          idUser: a.user?.id
+        }))
+        ?.filter((a: any) => a.idProduct && a.idUser) || [];
 
       // 2. Add NEW assignments for THIS user
       const currentUserAssignments = selectedProductIds.map(id => ({
@@ -723,14 +725,15 @@ const UsersView: React.FC<UsersViewProps> = ({
 
                <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-slate-200">
                   {allProducts
-                    .filter(p => p.name.toLowerCase().includes(assignmentSearchTerm.toLowerCase()) || p.sku?.toLowerCase()?.includes(assignmentSearchTerm.toLowerCase()))
+                    .filter(p => p && p.name && (p.name.toLowerCase().includes(assignmentSearchTerm.toLowerCase()) || p.sku?.toLowerCase()?.includes(assignmentSearchTerm.toLowerCase())))
                     .map(product => {
+                      if (!product || !product.id) return null;
                       const isSelected = selectedProductIds.includes(product.id);
                       // Find all other users assigned to this product
                       const otherAssignments = staffQueue.productAssignments?.filter(
-                        (a: any) => a.product.id === product.id && a.user.id !== assignmentUser.id
+                        (a: any) => a && a.product?.id === product.id && a.user?.id !== assignmentUser?.id
                       ) || [];
-                      const otherNames = otherAssignments.map((a: any) => a.user.name).join('، ');
+                      const otherNames = otherAssignments.map((a: any) => a?.user?.name).filter(Boolean).join('، ');
 
                       return (
                         <div 

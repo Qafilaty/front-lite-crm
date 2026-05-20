@@ -57,8 +57,9 @@ const StaffQueueManager: React.FC = () => {
   useEffect(() => {
     if (selectedUserId && staffQueue?.productAssignments) {
       const assigned = staffQueue.productAssignments
-        .filter((a: any) => a.user.id === selectedUserId)
-        .map((a: any) => a.product.id);
+        .filter((a: any) => a.user?.id === selectedUserId)
+        .map((a: any) => a.product?.id)
+        .filter(Boolean);
       setSelectedProductIds(assigned);
     } else {
       setSelectedProductIds([]);
@@ -117,11 +118,12 @@ const StaffQueueManager: React.FC = () => {
     try {
       // 1. Keep assignments for OTHER users
       const otherUserAssignments = (staffQueue?.productAssignments || [])
-        .filter((a: any) => a.user.id !== selectedUserId)
+        .filter((a: any) => a.user?.id !== selectedUserId)
         .map((a: any) => ({
-          idProduct: a.product.id,
-          idUser: a.user.id
-        }));
+          idProduct: a.product?.id,
+          idUser: a.user?.id
+        }))
+        .filter((a: any) => a.idProduct && a.idUser);
 
       // 2. Add current selections for THIS user
       const currentUserAssignments = selectedProductIds.map(productId => ({
@@ -156,11 +158,12 @@ const StaffQueueManager: React.FC = () => {
 
   const handleRemoveAssignment = async (idProduct: string) => {
     const newAssignments = staffQueue?.productAssignments
-      ?.filter((a: any) => a.product.id !== idProduct)
+      ?.filter((a: any) => a.product?.id !== idProduct)
       ?.map((a: any) => ({
-        idProduct: a.product.id,
-        idUser: a.user.id
-      })) || [];
+        idProduct: a.product?.id,
+        idUser: a.user?.id
+      }))
+      ?.filter((a: any) => a.idProduct && a.idUser) || [];
 
     try {
       const { data } = await updateAssignments({
@@ -310,8 +313,10 @@ const StaffQueueManager: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {staffQueue.productAssignments?.length > 0 ? (
-                staffQueue.productAssignments.map((assign: any) => (
-                  <div key={assign.id} className="group bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-200 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all duration-300 relative overflow-hidden">
+                staffQueue.productAssignments
+                  .filter((assign: any) => assign.product && assign.user)
+                  .map((assign: any) => (
+                    <div key={assign.id} className="group bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-200 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-slate-100/30 rounded-bl-[60px] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
@@ -431,12 +436,13 @@ const StaffQueueManager: React.FC = () => {
                 <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-y-auto pr-1 pb-4 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
                   {products
                     .filter(p =>
-                      p.name.toLowerCase().includes(assignmentSearchTerm.toLowerCase()) ||
-                      p.sku?.toLowerCase()?.includes(assignmentSearchTerm.toLowerCase())
+                      p && p.name && (p.name.toLowerCase().includes(assignmentSearchTerm.toLowerCase()) ||
+                      p.sku?.toLowerCase()?.includes(assignmentSearchTerm.toLowerCase()))
                     )
                     .map(product => {
+                      if (!product || !product.id) return null;
                       const isSelected = selectedProductIds.includes(product.id);
-                      const assignedToOther = staffQueue.productAssignments?.find((a: any) => a.product.id === product.id && a.user.id !== selectedUserId);
+                      const assignedToOther = staffQueue.productAssignments?.find((a: any) => a && a.product?.id === product.id && a.user?.id !== selectedUserId);
 
                       return (
                         <div
@@ -462,7 +468,7 @@ const StaffQueueManager: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <span className="text-[9px] font-black text-slate-400 opacity-70">SKU: {product.sku}</span>
                                 {assignedToOther && (
-                                  <span className="text-[8px] font-black bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100/50 animate-in fade-in zoom-in-95">{t('staff_queue.modal.assigned_to_other', { name: assignedToOther.user.name })}</span>
+                                  <span className="text-[8px] font-black bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100/50 animate-in fade-in zoom-in-95">{t('staff_queue.modal.assigned_to_other', { name: assignedToOther.user?.name })}</span>
                                 )}
                               </div>
                             </div>
