@@ -281,7 +281,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                         totalQuantity,
 
                         products: cart.map(item => ({
-                            idProduct: item.id,
+                            idProduct: item.id.startsWith('MANUAL_') ? null : item.id,
                             idVariantsProduct: item.idVariant || null,
                             name: item.name,
                             sku: item.sku || "",
@@ -549,6 +549,34 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                         {Object.keys(filteredAndGroupedProducts).length === 0 && (
                                             <div className="p-8 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">{t('orders.confirmation.create_modal.no_products_found')}</div>
                                         )}
+                                        
+                                        {/* Add Manual Product Button */}
+                                        {productSearchQuery.trim() && (
+                                            <div className="p-2 border-t border-slate-100 bg-white sticky bottom-0">
+                                                <button
+                                                    onClick={() => {
+                                                        setCart([...cart, {
+                                                            id: 'MANUAL_' + Date.now(),
+                                                            name: productSearchQuery.trim(),
+                                                            variant: t('common.manual'),
+                                                            quantity: 1,
+                                                            price: 0,
+                                                            sku: '',
+                                                            storageLocation: 'SHOP'
+                                                        }]);
+                                                        setProductSearchQuery('');
+                                                        setIsProductPickerOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-between p-3 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 border-dashed transition-colors group"
+                                                >
+                                                    <div className="flex flex-col text-left">
+                                                        <span className="text-[11px] font-bold text-amber-700">{t('orders.details.manual_input_prompt') || 'إضافة كمنتج يدوي'}</span>
+                                                        <span className="text-[10px] font-black text-amber-600 mt-0.5">{productSearchQuery.trim()}</span>
+                                                    </div>
+                                                    <PlusCircle className="w-4 h-4 text-amber-500" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -560,10 +588,32 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                 <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between group animate-in slide-in-from-left-2">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-indigo-600"><Package className="w-4 h-4" /></div>
-                                        <div>
-                                            <p className="text-[11px] font-black text-slate-800 leading-none">{item.name}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">{item.variant}</p>
-                                        </div>
+                                        {item.id.startsWith('MANUAL_') ? (
+                                            <div className="flex flex-col gap-1.5">
+                                                <input 
+                                                    value={item.name} 
+                                                    onChange={(e) => { const u = [...cart]; u[idx].name = e.target.value; setCart(u); }}
+                                                    className="text-[11px] font-black text-slate-800 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 outline-none p-0 w-32 md:w-48 transition-colors placeholder:text-slate-300"
+                                                    placeholder={t('orders.details.manual')}
+                                                />
+                                                <div className="flex items-center gap-1">
+                                                    <input 
+                                                        type="number"
+                                                        value={item.price === 0 ? '' : item.price}
+                                                        onChange={(e) => { const u = [...cart]; u[idx].price = parseFloat(e.target.value) || 0; setCart(u); }}
+                                                        className="text-[10px] font-bold text-indigo-600 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 outline-none p-0 w-16 transition-colors placeholder:text-slate-300"
+                                                        placeholder="0"
+                                                    />
+                                                    <span className="text-[9px] text-slate-400 font-bold">{t('orders.confirmation.create_modal.currency')}</span>
+                                                    <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-600 font-black ml-2 uppercase">{t('common.manual')}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <p className="text-[11px] font-black text-slate-800 leading-none">{item.name}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">{item.variant}</p>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center gap-2 bg-white rounded-md p-1 border border-slate-200">
