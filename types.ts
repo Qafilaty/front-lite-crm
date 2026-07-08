@@ -25,6 +25,7 @@ export enum View {
   SALARIES = 'salaries',
   INTEGRATION_SETTINGS = 'integration_settings',
   PROFIT_SIMULATOR = 'profit-simulator',
+  AI_ASSISTANT = 'ai_assistant',
 }
 
 export interface OrderItem {

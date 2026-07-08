@@ -14,6 +14,7 @@
     "@types/apollo-upload-client": "^19.0.0",
     "apollo-upload-client": "^17.0.0",
     "clsx": "^2.1.1",
+    "escape-string-regexp": "^5.0.0",
     "graphql": "^16.10.0",
     "graphql-ws": "^6.0.6",
     "i18next": "^26.0.3",
@@ -23,8 +24,10 @@
     "react-dom": "^19.2.3",
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.2",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.1.3",
     "recharts": "^3.6.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

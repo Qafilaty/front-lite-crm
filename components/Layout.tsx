@@ -56,6 +56,7 @@ const Layout: React.FC = () => {
     if (path.includes('/salaries')) return View.SALARIES;
     if (path.includes('/profit-simulator')) return View.PROFIT_SIMULATOR;
     if (path.includes('/integration-settings')) return View.INTEGRATION_SETTINGS;
+    if (path.includes('/ai-assistant')) return View.AI_ASSISTANT;
     // Check Dashboard last or exact match
     if (path === '/dashboard' || path === '/dashboard/') return View.DASHBOARD;
 
@@ -82,6 +83,7 @@ const Layout: React.FC = () => {
       [View.FINANCIAL_STATS]: '/dashboard/financial-stats',
       [View.SALARIES]: '/dashboard/salaries',
       [View.PROFIT_SIMULATOR]: '/dashboard/profit-simulator',
+      [View.AI_ASSISTANT]: '/dashboard/ai-assistant',
       [View.LOGIN]: '/login',
       [View.REGISTER]: '/register',
     };

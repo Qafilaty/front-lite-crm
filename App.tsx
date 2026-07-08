@@ -34,6 +34,7 @@ import IntegrationSettingsPage from './pages/dashboard/IntegrationSettingsPage';
 import GoogleSheetsSuccessPage from './pages/GoogleSheetsSuccessPage';
 import GoogleSheetsFailedPage from './pages/GoogleSheetsFailedPage';
 import ProfitSimulatorPage from './pages/dashboard/ProfitSimulatorPage';
+import AIAssistantPage from './pages/dashboard/AIAssistantPage';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -78,8 +79,18 @@ const AppRoutes: React.FC = () => {
         <Route path="salaries" element={<RequirePermission allowedView={View.SALARIES}><SalariesPage /></RequirePermission>} />
         <Route path="profit-simulator" element={<RequirePermission allowedView={View.PROFIT_SIMULATOR}><ProfitSimulatorPage /></RequirePermission>} />
         <Route path="integration-settings" element={<RequirePermission allowedView={View.INTEGRATION_SETTINGS}><IntegrationSettingsPage /></RequirePermission>} />
+        <Route path="ai-assistant" element={<AIAssistantPage />} />
       </Route>
 
+      {/* Standalone AI Assistant Route */}
+      <Route
+        path="/ai-assistant-standalone"
+        element={
+          <ProtectedRoute>
+            <AIAssistantPage isStandalone={true} />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch all - redirect to dashboard */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

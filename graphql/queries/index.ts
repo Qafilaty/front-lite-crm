@@ -68,3 +68,6 @@ export * from './googleSheetsQueries';
 
 // Notification Queries
 export * from './notificationQueries';
+
+// AI Agent Queries
+export * from './aiAgentQueries';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from '../types';
-import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen, Calculator } from 'lucide-react';
+import { LayoutDashboard, Users, CheckCircle2, Truck, Box, FileWarning, Wallet, Banknote, FileSpreadsheet, Share2, Map, Store, BookOpen, Calculator, Sparkles, Bot } from 'lucide-react';
 import logo from '../assets/logo.png';
 import logoIcon from '../assets/logo-icon.png';
 import { useOrderNotification } from '../contexts/OrderNotificationContext';
@@ -143,6 +143,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
       return false;
     })
   })).filter(section => section.items.length > 0);
+
+  // Inject AI Assistant only for authorized emails
+  if (user?.email === 'wilo@gmail.com' || user?.email === 'hicham5lehouedj@gmail.com') {
+    const statsSection = sections.find(s => s.title === t('sidebar.sections.stats'));
+    if (statsSection) {
+      statsSection.items.push({
+        id: View.AI_ASSISTANT,
+        label: 'المساعد الذكي (AI Assistant)',
+        icon: Sparkles,
+        badge: 'BETA'
+      });
+    }
+  }
 
   return (
     <aside className={`
