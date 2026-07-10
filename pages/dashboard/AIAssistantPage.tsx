@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLazyQuery, useQuery, useMutation } from '@apollo/client';
-import { ASK_CRM_AGENT, GET_CRM_AGENT_HISTORY, CLEAR_CRM_AGENT_HISTORY } from '../../graphql/queries';
-import { Send, Bot, User, Sparkles, Loader2, Maximize, Minimize, ExternalLink, RotateCcw } from 'lucide-react';
+import { ASK_CRM_AGENT, GET_CRM_AGENT_HISTORY, CLEAR_CRM_AGENT_HISTORY, GET_CRM_AGENT_SUGGESTIONS } from '../../graphql/queries';
+import { Send, Bot, User, Sparkles, Loader2, Maximize, Minimize, ExternalLink, RotateCcw, Cpu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,6 +49,13 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  const [model, setModel] = useState(() => localStorage.getItem('crm_agent_model') || 'llama-3.3-70b-versatile');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    localStorage.setItem('crm_agent_model', model);
+  }, [model]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -129,21 +136,60 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     scrollToBottom();
   }, [messages, loading]);
 
-  const handleSend = () => {
-    if (!input.trim() || loading || historyLoading) return;
+  const [fetchSuggestions] = useLazyQuery(GET_CRM_AGENT_SUGGESTIONS, {
+    fetchPolicy: 'network-only',
+    onCompleted: (data) => {
+      if (data?.getCRMAgentSuggestions) {
+        setSuggestions(data.getCRMAgentSuggestions);
+      }
+    }
+  });
 
-    const userMsg = input.trim();
+  useEffect(() => {
+    if (!loading && !historyLoading) {
+      fetchSuggestions();
+    }
+  }, [messages.length, loading, historyLoading]);
+
+  const handleSend = (textToSend?: string) => {
+    const msgToSend = textToSend || input.trim();
+    if (!msgToSend || loading || historyLoading) return;
+
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
       type: 'user',
-      content: userMsg,
+      content: msgToSend,
       timestamp: new Date()
     }]);
     
     setInput('');
     
-    askAgent({ variables: { message: userMsg } });
+    askAgent({ variables: { message: msgToSend, model } });
   };
+
+  const handleSuggestionClick = (suggestionText: string) => {
+    handleSend(suggestionText);
+  };
+
+  const pool = Array.from(new Set([
+    ...suggestions,
+    ...messages.filter(m => m.type === 'user').map(m => m.content),
+    "ما هي نسبة تسليم الطلبات هذا الشهر؟",
+    "أعطني نظرة عامة على المخزون والمنتجات الأكثر مبيعاً.",
+    "ما هي الولايات الأكثر مبيعاً؟",
+    "أعطني ملخصاً للمصاريف التسويقية.",
+    "ما هو صافي الأرباح لهذا الأسبوع؟",
+    "كيف يمكنني تقليل نسبة المرتجعات وتحسين التوصيل؟",
+    "ما هي المنتجات التي تقترب من النفاد؟",
+    "تتبع الطلب الخاص بالزبون"
+  ]));
+
+  const filteredSuggestions = input.trim() === ''
+    ? suggestions
+    : pool.filter(s => 
+        s.toLowerCase().includes(input.toLowerCase()) && 
+        s.toLowerCase() !== input.toLowerCase()
+      );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -179,6 +225,28 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mr-auto">
+          <div className="relative flex items-center bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 h-10 gap-2 transition-all select-none">
+            <Cpu className="w-4 h-4 text-indigo-400" />
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-300 outline-none border-none pr-6 cursor-pointer focus:ring-0 focus:text-white"
+            >
+              <option value="llama-3.3-70b-versatile" className="bg-[#0F172A] text-white">Llama 3.3 (70B)</option>
+              <option value="llama-3.1-8b-instant" className="bg-[#0F172A] text-white">Llama 3.1 (8B)</option>
+              <option value="meta-llama/llama-4-scout-17b-16e-instruct" className="bg-[#0F172A] text-white">Llama 4 Scout (17B)</option>
+              <option value="allam-2-7b" className="bg-[#0F172A] text-white">Allam 2 (7B)</option>
+              <option value="qwen/qwen3-32b" className="bg-[#0F172A] text-white">Qwen 3 (32B)</option>
+              <option value="qwen/qwen3.6-27b" className="bg-[#0F172A] text-white">Qwen 3.6 (27B)</option>
+              <option value="groq/compound" className="bg-[#0F172A] text-white">Groq Compound</option>
+              <option value="groq/compound-mini" className="bg-[#0F172A] text-white">Groq Compound Mini</option>
+              <option value="openai/gpt-oss-120b" className="bg-[#0F172A] text-white">GPT OSS (120B)</option>
+              <option value="openai/gpt-oss-20b" className="bg-[#0F172A] text-white">GPT OSS (20B)</option>
+              <option value="openai/gpt-oss-safeguard-20b" className="bg-[#0F172A] text-white">GPT OSS Safeguard (20B)</option>
+              <option value="meta-llama/llama-prompt-guard-2-22m" className="bg-[#0F172A] text-white">Llama Prompt Guard (22M)</option>
+              <option value="meta-llama/llama-prompt-guard-2-86m" className="bg-[#0F172A] text-white">Llama Prompt Guard (86M)</option>
+            </select>
+          </div>
           <button 
             onClick={handleNewChat}
             disabled={clearing || historyLoading}
@@ -277,8 +345,42 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
 
       {/* Input Area */}
       <div className="p-4 md:p-6 bg-slate-900/80 backdrop-blur-xl border-t border-slate-800">
+        {/* Suggestion Chips */}
+        {input.trim() === '' && filteredSuggestions.length > 0 && !loading && (
+          <div className="flex flex-wrap gap-2 mb-3 max-w-4xl mx-auto justify-start overflow-x-auto pb-1 custom-scrollbar" dir="rtl">
+            {filteredSuggestions.map((s, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSuggestionClick(s)}
+                className="px-3 py-1.5 text-xs bg-slate-800/85 hover:bg-indigo-600/20 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl text-slate-300 hover:text-indigo-200 transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap shadow-sm flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <span>{s}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="max-w-4xl mx-auto relative flex items-end gap-3">
           <div className="relative flex-1 bg-slate-800 rounded-2xl border border-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all shadow-inner">
+            {/* Autocomplete Suggestion List */}
+            {input.trim() !== '' && filteredSuggestions.length > 0 && (
+              <div className="absolute bottom-full mb-2 left-0 right-0 bg-slate-800/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-20" dir="rtl">
+                <div className="py-1">
+                  {filteredSuggestions.slice(0, 5).map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSuggestionClick(s)}
+                      className="w-full text-right px-5 py-3 text-sm text-slate-300 hover:bg-indigo-600/90 hover:text-white transition-all duration-150 flex items-center gap-2 cursor-pointer font-medium border-b border-slate-700/30 last:border-b-0"
+                    >
+                      <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                      <span className="truncate">{s}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -291,7 +393,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
             />
           </div>
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || loading}
             className={`
               w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300
