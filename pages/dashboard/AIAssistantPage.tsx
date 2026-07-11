@@ -50,7 +50,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const [model, setModel] = useState(() => localStorage.getItem('crm_agent_model') || 'llama-3.3-70b-versatile');
+  const [model, setModel] = useState(() => localStorage.getItem('crm_agent_model') || 'google/gemini-2.5-flash-lite');
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -232,19 +232,9 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
               onChange={(e) => setModel(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-300 outline-none border-none pr-6 cursor-pointer focus:ring-0 focus:text-white"
             >
-              <option value="llama-3.3-70b-versatile" className="bg-[#0F172A] text-white">Llama 3.3 (70B)</option>
-              <option value="llama-3.1-8b-instant" className="bg-[#0F172A] text-white">Llama 3.1 (8B)</option>
-              <option value="meta-llama/llama-4-scout-17b-16e-instruct" className="bg-[#0F172A] text-white">Llama 4 Scout (17B)</option>
-              <option value="allam-2-7b" className="bg-[#0F172A] text-white">Allam 2 (7B)</option>
-              <option value="qwen/qwen3-32b" className="bg-[#0F172A] text-white">Qwen 3 (32B)</option>
-              <option value="qwen/qwen3.6-27b" className="bg-[#0F172A] text-white">Qwen 3.6 (27B)</option>
-              <option value="groq/compound" className="bg-[#0F172A] text-white">Groq Compound</option>
-              <option value="groq/compound-mini" className="bg-[#0F172A] text-white">Groq Compound Mini</option>
-              <option value="openai/gpt-oss-120b" className="bg-[#0F172A] text-white">GPT OSS (120B)</option>
-              <option value="openai/gpt-oss-20b" className="bg-[#0F172A] text-white">GPT OSS (20B)</option>
-              <option value="openai/gpt-oss-safeguard-20b" className="bg-[#0F172A] text-white">GPT OSS Safeguard (20B)</option>
-              <option value="meta-llama/llama-prompt-guard-2-22m" className="bg-[#0F172A] text-white">Llama Prompt Guard (22M)</option>
-              <option value="meta-llama/llama-prompt-guard-2-86m" className="bg-[#0F172A] text-white">Llama Prompt Guard (86M)</option>
+              <option value="google/gemma-4-31b-it:free" className="bg-[#0F172A] text-white">Google: Gemma 4 31B (مجاني)</option>
+              <option value="google/gemini-2.5-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 2.5 Flash Lite (افتراضي)</option>
+              <option value="google/gemini-3.1-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 3.1 Flash Lite (برو)</option>
             </select>
           </div>
           <button 
