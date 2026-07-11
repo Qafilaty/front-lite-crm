@@ -106,27 +106,8 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     clearHistory();
   };
 
-  const [askAgent, { loading }] = useLazyQuery(ASK_CRM_AGENT, {
-    fetchPolicy: 'no-cache', // Ensure we always get fresh analysis
-    onCompleted: (data) => {
-      const response = data?.askCRMAgent;
-        
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'agent',
-        content: response || "عذراً، لم أتمكن من إحضار الرد.",
-        timestamp: new Date()
-      }]);
-    },
-    onError: (error) => {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'agent',
-        content: `عذراً، حدث خطأ أثناء الاتصال بالنظام: ${error.message}`,
-        timestamp: new Date()
-      }]);
-    }
-  });
+  const [streaming, setStreaming] = useState(false);
+  const loading = streaming;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -151,20 +132,106 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     }
   }, [messages.length, loading, historyLoading]);
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const msgToSend = textToSend || input.trim();
-    if (!msgToSend || loading || historyLoading) return;
+    if (!msgToSend || streaming || historyLoading) return;
 
+    const userMsgId = 'user-' + Date.now();
     setMessages(prev => [...prev, {
-      id: Date.now().toString(),
+      id: userMsgId,
       type: 'user',
       content: msgToSend,
       timestamp: new Date()
     }]);
     
     setInput('');
-    
-    askAgent({ variables: { message: msgToSend, model } });
+    setStreaming(true);
+
+    const agentMsgId = 'agent-' + (Date.now() + 1);
+    setMessages(prev => [...prev, {
+      id: agentMsgId,
+      type: 'agent',
+      content: '🔍 *[جاري بدء التحليل والاتصال بخدمة الذكاء الاصطناعي...]*\n\n',
+      timestamp: new Date()
+    }]);
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/graphql').replace('/graphql', '');
+      
+      const response = await fetch(`${apiBaseUrl}/api/ai/chat-stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? token : '',
+        },
+        body: JSON.stringify({
+          message: msgToSend,
+          model: model
+        })
+      });
+
+      if (!response.ok) {
+        let errText = "فشل الاتصال بخادم الذكاء الاصطناعي.";
+        try {
+          const errData = await response.json();
+          if (errData?.message) errText = errData.message;
+        } catch (_) {}
+        throw new Error(errText);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let finished = false;
+      let accumulatedText = '';
+      let thoughtsText = '';
+
+      while (!finished && reader) {
+        const { value, done } = await reader.read();
+        finished = done;
+        if (value) {
+          const chunkStr = decoder.decode(value, { stream: true });
+          const lines = chunkStr.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr === '[DONE]') {
+                finished = true;
+                break;
+              }
+              try {
+                const chunk = JSON.parse(dataStr);
+                
+                if (chunk.type === 'error') {
+                  accumulatedText = chunk.message;
+                  finished = true;
+                  break;
+                }
+
+                if (chunk.type === 'text-delta') {
+                  accumulatedText += chunk.text;
+                  setMessages(prev => prev.map(m => m.id === agentMsgId ? { ...m, content: thoughtsText + accumulatedText } : m));
+                } else if (chunk.type === 'tool-call') {
+                  const toolNameArabic = mapToolNameToArabic(chunk.toolName);
+                  thoughtsText += `🔍 *[خطوة تفكير: جاري تشغيل أداة ${toolNameArabic}...]*\n\n`;
+                  setMessages(prev => prev.map(m => m.id === agentMsgId ? { ...m, content: thoughtsText + accumulatedText } : m));
+                }
+              } catch (e) {
+                // Ignore partial JSON parsing errors
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Error during streaming:", error);
+      setMessages(prev => prev.map(m => m.id === agentMsgId 
+        ? { ...m, content: `❌ عذراً، حدث خطأ أثناء الاتصال بالنظام: ${error.message || "يرجى التحقق من اتصالك بالإنترنت"}` } 
+        : m
+      ));
+    } finally {
+      setStreaming(false);
+    }
   };
 
   const handleSuggestionClick = (suggestionText: string) => {
@@ -317,7 +384,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
           ))}
 
           {/* Loading Indicator */}
-          {loading && (
+          {loading && messages[messages.length - 1]?.type !== 'agent' && (
             <div className="flex gap-4 justify-start">
               <div className={`w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0 mt-1`}>
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -406,16 +473,20 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       {/* Styles for Markdown */}
       <style dangerouslySetInnerHTML={{__html: `
         .markdown-body table {
+          display: block;
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
           border-collapse: separate;
           border-spacing: 0;
           border-radius: 8px;
-          overflow: hidden;
           border: 1px solid #334155;
           margin: 1rem 0;
         }
         .markdown-body th, .markdown-body td {
           padding: 12px 16px;
           text-align: right;
+          white-space: nowrap;
         }
         .markdown-body th {
           background-color: #0F172A;
@@ -428,6 +499,19 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       `}} />
     </div>
   );
+};
+
+const mapToolNameToArabic = (name: string): string => {
+  switch (name) {
+    case 'getFinancialData': return 'البيانات المالية والمبيعات';
+    case 'getInventoryData': return 'المخزون والمنتجات';
+    case 'getOperationsData': return 'شركات الشحن والعمليات';
+    case 'searchOrders': return 'البحث في الطلبات';
+    case 'getSalaries': return 'حسابات الرواتب';
+    case 'getFinancialTransactions': return 'التدفقات المالية والمصاريف';
+    case 'getNetProfitAnalysis': return 'تحليل الأرباح الصافية';
+    default: return name;
+  }
 };
 
 export default AIAssistantPage;
