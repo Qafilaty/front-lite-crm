@@ -50,7 +50,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const [model, setModel] = useState(() => localStorage.getItem('crm_agent_model') || 'google/gemini-2.5-flash-lite');
+  const [model, setModel] = useState(() => localStorage.getItem('crm_agent_model') || 'google/gemini-3.1-flash-lite');
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -232,9 +232,12 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
               onChange={(e) => setModel(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-300 outline-none border-none pr-6 cursor-pointer focus:ring-0 focus:text-white"
             >
-              <option value="google/gemma-4-31b-it:free" className="bg-[#0F172A] text-white">Google: Gemma 4 31B (مجاني)</option>
-              <option value="google/gemini-2.5-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 2.5 Flash Lite (افتراضي)</option>
-              <option value="google/gemini-3.1-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 3.1 Flash Lite (برو)</option>
+              <option value="google/gemini-3.1-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 3.1 Flash Lite (افتراضي)</option>
+              <option value="openai/gpt-oss-20b:free" className="bg-[#0F172A] text-white">OpenAI: gpt-oss-20b (مجاني)</option>
+              <option value="openai/gpt-oss-120b:free" className="bg-[#0F172A] text-white">OpenAI: gpt-oss-120b (مجاني)</option>
+              <option value="openai/gpt-5-nano" className="bg-[#0F172A] text-white">OpenAI: GPT-5 Nano (اقتصادي)</option>
+              <option value="openai/gpt-4.1-nano" className="bg-[#0F172A] text-white">OpenAI: GPT-4.1 Nano (اقتصادي)</option>
+              <option value="openai/gpt-4o-mini" className="bg-[#0F172A] text-white">OpenAI: GPT-4o-mini</option>
             </select>
           </div>
           <button 
