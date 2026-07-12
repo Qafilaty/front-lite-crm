@@ -366,9 +366,10 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
                   (() => {
                     const { thoughts, body } = parseAgentMessage(msg.content);
                     const isLastMessage = msg.id === messages[messages.length - 1]?.id;
+                    const showThoughts = thoughts.length > 0 && streaming && isLastMessage;
                     return (
                       <>
-                        {thoughts.length > 0 && (
+                        {showThoughts && (
                           <div className="mb-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl p-4 space-y-2">
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-400 border-b border-slate-800 pb-2 mb-2">
                               <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
