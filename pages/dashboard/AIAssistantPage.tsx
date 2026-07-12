@@ -363,11 +363,62 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
                 {msg.type === 'user' ? (
                   <p className="whitespace-pre-wrap leading-relaxed text-[15px] font-medium">{msg.content}</p>
                 ) : (
-                  <div className={`markdown-body text-[15px] leading-relaxed prose prose-invert max-w-none prose-p:my-2 prose-headings:text-indigo-300 prose-strong:text-white prose-li:my-1 prose-table:w-full prose-td:border-slate-700 prose-th:border-slate-600 prose-th:bg-slate-900/50`}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
+                  (() => {
+                    const { thoughts, body } = parseAgentMessage(msg.content);
+                    const isLastMessage = msg.id === messages[messages.length - 1]?.id;
+                    return (
+                      <>
+                        {thoughts.length > 0 && (
+                          <div className="mb-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl p-4 space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 border-b border-slate-800 pb-2 mb-2">
+                              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+                              <span>مسار تفكير الوكيل الذكي ({thoughts.length})</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {thoughts.map((thought, tIdx) => {
+                                const isLastThought = tIdx === thoughts.length - 1;
+                                const isRunning = isLastThought && streaming && isLastMessage;
+                                return (
+                                  <div key={tIdx} className="flex items-center justify-between text-xs font-medium">
+                                    <div className="flex items-center gap-2">
+                                      {isRunning ? (
+                                        <span className="relative flex h-2 w-2">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                        </span>
+                                      ) : (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                      )}
+                                      <span className={isRunning ? "text-indigo-300 font-bold animate-pulse" : "text-slate-400"}>
+                                        {thought}
+                                      </span>
+                                    </div>
+                                    <span className={`text-[10px] ${isRunning ? "text-indigo-400 font-bold" : "text-slate-500"}`}>
+                                      {isRunning ? "جاري التشغيل..." : "اكتمل"}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {body !== '' ? (
+                          <div className={`markdown-body text-[15px] leading-relaxed prose prose-invert max-w-none prose-p:my-2 prose-headings:text-indigo-300 prose-strong:text-white prose-li:my-1 prose-table:w-full prose-td:border-slate-700 prose-th:border-slate-600 prose-th:bg-slate-900/50`}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {body}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          isLastMessage && streaming && (
+                            <div className="flex items-center gap-2 text-slate-500 text-xs animate-pulse font-medium py-2">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                              <span>جاري صياغة الإجابة النهائية...</span>
+                            </div>
+                          )
+                        )}
+                      </>
+                    );
+                  })()
                 )}
                 <span className={`text-[10px] mt-3 block font-medium ${msg.type === 'user' ? 'text-indigo-200/70' : 'text-slate-500'}`}>
                   {msg.timestamp.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}
@@ -499,6 +550,35 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       `}} />
     </div>
   );
+};
+
+const parseAgentMessage = (content: string) => {
+  const lines = content.split('\n');
+  const thoughts: string[] = [];
+  const bodyLines: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.includes('خطوة تفكير:')) {
+      const startIdx = trimmed.indexOf('خطوة تفكير:') + 'خطوة تفكير:'.length;
+      const endIdx = trimmed.lastIndexOf(']');
+      if (endIdx > startIdx) {
+        let thought = trimmed.substring(startIdx, endIdx);
+        thought = thought.replace(/^\s*|\s*$/g, '')
+                         .replace(/\.\.\.$/g, '')
+                         .replace(/\*$/g, '')
+                         .trim();
+        thoughts.push(thought);
+      }
+    } else {
+      bodyLines.push(line);
+    }
+  }
+  
+  return {
+    thoughts,
+    body: bodyLines.join('\n').trim()
+  };
 };
 
 const mapToolNameToArabic = (name: string): string => {
