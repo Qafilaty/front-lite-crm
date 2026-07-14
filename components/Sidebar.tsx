@@ -144,8 +144,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
     })
   })).filter(section => section.items.length > 0);
 
-  // Inject AI Assistant only for authorized emails
-  if (user?.email === 'wilo@gmail.com' || user?.email === 'hicham5lehouedj@gmail.com') {
+  // Inject AI Assistant only for admins and owners
+  if (user?.role === 'admin' || user?.role === 'owner') {
     const statsSection = sections.find(s => s.title === t('sidebar.sections.stats'));
     if (statsSection) {
       statsSection.items.push({
@@ -249,6 +249,30 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isOpen, is
               <p className={`text-[9px] text-slate-500 mt-2 font-bold ${i18n.dir() === 'rtl' ? 'text-left' : 'text-right'}`}>
                 {user.company.plans.name === 'payg' ? t('sidebar.footer.payg') : t('sidebar.footer.monthly')}
               </p>
+              {user?.company?.plans?.aiTokenUsage && (
+                <>
+                  <div className="flex items-center justify-between mt-3 mb-2 pt-3 border-t border-slate-700/50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">رصيد (AI) اليومي</span>
+                    <span className={`text-xs font-black ${
+                      (user.company.plans.aiTokenUsage.standardTokens?.dailyUsed || 0) >= (user.company.plans.aiTokenUsage.standardTokens?.dailyLimit || 0)
+                      && (user.company.plans.aiTokenUsage.standardTokens?.extraTokens || 0) <= 0 
+                      ? 'text-rose-500' : 'text-amber-400'
+                    }`}>
+                      {Math.max(0, (user.company.plans.aiTokenUsage.standardTokens?.dailyLimit || 0) - (user.company.plans.aiTokenUsage.standardTokens?.dailyUsed || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        (user.company.plans.aiTokenUsage.standardTokens?.dailyUsed || 0) >= (user.company.plans.aiTokenUsage.standardTokens?.dailyLimit || 0)
+                        && (user.company.plans.aiTokenUsage.standardTokens?.extraTokens || 0) <= 0 
+                        ? 'bg-rose-500' : 'bg-indigo-500'
+                      }`}
+                      style={{ width: `${Math.min(100, ((user.company.plans.aiTokenUsage.standardTokens?.dailyUsed || 0) / (user.company.plans.aiTokenUsage.standardTokens?.dailyLimit || 1)) * 100)}%` }}
+                    ></div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )

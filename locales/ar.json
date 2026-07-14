@@ -667,7 +667,8 @@
       "updates": "التحديثات والتحسينات",
       "support": "دعم 24/7",
       "extra_order": "كل طلب اضافي {{price}} دج",
-      "unlimited_orders": "طلبات غير محدودة"
+      "unlimited_orders": "طلبات غير محدودة",
+      "ai_tokens": "رصيد ذكاء اصطناعي بقيمة {{amount}} توكن شهرياً"
     },
     "toast": {
       "attach_proof": "يرجى إرفاق وصل الدفع للمتابعة",
@@ -702,7 +703,10 @@
     "self_hosted_pricing_desc": "التسعير بناءً على الحجم والمتطلبات",
     "on_request": "حسب الطلب",
     "download_invoice": "تحميل الفاتورة",
-    "complete_payment": "إكمال الدفع"
+    "complete_payment": "إكمال الدفع",
+    "top_up": "شحن رصيد",
+    "points_bundle": "{{count}} طلبات",
+    "discount_percent": "خصم {{percent}}%"
   },
   "inventory": {
     "title": "إدارة المخزون",

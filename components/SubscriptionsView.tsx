@@ -31,6 +31,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '500 ألف' } },
       { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
     buttonTextKey: 'subscriptions.start_now',
@@ -54,6 +55,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '1 مليون' } },
       { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
     buttonTextKey: 'subscriptions.renew',
@@ -77,7 +79,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
-      { key: 'subscriptions.features.updates' }
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '2.5 مليون' } }
     ],
     buttonTextKey: 'subscriptions.expand',
     popular: false,
@@ -90,6 +92,13 @@ const POINT_BUNDLES = [
   { points: 500, price: 4500, labelKey: 'subscriptions.points_bundle', params: { count: 500 }, discount: 5 },
   { points: 1000, price: 8000, labelKey: 'subscriptions.points_bundle', params: { count: 1000 }, discount: 10 },
   { points: 5000, price: 35000, labelKey: 'subscriptions.points_bundle', params: { count: 5000 }, discount: 15 }
+];
+
+const AI_BUNDLES = [
+  { points: 1000000, price: 500, label: '1M', discount: 0 },
+  { points: 2000000, price: 950, label: '2M', discount: 5 },
+  { points: 5000000, price: 2250, label: '5M', discount: 10 },
+  { points: 10000000, price: 4250, label: '10M', discount: 15 }
 ];
 
 const SubscriptionsView: React.FC = () => {
@@ -160,7 +169,7 @@ const SubscriptionsView: React.FC = () => {
   const fetchInvoices = async () => {
     try {
       setLoadingInvoices(true);
-      const result = await invoiceService.getAllInvoices(user?.company?.id);
+      const result = await invoiceService.getAllInvoices((user as any)?.company?.id);
       if (result.success && result.invoices) {
         setInvoices(result.invoices);
       }
@@ -186,6 +195,9 @@ const SubscriptionsView: React.FC = () => {
     if (plan.id === 'payg') {
       setDuration(0);
       setSelectedPoints(100); // Default
+    } else if (plan.id === 'ai_topup') {
+      setDuration(0);
+      setSelectedPoints(1000000); // 1M tokens by default
     } else {
       setDuration(1);
       setSelectedPoints(null);
@@ -214,6 +226,15 @@ const SubscriptionsView: React.FC = () => {
         let price = bundle ? bundle.price : 0;
 
         // Apply Coupon logic if needed (usually coupons might apply to points too)
+        if (appliedCoupon) {
+          price = price * (1 - appliedCoupon.discount / 100);
+        }
+        setTotalPrice(Math.floor(price));
+      } else if (selectedPlan.id === 'ai_topup' && selectedPoints) {
+        // AI Top-up pricing logic
+        const bundle = AI_BUNDLES.find(b => b.points === selectedPoints);
+        let price = bundle ? bundle.price : 0;
+        
         if (appliedCoupon) {
           price = price * (1 - appliedCoupon.discount / 100);
         }
@@ -331,7 +352,8 @@ const SubscriptionsView: React.FC = () => {
         proof: proofFilename,
         paymentMethod: paymentMethod,
         currency: currency,
-        pointes: selectedPoints || 0,
+        pointes: selectedPlan.id === 'payg' ? (selectedPoints || 0) : 0,
+        credits: selectedPlan.id === 'ai_topup' ? (selectedPoints || 0) : 0, // Sending standard tokens as credits for now
         idCoupon: appliedCoupon ? appliedCoupon.id : null
       };
 
@@ -488,8 +510,8 @@ const SubscriptionsView: React.FC = () => {
         })}
       </div>
 
-      {/* 3. Special Solutions (Pay-as-you-go & Enterprise) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+      {/* 3. Special Solutions (Pay-as-you-go, AI Topup & Enterprise) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
         {/* Enhanced Pay-as-you-go Plan */}
         <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 rounded-lg p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all border-dashed">
@@ -532,6 +554,40 @@ const SubscriptionsView: React.FC = () => {
             onClick={() => handleOpenModal({ id: 'payg', nameKey: 'subscriptions.payg_title', price: '0' })}
             className="w-full mt-8 bg-slate-900 text-white py-4 rounded-md font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
             {t('subscriptions.payg_title')} ({t('subscriptions.top_up')})
+          </button>
+        </div>
+
+        {/* AI Extra Tokens Plan */}
+        <div className="bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-200 rounded-lg p-10 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all border-dashed">
+          <div className="absolute top-0 left-0 w-24 h-24 bg-indigo-500/5 rounded-br-full -ml-8 -mt-8 transition-transform group-hover:scale-125"></div>
+
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-100">
+                <i className="fa-solid fa-robot"></i>
+              </div>
+              <div>
+                <h4 className="text-2xl font-black text-slate-900">رصيد الذكاء الاصطناعي</h4>
+                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mt-1">لا تنتهي صلاحيته أبدًا</p>
+              </div>
+            </div>
+
+            <p className="text-slate-600 text-sm font-medium leading-relaxed">
+              تجاوزت الحد الشهري لخطتك؟ يمكنك شحن رصيد إضافي للذكاء الاصطناعي ومواصلة استخدام النماذج المتقدمة.
+            </p>
+
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg border border-indigo-100 flex items-center justify-between">
+              <div className="text-right">
+                <span className="block text-[10px] font-black text-slate-400 uppercase">1 مليون توكن معياري</span>
+                <span className="text-3xl font-black text-indigo-600 tracking-tighter">500 د.ج</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => handleOpenModal({ id: 'ai_topup', nameKey: 'رصيد الذكاء الاصطناعي', price: '0' })}
+            className="w-full mt-8 bg-indigo-600 text-white py-4 rounded-md font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200">
+            شراء رصيد إضافي
           </button>
         </div>
 
@@ -718,6 +774,22 @@ const SubscriptionsView: React.FC = () => {
                         >
                           <h5 className="text-xl font-black">{bundle.points}</h5>
                           <span className="text-[10px] font-bold uppercase">{t('subscriptions.points')}</span>
+                          <span className="block text-xs font-bold text-slate-900 mt-1">{formatCurrency(bundle.price).split(' ')[0]}</span>
+                          {bundle.discount > 0 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">{t('subscriptions.discount_percent', { percent: bundle.discount })}</span>}
+                        </button>
+                      ))
+                    ) : selectedPlan.id === 'ai_topup' ? (
+                      AI_BUNDLES.map((bundle) => (
+                        <button
+                          key={bundle.points}
+                          onClick={() => setSelectedPoints(bundle.points)}
+                          className={`p-4 rounded-lg border-2 transition-all text-center space-y-2 ${selectedPoints === bundle.points
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                            }`}
+                        >
+                          <h5 className="text-xl font-black">{bundle.label}</h5>
+                          <span className="text-[10px] font-bold uppercase">توكن</span>
                           <span className="block text-xs font-bold text-slate-900 mt-1">{formatCurrency(bundle.price).split(' ')[0]}</span>
                           {bundle.discount > 0 && <span className="block text-[9px] text-emerald-600 font-bold bg-emerald-50 rounded-sm px-1">{t('subscriptions.discount_percent', { percent: bundle.discount })}</span>}
                         </button>

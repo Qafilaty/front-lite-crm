@@ -175,6 +175,25 @@ export interface User {
       name?: string;
       dateExpiry?: string;
       pointes?: number;
+      aiTokenUsage?: {
+        standardTokens?: {
+          monthlyLimit?: number;
+          monthlyUsed?: number;
+          weeklyLimit?: number;
+          weeklyUsed?: number;
+          dailyLimit?: number;
+          dailyUsed?: number;
+          extraTokens?: number;
+        };
+        freeTokens?: {
+          monthlyLimit?: number;
+          monthlyUsed?: number;
+          weeklyLimit?: number;
+          weeklyUsed?: number;
+          dailyLimit?: number;
+          dailyUsed?: number;
+        };
+      };
     };
     affiliate?: {
       id: string;
@@ -334,7 +353,7 @@ export interface Invoice {
   discount: number;
   amount: number; // For UI display mostly
   currency: string;
-  status: 'paid' | 'pending' | 'failed';
+  status: 'confirmed' | 'pending' | 'failed';
   date: string; // createdAt or dateExpiry? Usually createdAt for history
   createdAt: string;
   paymentMethod: string;

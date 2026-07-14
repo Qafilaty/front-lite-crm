@@ -21,6 +21,25 @@ export const LOGIN = gql`
             name
             dateExpiry
             pointes
+            aiTokenUsage {
+              standardTokens {
+                monthlyLimit
+                monthlyUsed
+                weeklyLimit
+                weeklyUsed
+                dailyLimit
+                dailyUsed
+                extraTokens
+              }
+              freeTokens {
+                monthlyLimit
+                monthlyUsed
+                weeklyLimit
+                weeklyUsed
+                dailyLimit
+                dailyUsed
+              }
+            }
           }
           affiliate {
             id
@@ -50,6 +69,25 @@ export const GET_CURRENT_USER = gql`
           name
           dateExpiry
           pointes
+          aiTokenUsage {
+            standardTokens {
+              monthlyLimit
+              monthlyUsed
+              weeklyLimit
+              weeklyUsed
+              dailyLimit
+              dailyUsed
+              extraTokens
+            }
+            freeTokens {
+              monthlyLimit
+              monthlyUsed
+              weeklyLimit
+              weeklyUsed
+              dailyLimit
+              dailyUsed
+            }
+          }
         }
         affiliate {
           id

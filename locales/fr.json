@@ -578,7 +578,8 @@
       "updates": "Mises à jour & Améliorations",
       "support": "Support 24/7",
       "extra_order": "Chaque commande extra {{price}} DZD",
-      "unlimited_orders": "Commandes illimitées"
+      "unlimited_orders": "Commandes illimitées",
+      "ai_tokens": "Jetons IA : {{amount}} Jetons par mois"
     },
     "toast": {
       "attach_proof": "Veuillez joindre la preuve de paiement",
@@ -613,7 +614,10 @@
     "self_hosted_pricing_desc": "Tarification basée sur le volume et les besoins",
     "on_request": "Sur demande",
     "download_invoice": "Télécharger la facture",
-    "complete_payment": "Compléter le paiement"
+    "complete_payment": "Compléter le paiement",
+    "top_up": "Recharger",
+    "points_bundle": "{{count}} Commandes",
+    "discount_percent": "Remise de {{percent}}%"
   },
   "inventory": {
     "title": "Gestion des Stocks",

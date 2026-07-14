@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLazyQuery, useQuery, useMutation } from '@apollo/client';
 import { ASK_CRM_AGENT, GET_CRM_AGENT_HISTORY, CLEAR_CRM_AGENT_HISTORY, GET_CRM_AGENT_SUGGESTIONS } from '../../graphql/queries';
-import { Send, Bot, User, Sparkles, Loader2, Maximize, Minimize, ExternalLink, RotateCcw, Cpu } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, Maximize, Minimize, ExternalLink, RotateCcw, Cpu, Coins } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,16 +24,16 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
   const { i18n } = useTranslation();
 
   // Security check: Only allow specific emails
-  if (user?.email !== 'wilo@gmail.com' && user?.email !== 'hicham5lehouedj@gmail.com') {
+  if (user?.role !== 'admin' && user?.role !== 'owner') {
     return <Navigate to="/dashboard" replace />;
   }
 
   const [messages, setMessages] = useState<Message[]>([
-    { 
-      id: 'init-crm', 
-      type: 'agent', 
-      content: 'أهلاً بك يا سيدي! 👋 أنا المساعد الذكي الشامل الخاص بشركتك. أنا متصل مباشرة بقاعدة البيانات وأستطيع تزويدك بأدق التحليلات عن المبيعات، المرتجعات، المصاريف، وأداء المنتجات.\n\nكما يمكنني متابعة حالة طلب معين برقم الهاتف أو رقم التتبع، وإعطائك نظرة شاملة عن المخزون وشركات التوصيل المربوطة.\n\n**كيف يمكنني مساعدتك اليوم؟**', 
-      timestamp: new Date() 
+    {
+      id: 'init-crm',
+      type: 'agent',
+      content: 'أهلاً بك يا سيدي! 👋 أنا المساعد الذكي الشامل الخاص بشركتك. أنا متصل مباشرة بقاعدة البيانات وأستطيع تزويدك بأدق التحليلات عن المبيعات، المرتجعات، المصاريف، وأداء المنتجات.\n\nكما يمكنني متابعة حالة طلب معين برقم الهاتف أو رقم التتبع، وإعطائك نظرة شاملة عن المخزون وشركات التوصيل المربوطة.\n\n**كيف يمكنني مساعدتك اليوم؟**',
+      timestamp: new Date()
     }
   ]);
 
@@ -91,11 +91,11 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
   const [clearHistory, { loading: clearing }] = useMutation(CLEAR_CRM_AGENT_HISTORY, {
     onCompleted: () => {
       setMessages([
-        { 
-          id: 'init-crm', 
-          type: 'agent', 
-          content: 'أهلاً بك يا سيدي! 👋 أنا المساعد الذكي الشامل الخاص بشركتك. أنا متصل مباشرة بقاعدة البيانات وأستطيع تزويدك بأدق التحليلات عن المبيعات، المرتجعات، المصاريف، وأداء المنتجات.\n\nكما يمكنني متابعة حالة طلب معين برقم الهاتف أو رقم التتبع، وإعطائك نظرة شاملة عن المخزون وشركات التوصيل المربوطة.\n\n**كيف يمكنني مساعدتك اليوم؟**', 
-          timestamp: new Date() 
+        {
+          id: 'init-crm',
+          type: 'agent',
+          content: 'أهلاً بك يا سيدي! 👋 أنا المساعد الذكي الشامل الخاص بشركتك. أنا متصل مباشرة بقاعدة البيانات وأستطيع تزويدك بأدق التحليلات عن المبيعات، المرتجعات، المصاريف، وأداء المنتجات.\n\nكما يمكنني متابعة حالة طلب معين برقم الهاتف أو رقم التتبع، وإعطائك نظرة شاملة عن المخزون وشركات التوصيل المربوطة.\n\n**كيف يمكنني مساعدتك اليوم؟**',
+          timestamp: new Date()
         }
       ]);
     }
@@ -143,7 +143,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       content: msgToSend,
       timestamp: new Date()
     }]);
-    
+
     setInput('');
     setStreaming(true);
 
@@ -158,7 +158,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
     try {
       const token = localStorage.getItem('authToken');
       const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/graphql').replace('/graphql', '');
-      
+
       const response = await fetch(`${apiBaseUrl}/api/ai/chat-stream`, {
         method: 'POST',
         headers: {
@@ -176,7 +176,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
         try {
           const errData = await response.json();
           if (errData?.message) errText = errData.message;
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(errText);
       }
 
@@ -201,7 +201,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
               }
               try {
                 const chunk = JSON.parse(dataStr);
-                
+
                 if (chunk.type === 'error') {
                   accumulatedText = chunk.message;
                   finished = true;
@@ -225,8 +225,8 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       }
     } catch (error: any) {
       console.error("Error during streaming:", error);
-      setMessages(prev => prev.map(m => m.id === agentMsgId 
-        ? { ...m, content: `❌ عذراً، حدث خطأ أثناء الاتصال بالنظام: ${error.message || "يرجى التحقق من اتصالك بالإنترنت"}` } 
+      setMessages(prev => prev.map(m => m.id === agentMsgId
+        ? { ...m, content: `❌ عذراً، حدث خطأ أثناء الاتصال بالنظام: ${error.message || "يرجى التحقق من اتصالك بالإنترنت"}` }
         : m
       ));
     } finally {
@@ -253,10 +253,10 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
 
   const filteredSuggestions = input.trim() === ''
     ? suggestions
-    : pool.filter(s => 
-        s.toLowerCase().includes(input.toLowerCase()) && 
-        s.toLowerCase() !== input.toLowerCase()
-      );
+    : pool.filter(s =>
+      s.toLowerCase().includes(input.toLowerCase()) &&
+      s.toLowerCase() !== input.toLowerCase()
+    );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -266,12 +266,12 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       dir={i18n.dir()}
       className={`${(isFullscreen || isStandalone) ? 'h-[100dvh] w-screen fixed inset-0 z-[9999] rounded-none border-none' : 'h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] rounded-2xl w-full border border-slate-800'} flex flex-col bg-[#0F172A] text-slate-200 overflow-hidden relative shadow-2xl transition-all duration-300 ${i18n.language === 'ar' ? "font-['Tajawal']" : "font-['Roboto']"}`}
     >
-      
+
       {/* Premium Header */}
       <div className={`absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-indigo-950/90 border-indigo-500/10 to-transparent z-10 flex items-center px-6 border-b backdrop-blur-sm`}>
         <div className="flex items-center gap-4">
@@ -300,14 +300,81 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
               className="bg-transparent text-xs font-bold text-slate-300 outline-none border-none pr-6 cursor-pointer focus:ring-0 focus:text-white"
             >
               <option value="google/gemini-3.1-flash-lite" className="bg-[#0F172A] text-white">Google: Gemini 3.1 Flash Lite (افتراضي)</option>
-              <option value="openai/gpt-oss-20b:free" className="bg-[#0F172A] text-white">OpenAI: gpt-oss-20b (مجاني)</option>
               <option value="openai/gpt-oss-120b:free" className="bg-[#0F172A] text-white">OpenAI: gpt-oss-120b (مجاني)</option>
               <option value="openai/gpt-5-nano" className="bg-[#0F172A] text-white">OpenAI: GPT-5 Nano (اقتصادي)</option>
-              <option value="openai/gpt-4.1-nano" className="bg-[#0F172A] text-white">OpenAI: GPT-4.1 Nano (اقتصادي)</option>
               <option value="openai/gpt-4o-mini" className="bg-[#0F172A] text-white">OpenAI: GPT-4o-mini</option>
             </select>
           </div>
-          <button 
+          
+          {/* Tokens Remaining Indicator */}
+          {user?.company?.plans?.aiTokenUsage && (
+            <div className="hidden lg:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 h-10 transition-all select-none group relative">
+              <Coins className={`w-4 h-4 ${
+                (user.company.plans.aiTokenUsage.standardTokens.dailyUsed || 0) >= (user.company.plans.aiTokenUsage.standardTokens.dailyLimit || 0) 
+                && (user.company.plans.aiTokenUsage.standardTokens.extraTokens || 0) <= 0 
+                ? 'text-rose-500' : 'text-amber-400'
+              }`} />
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-slate-400 uppercase leading-none mt-1">الرصيد اليومي</span>
+                <span className="text-xs font-black text-white leading-none mt-0.5">
+                  {Math.max(0, (user.company.plans.aiTokenUsage.standardTokens.dailyLimit || 0) - (user.company.plans.aiTokenUsage.standardTokens.dailyUsed || 0)).toLocaleString()} توكن
+                </span>
+              </div>
+
+              {/* Hover Dropdown */}
+              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-4 pointer-events-none group-hover:pointer-events-auto">
+                <h4 className="text-sm font-black text-white mb-3">تفاصيل رصيد الذكاء الاصطناعي</h4>
+                
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">اليومي</span>
+                      <span className="text-white font-bold">{Math.max(0, (user.company.plans.aiTokenUsage.standardTokens.dailyLimit || 0) - (user.company.plans.aiTokenUsage.standardTokens.dailyUsed || 0)).toLocaleString()} / {(user.company.plans.aiTokenUsage.standardTokens.dailyLimit || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5">
+                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, ((user.company.plans.aiTokenUsage.standardTokens.dailyUsed || 0) / (user.company.plans.aiTokenUsage.standardTokens.dailyLimit || 1)) * 100)}%` }}></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">الأسبوعي</span>
+                      <span className="text-white font-bold">{Math.max(0, (user.company.plans.aiTokenUsage.standardTokens.weeklyLimit || 0) - (user.company.plans.aiTokenUsage.standardTokens.weeklyUsed || 0)).toLocaleString()} / {(user.company.plans.aiTokenUsage.standardTokens.weeklyLimit || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5">
+                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, ((user.company.plans.aiTokenUsage.standardTokens.weeklyUsed || 0) / (user.company.plans.aiTokenUsage.standardTokens.weeklyLimit || 1)) * 100)}%` }}></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">الشهري</span>
+                      <span className="text-white font-bold">{Math.max(0, (user.company.plans.aiTokenUsage.standardTokens.monthlyLimit || 0) - (user.company.plans.aiTokenUsage.standardTokens.monthlyUsed || 0)).toLocaleString()} / {(user.company.plans.aiTokenUsage.standardTokens.monthlyLimit || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5">
+                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, ((user.company.plans.aiTokenUsage.standardTokens.monthlyUsed || 0) / (user.company.plans.aiTokenUsage.standardTokens.monthlyLimit || 1)) * 100)}%` }}></div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-700">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-amber-400 font-bold">الرصيد الإضافي</span>
+                      <span className="text-amber-400 font-bold">{(user.company.plans.aiTokenUsage.standardTokens.extraTokens || 0).toLocaleString()} توكن</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => window.open('/dashboard/subscriptions', '_self')}
+                  className="w-full mt-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  شحن رصيد إضافي
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
             onClick={handleNewChat}
             disabled={clearing || historyLoading}
             className={`px-4 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 text-xs font-bold transition-all shadow-md shadow-indigo-600/10 active:scale-95 cursor-pointer ${(clearing || historyLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -317,7 +384,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
             <span className="hidden sm:inline">محادثة جديدة</span>
           </button>
           {!isStandalone && (
-            <button 
+            <button
               onClick={toggleFullscreen}
               className="w-10 h-10 rounded-xl bg-slate-800/50 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
               title={isFullscreen ? "تصغير" : "ملء الشاشة"}
@@ -326,7 +393,7 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
             </button>
           )}
           {!isStandalone && (
-            <button 
+            <button
               onClick={openInNewWindow}
               className="w-10 h-10 rounded-xl bg-slate-800/50 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
               title="فتح في صفحة منفصلة"
@@ -341,8 +408,8 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-28 pb-10 custom-scrollbar scroll-smooth" dir="rtl">
         <div className="max-w-4xl mx-auto space-y-8">
           {messages.map((msg) => (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id}
               className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {/* Agent Avatar */}
@@ -353,12 +420,11 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
               )}
 
               {/* Message Bubble */}
-              <div 
-                className={`max-w-[85%] md:max-w-[75%] rounded-3xl p-5 shadow-sm ${
-                  msg.type === 'user' 
-                    ? `bg-indigo-600 text-white rounded-tl-sm` 
+              <div
+                className={`max-w-[85%] md:max-w-[75%] rounded-3xl p-5 shadow-sm ${msg.type === 'user'
+                    ? `bg-indigo-600 text-white rounded-tl-sm`
                     : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tr-sm'
-                }`}
+                  }`}
               >
                 {msg.type === 'user' ? (
                   <p className="whitespace-pre-wrap leading-relaxed text-[15px] font-medium">{msg.content}</p>
@@ -509,8 +575,8 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
             disabled={!input.trim() || loading}
             className={`
               w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300
-              ${input.trim() && !loading 
-                ? `bg-indigo-600 shadow-indigo-600/30 hover:bg-indigo-500 text-white shadow-lg hover:scale-105 active:scale-95` 
+              ${input.trim() && !loading
+                ? `bg-indigo-600 shadow-indigo-600/30 hover:bg-indigo-500 text-white shadow-lg hover:scale-105 active:scale-95`
                 : 'bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed'}
             `}
           >
@@ -523,7 +589,8 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       </div>
 
       {/* Styles for Markdown */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .markdown-body table {
           display: block;
           width: 100%;
@@ -557,7 +624,7 @@ const parseAgentMessage = (content: string) => {
   const lines = content.split('\n');
   const thoughts: string[] = [];
   const bodyLines: string[] = [];
-  
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.includes('خطوة تفكير:')) {
@@ -566,16 +633,16 @@ const parseAgentMessage = (content: string) => {
       if (endIdx > startIdx) {
         let thought = trimmed.substring(startIdx, endIdx);
         thought = thought.replace(/^\s*|\s*$/g, '')
-                         .replace(/\.\.\.$/g, '')
-                         .replace(/\*$/g, '')
-                         .trim();
+          .replace(/\.\.\.$/g, '')
+          .replace(/\*$/g, '')
+          .trim();
         thoughts.push(thought);
       }
     } else {
       bodyLines.push(line);
     }
   }
-  
+
   return {
     thoughts,
     body: bodyLines.join('\n').trim()

@@ -581,7 +581,8 @@
       "updates": "Updates & Improvements",
       "support": "24/7 Support",
       "extra_order": "Each extra order {{price}} DZD",
-      "unlimited_orders": "Unlimited orders"
+      "unlimited_orders": "Unlimited orders",
+      "ai_tokens": "AI Tokens: {{amount}} Tokens monthly"
     },
     "toast": {
       "attach_proof": "Please attach payment proof to continue",
@@ -616,7 +617,10 @@
     "self_hosted_pricing_desc": "Pricing based on volume and requirements",
     "on_request": "On Request",
     "download_invoice": "Download Invoice",
-    "complete_payment": "Complete Payment"
+    "complete_payment": "Complete Payment",
+    "top_up": "Top-up",
+    "points_bundle": "{{count}} Orders",
+    "discount_percent": "{{percent}}% Discount"
   },
   "inventory": {
     "title": "Inventory Management",
