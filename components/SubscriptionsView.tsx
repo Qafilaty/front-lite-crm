@@ -31,7 +31,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
-      { key: 'subscriptions.features.ai_tokens', params: { amount: '500 ألف' } },
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '1 مليون' } },
       { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
     buttonTextKey: 'subscriptions.start_now',
@@ -55,7 +55,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
-      { key: 'subscriptions.features.ai_tokens', params: { amount: '1 مليون' } },
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '1.5 مليون' } },
       { key: 'subscriptions.features.extra_order', params: { price: 10 } }
     ],
     buttonTextKey: 'subscriptions.renew',
@@ -79,7 +79,7 @@ const MAIN_PLANS = [
       { key: 'subscriptions.features.sheets_linking' },
       { key: 'subscriptions.features.updates' },
       { key: 'subscriptions.features.support' },
-      { key: 'subscriptions.features.ai_tokens', params: { amount: '2.5 مليون' } }
+      { key: 'subscriptions.features.ai_tokens', params: { amount: '3 مليون' } }
     ],
     buttonTextKey: 'subscriptions.expand',
     popular: false,
