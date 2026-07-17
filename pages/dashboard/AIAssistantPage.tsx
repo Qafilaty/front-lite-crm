@@ -41,6 +41,10 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const LIMIT = 20;
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -72,17 +76,21 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
   };
 
   // 1. Fetch persistent chat history from MongoDB
-  const { loading: historyLoading } = useQuery(GET_CRM_AGENT_HISTORY, {
+  const { loading: historyLoading, fetchMore } = useQuery(GET_CRM_AGENT_HISTORY, {
+    variables: { limit: LIMIT, offset: 0 },
     fetchPolicy: 'network-only',
     onCompleted: (data) => {
-      if (data?.getCRMAgentHistory && data.getCRMAgentHistory.length > 0) {
-        const historyMsgs = data.getCRMAgentHistory.map((m: any, idx: number) => ({
+      const result = data?.getCRMAgentHistory;
+      if (result) {
+        setHasMore(result.hasMore);
+        const historyMsgs = result.messages.map((m: any, idx: number) => ({
           id: 'hist-' + idx + '-' + new Date(m.timestamp).getTime(),
           type: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent',
           content: m.content,
           timestamp: new Date(m.timestamp)
         }));
         setMessages(historyMsgs);
+        setOffset(LIMIT);
       }
     }
   });
@@ -98,12 +106,43 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
           timestamp: new Date()
         }
       ]);
+      setOffset(0);
+      setHasMore(false);
     }
   });
 
   const handleNewChat = () => {
     if (clearing) return;
     clearHistory();
+  };
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const { data } = await fetchMore({
+        variables: {
+          limit: LIMIT,
+          offset: offset
+        }
+      });
+      const result = data?.getCRMAgentHistory;
+      if (result) {
+        setHasMore(result.hasMore);
+        const newMsgs = result.messages.map((m: any, idx: number) => ({
+          id: 'hist-more-' + offset + '-' + idx + '-' + new Date(m.timestamp).getTime(),
+          type: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent',
+          content: m.content,
+          timestamp: new Date(m.timestamp)
+        }));
+        setMessages(prev => [...newMsgs, ...prev]);
+        setOffset(prev => prev + LIMIT);
+      }
+    } catch (err) {
+      console.error("Error loading more history:", err);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const [streaming, setStreaming] = useState(false);
@@ -407,6 +446,18 @@ const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ isStandalone = false 
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-28 pb-10 custom-scrollbar scroll-smooth" dir="rtl">
         <div className="max-w-4xl mx-auto space-y-8">
+          {hasMore && (
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="text-xs font-bold text-slate-400 hover:text-indigo-400 bg-slate-800 border border-slate-700 px-5 py-2 rounded-full transition-all hover:border-indigo-500/50 shadow-sm cursor-pointer flex items-center gap-2"
+              >
+                {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" /> : null}
+                <span>تحميل المزيد</span>
+              </button>
+            </div>
+          )}
           {messages.map((msg) => (
             <div
               key={msg.id}

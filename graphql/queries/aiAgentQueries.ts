@@ -7,11 +7,15 @@ export const ASK_CRM_AGENT = gql`
 `;
 
 export const GET_CRM_AGENT_HISTORY = gql`
-  query GetCRMAgentHistory {
-    getCRMAgentHistory {
-      role
-      content
-      timestamp
+  query GetCRMAgentHistory($limit: Int, $offset: Int) {
+    getCRMAgentHistory(limit: $limit, offset: $offset) {
+      messages {
+        role
+        content
+        timestamp
+      }
+      hasMore
+      totalCount
     }
   }
 `;
