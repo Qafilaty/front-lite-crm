@@ -568,7 +568,7 @@ const ShippingCarriersView: React.FC = () => {
                       )}
 
                       {/* Webhook Configuration Section */}
-                      {editModeCarrier && (editModeCarrier.webhookUrl || (editModeCarrier.availableDeliveryCompany?.name?.toLowerCase() === 'yalidine' || editModeCarrier.availableDeliveryCompany?.name?.toLowerCase() === 'guepex')) && (
+                      {editModeCarrier && (editModeCarrier.webhookUrl || (['yalidine', 'guepex', 'zimou express', 'zimouexpress'].includes(editModeCarrier.availableDeliveryCompany?.name?.toLowerCase() || ''))) && (
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                           <div className="flex items-center gap-2">
                             <Globe className="w-4 h-4 text-indigo-500" />
