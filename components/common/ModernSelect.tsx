@@ -4,7 +4,8 @@ import { twMerge } from 'tailwind-merge';
 
 export interface Option {
     value: string;
-    label: string;
+    label: React.ReactNode;
+    searchText?: string;
     color?: string;
 }
 
@@ -29,9 +30,10 @@ export const ModernSelect: React.FC<ModernSelectProps> = ({ value, onChange, opt
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    const filteredOptions = options.filter(opt =>
-        (opt.label || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredOptions = options.filter(opt => {
+        const textToSearch = opt.searchText || (typeof opt.label === 'string' ? opt.label : '');
+        return textToSearch.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

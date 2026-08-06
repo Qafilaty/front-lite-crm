@@ -44,7 +44,7 @@ export interface OrderItem {
 }
 
 export interface OrderLog {
-  status: OrderStatus;
+  status: OrderStatus | StatusOrderObject | any;
   color?: string;
   metadata?: any;
   date: string;
@@ -134,6 +134,7 @@ export interface Order {
     status?: string;
     trackingCode?: string;
   };
+  deliveryCompanyCenter?: any;
   confirmed?: User;
   updatedAtStatusDeliveryCompany?: string;
   isLocked?: boolean;

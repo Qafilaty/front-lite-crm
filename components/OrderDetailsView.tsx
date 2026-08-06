@@ -43,7 +43,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   order, onBack, onUpdate, onDelete, readOnly = false, trackingMode = false
 }) => {
   const { t, i18n } = useTranslation();
-  const [editedOrder, setEditedOrder] = useState<Order>(() => ({
+  const [editedOrder, setEditedOrder] = useState<Order & { deliveryCompanyId?: string; deliveryCenterId?: string; }>(() => ({
     ...order,
     customer: order.customer || order.fullName || '',
     state: typeof order.state === 'object' && order.state !== null ? (order.state as any).name : order.state,
@@ -430,7 +430,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       setEditedOrder(updated);
       onUpdate(updated);
       setIsAddLogOpen(false);
-      setNewLog({ status: updated.status, note: '' });
+      setNewLog({ status: updated.status, note: '', postponeDate: '' });
 
     } catch (error: any) {
       console.error(error);
@@ -482,7 +482,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       setEditedOrder(updated);
       onUpdate(updated);
       setPendingStatusChange(null);
-      setNewLog({ status: updated.status, note: '' });
+      setNewLog({ status: updated.status, note: '', postponeDate: '' });
 
     } catch (error) {
       console.error("Postpone Error", error);
@@ -961,14 +961,23 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_center')}</label>
                   <ModernSelect
-                    disabled={readOnly || !editedOrder.deliveryCompanyId || loadingCenters}
-                    value={editedOrder.deliveryCenterId}
+                    disabled={readOnly || !(editedOrder as any).deliveryCompanyId || loadingCenters}
+                    value={(editedOrder as any).deliveryCenterId}
                     onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCenterId: val })}
                     options={[
                       { value: '', label: loadingCenters ? t('orders.create_modal.loading') : t('orders.details.select_center') },
                       ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
                         value: c.id,
-                        label: `${c.name} (${c.commune || c.communeAr})`
+                        label: c.partner ? (
+                          <div className="flex items-center gap-2">
+                            {c.partner.logo && <img src={c.partner.logo} alt={c.partner.name} className="w-5 h-5 object-contain rounded-full border border-slate-200" />}
+                            <div className="flex flex-col items-start leading-tight">
+                              <span className="text-xs font-bold text-slate-700">{c.address || c.name}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">{c.commune || c.communeAr} • {c.partner.name}</span>
+                            </div>
+                          </div>
+                        ) : `${c.name} (${c.commune || c.communeAr})`,
+                        searchText: `${c.name} ${c.address || ''} ${c.commune || c.communeAr} ${c.partner?.name || ''}`
                       })) || [])
                     ]}
                     placeholder={t('orders.details.select_center')}

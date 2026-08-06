@@ -81,12 +81,16 @@ export const GET_DELIVERY_COMPANY_CENTER = gql`
       id
       stateName
       stateCode
-      communes {
+        communes {
         id
         name
         address
         commune
         codeCenter
+        partner {
+          name
+          logo
+        }
       }
     }
   }

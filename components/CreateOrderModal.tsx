@@ -55,6 +55,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
         quantity: number;
         price: number;
         sku: string;
+        storageLocation?: string;
     }[]>([]);
 
     const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
@@ -475,7 +476,16 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                                             { value: '', label: loadingCenters ? t('orders.confirmation.create_modal.loading') : t('orders.confirmation.create_modal.select_center') },
                                             ...(centersData?.allDeliveryCompanyCenter?.communes?.map((c: any) => ({
                                                 value: c.id,
-                                                label: `${c.name} (${c.commune || c.communeAr})`
+                                                label: c.partner ? (
+                                                    <div className="flex items-center gap-2">
+                                                        {c.partner.logo && <img src={c.partner.logo} alt={c.partner.name} className="w-5 h-5 object-contain rounded-full border border-slate-200" />}
+                                                        <div className="flex flex-col items-start leading-tight">
+                                                            <span className="text-xs font-bold text-slate-700">{c.address || c.name}</span>
+                                                            <span className="text-[10px] text-slate-400 font-medium">{c.commune || c.communeAr} • {c.partner.name}</span>
+                                                        </div>
+                                                    </div>
+                                                ) : `${c.name} (${c.commune || c.communeAr})`,
+                                                searchText: `${c.name} ${c.address || ''} ${c.commune || c.communeAr} ${c.partner?.name || ''}`
                                             })) || [])
                                         ]}
                                         placeholder={t('orders.confirmation.create_modal.select_center')}
