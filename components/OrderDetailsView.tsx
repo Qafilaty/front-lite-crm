@@ -12,7 +12,9 @@ import {
   ChevronDown,
   FileSpreadsheet,
   UserCheck,
-  Activity
+  Activity,
+  Info,
+  Sparkles
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
@@ -24,7 +26,7 @@ import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
-import { GET_ALL_DELIVERY_PRICE_COMPANY } from '../graphql/queries/deliveryQueries';
+import { GET_ALL_DELIVERY_PRICE_COMPANY, ZIMOU_DELIVERY_PRICE_COMPARATOR } from '../graphql/queries/deliveryQueries';
 import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
 import { ModernSelect } from './common';
 import { useTranslation } from 'react-i18next';
@@ -65,6 +67,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   // Delete States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAllRelayPoints, setShowAllRelayPoints] = useState(false);
 
   // Send to Delivery States
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
@@ -94,6 +97,56 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const { data: deliveryCompaniesData } = useQuery(GET_ALL_DELIVERY_COMPANIES);
   const [getCenters, { data: centersData, loading: loadingCenters }] = useLazyQuery(GET_DELIVERY_COMPANY_CENTER);
+
+  // Zimou Express Delivery Price Comparator Query
+  const currentStateName = typeof editedOrder.state === 'object' && editedOrder.state !== null
+    ? (editedOrder.state as any).name
+    : (editedOrder.state || '');
+
+  const currentCommuneName = editedOrder.city || editedOrder.address || '';
+
+  const isZimouSelected = useMemo(() => {
+    const targetId = editedOrder.deliveryCompanyId || (order?.deliveryCompany as any)?.idDeliveryCompany || (order?.deliveryCompany as any)?.deliveryCompany?.id;
+    if (targetId && deliveryCompaniesData?.allDeliveryCompany) {
+      const selectedCompany = deliveryCompaniesData.allDeliveryCompany.find((c: any) => c.id === targetId || c._id === targetId);
+      if (selectedCompany) {
+        const name = selectedCompany.name || '';
+        const origName = selectedCompany.originalName || '';
+        const availName = selectedCompany.availableDeliveryCompany?.name || '';
+        return /zimou/i.test(name) || /zimou/i.test(origName) || /zimou/i.test(availName);
+      }
+    }
+    const compName = (order?.deliveryCompany as any)?.deliveryCompany?.name || (order?.deliveryCompany as any)?.deliveryCompany?.originalName || '';
+    return /zimou/i.test(compName);
+  }, [editedOrder.deliveryCompanyId, order, deliveryCompaniesData]);
+
+  const { data: zimouComparatorData, loading: loadingZimouComparator, refetch: refetchZimouComparator } = useQuery(
+    ZIMOU_DELIVERY_PRICE_COMPARATOR,
+    {
+      variables: {
+        orderId: (editedOrder as any).id || (editedOrder as any)._id || undefined,
+        wilaya: currentStateName,
+        commune: currentCommuneName,
+        idDeliveryCompany: editedOrder.deliveryCompanyId || undefined
+      },
+      skip: !isZimouSelected || !currentStateName || !currentCommuneName,
+      fetchPolicy: 'cache-and-network'
+    }
+  );
+
+  const zimouResult = zimouComparatorData?.zimouDeliveryPriceComparator;
+  const zimouPrices = zimouResult?.prices || [];
+  const zimouHomeOption = zimouPrices.find((p: any) => p.delivery_type === 'Express');
+  const zimouHomePrice = zimouHomeOption ? zimouHomeOption.delivery_price : null;
+
+  const zimouFlexibleOption = zimouPrices.find((p: any) => p.delivery_type === 'Flexible');
+  const zimouFlexiblePrice = zimouFlexibleOption ? zimouFlexibleOption.delivery_price : null;
+
+  const zimouDeskOptions = zimouPrices.filter((p: any) => p.delivery_type && p.delivery_type.toLowerCase().startsWith('point relai'));
+  const zimouDeskPrice = zimouDeskOptions.length > 0 ? zimouDeskOptions[0].delivery_price : null;
+
+  const targetZimouPrice = editedOrder.deliveryType === 'inDesk' ? zimouDeskPrice : zimouHomePrice;
+  const isPriceDifferent = targetZimouPrice !== null && targetZimouPrice !== undefined && Number(editedOrder.shippingCost) !== Number(targetZimouPrice);
 
   const formatLogDate = (date: any) => {
     if (!date) return '-';
@@ -940,24 +993,26 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </button>
             </div>
 
-            {editedOrder.deliveryType === "inDesk" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 mt-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_company')}</label>
-                  <ModernSelect
-                    disabled={readOnly}
-                    value={editedOrder.deliveryCompanyId}
-                    onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
-                    options={[
-                      { value: '', label: t('orders.details.select_company') },
-                      ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
-                        value: c.id,
-                        label: c.name
-                      })) || [])
-                    ]}
-                    placeholder={t('orders.details.select_company')}
-                  />
-                </div>
+            {/* Delivery Company & Center Selector */}
+            <div className={`grid grid-cols-1 ${editedOrder.deliveryType === "inDesk" ? 'sm:grid-cols-2' : ''} gap-4 animate-in slide-in-from-top-2 mt-4`}>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_company')}</label>
+                <ModernSelect
+                  disabled={readOnly}
+                  value={editedOrder.deliveryCompanyId}
+                  onChange={(val) => setEditedOrder({ ...editedOrder, deliveryCompanyId: val, deliveryCenterId: '' })}
+                  options={[
+                    { value: '', label: t('orders.details.select_company') },
+                    ...(deliveryCompaniesData?.allDeliveryCompany?.map((c: any) => ({
+                      value: c.id,
+                      label: c.name
+                    })) || [])
+                  ]}
+                  placeholder={t('orders.details.select_company')}
+                />
+              </div>
+
+              {editedOrder.deliveryType === "inDesk" && (
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('orders.details.delivery_center')}</label>
                   <ModernSelect
@@ -983,8 +1038,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     placeholder={t('orders.details.select_center')}
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Items / Cart Management Card - Redesigned */}
@@ -1316,6 +1371,255 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
 
               </div>
+
+              {/* Real Zimou Express Delivery Price Note / Comparator Section */}
+              {(isZimouSelected && currentStateName && currentCommuneName) && (
+                <div className="mt-6 pt-5 border-t border-slate-200/80">
+                  <div className="rounded-2xl border border-indigo-100/80 bg-indigo-50/30 p-4 transition-all" dir={i18n.dir()}>
+                    
+                    {/* Header Row: Title & Location & Refresh Button */}
+                    <div className="flex items-center justify-between pb-3 border-b border-indigo-100/60">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                          <Truck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-800">
+                              سعر التوصيل الفعلي لدى Zimou Express
+                            </span>
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 font-mono uppercase">
+                              Live API
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
+                            {zimouResult?.wilayaName || currentStateName} • {zimouResult?.communeName || currentCommuneName}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => refetchZimouComparator()}
+                        disabled={loadingZimouComparator}
+                        className="px-2.5 py-1 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-[10px] font-bold"
+                        title="تحديث التسعيرة"
+                      >
+                        <RefreshCcw className={`w-3.5 h-3.5 ${loadingZimouComparator ? 'animate-spin text-indigo-600' : ''}`} />
+                        <span>تحديث التسعيرة</span>
+                      </button>
+                    </div>
+
+                    {/* Body Content */}
+                    <div className="pt-3">
+                      {loadingZimouComparator ? (
+                        <div className="flex items-center justify-center gap-2 py-3 text-indigo-600 text-xs font-bold">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>جاري جلب الأسعار الحقيقية من شركة التوصيل...</span>
+                        </div>
+                      ) : zimouResult?.success ? (
+                        <div className="space-y-3">
+                          
+                          {/* Home Delivery Section */}
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                              خيارات التوصيل للمنزل (Home Delivery)
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {/* Express Home Delivery Card */}
+                              {zimouHomePrice !== null && (
+                                <div
+                                  onClick={() => {
+                                    if (!readOnly && zimouHomePrice !== null && zimouHomePrice !== undefined) {
+                                      setEditedOrder({ ...editedOrder, deliveryType: 'home', shippingCost: Number(zimouHomePrice) });
+                                      toast.success(`تم اختيار Express وتحديد سعر التوصيل ${zimouHomePrice} ${t('common.currency')}`);
+                                    }
+                                  }}
+                                  className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer hover:border-indigo-400 hover:shadow-sm ${
+                                    editedOrder.deliveryType === 'home' && Number(editedOrder.shippingCost) === Number(zimouHomePrice)
+                                      ? 'bg-white border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
+                                      : 'bg-white/70 border-slate-200'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div className={`p-2 rounded-lg ${editedOrder.deliveryType === 'home' && Number(editedOrder.shippingCost) === Number(zimouHomePrice) ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                                      <Home className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-black text-slate-700">توصيل سريع للمنزل</span>
+                                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-mono uppercase">
+                                          Express
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 font-medium">تسليم مباشر للعنوان</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-left">
+                                    <span className="text-sm font-black text-slate-800 font-mono">
+                                      {zimouHomePrice} <span className="text-[10px] font-bold text-slate-500">{t('common.currency')}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Flexible Home Delivery Card */}
+                              {zimouFlexiblePrice !== null && (
+                                <div
+                                  onClick={() => {
+                                    if (!readOnly && zimouFlexiblePrice !== null && zimouFlexiblePrice !== undefined) {
+                                      setEditedOrder({ ...editedOrder, deliveryType: 'home', shippingCost: Number(zimouFlexiblePrice) });
+                                      toast.success(`تم اختيار Flexible وتحديد سعر التوصيل ${zimouFlexiblePrice} ${t('common.currency')}`);
+                                    }
+                                  }}
+                                  className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer hover:border-indigo-400 hover:shadow-sm ${
+                                    editedOrder.deliveryType === 'home' && Number(editedOrder.shippingCost) === Number(zimouFlexiblePrice)
+                                      ? 'bg-white border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
+                                      : 'bg-white/70 border-slate-200'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div className={`p-2 rounded-lg ${editedOrder.deliveryType === 'home' && Number(editedOrder.shippingCost) === Number(zimouFlexiblePrice) ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                                      <Truck className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-black text-slate-700">توصيل مرن للمنزل</span>
+                                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-mono uppercase">
+                                          Flexible
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 font-medium">تسليم مرن بتكلفة أقل</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-left">
+                                    <span className="text-sm font-black text-slate-800 font-mono">
+                                      {zimouFlexiblePrice} <span className="text-[10px] font-bold text-slate-500">{t('common.currency')}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Point Relais / Desk Section */}
+                          {zimouDeskOptions.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-indigo-100/60">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                    نقاط الاستلام والمكاتب المتاحة (Point Relais)
+                                  </span>
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-mono">
+                                    {zimouDeskOptions.length} نقطة
+                                  </span>
+                                </div>
+
+                                {zimouDeskOptions.length > 3 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAllRelayPoints(!showAllRelayPoints)}
+                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
+                                  >
+                                    <span>{showAllRelayPoints ? 'عرض أقل' : `عرض جميع النقاط (${zimouDeskOptions.length})`}</span>
+                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllRelayPoints ? 'rotate-180' : ''}`} />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                {(showAllRelayPoints ? zimouDeskOptions : zimouDeskOptions.slice(0, 3)).map((item: any, idx: number) => {
+                                  const rawType = item.delivery_type || '';
+                                  const cleanTitle = rawType.replace(/^Point\s*relai\s*\(/i, '').replace(/\)$/, '').trim();
+                                  const isSelected = editedOrder.deliveryType === 'inDesk' && Number(editedOrder.shippingCost) === Number(item.delivery_price);
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      onClick={() => {
+                                        if (!readOnly) {
+                                          setEditedOrder({ ...editedOrder, deliveryType: 'inDesk', shippingCost: Number(item.delivery_price) });
+                                          toast.success(`تم اختيار ${cleanTitle.split(':')[0] || 'نقطة الاستلام'} وتحديد سعر ${item.delivery_price} ${t('common.currency')}`);
+                                        }
+                                      }}
+                                      className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all cursor-pointer hover:border-indigo-400 hover:shadow-sm ${
+                                        isSelected
+                                          ? 'bg-white border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
+                                          : 'bg-white/70 border-slate-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isSelected ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                                          <Building2 className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <span className="text-[11px] font-black text-slate-700 block truncate" title={cleanTitle}>
+                                            {cleanTitle}
+                                          </span>
+                                          <span className="text-[9px] text-slate-400 font-medium block">
+                                            نقطة استلام / مكتب
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-baseline justify-between pt-1.5 border-t border-slate-100">
+                                        <span className="text-[9px] font-bold text-indigo-600 font-mono">
+                                          {item.paid_by_promo ? 'عرض ترويجي' : 'توصيل للمكتب'}
+                                        </span>
+                                        <span className="text-xs font-black text-slate-800 font-mono">
+                                          {item.delivery_price} <span className="text-[9px] font-bold text-slate-500">{t('common.currency')}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notice & Quick Action Banner */}
+                          {isPriceDifferent ? (
+                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm mt-3">
+                              <div className="flex items-center gap-2 text-amber-900 text-xs font-bold">
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span>
+                                  السعر المحدد في الطلب ({editedOrder.shippingCost} {t('common.currency')}) يختلف عن تسعيرة Zimou Express المتاحة
+                                </span>
+                              </div>
+                              {!readOnly && targetZimouPrice !== null && targetZimouPrice !== undefined && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditedOrder({ ...editedOrder, shippingCost: Number(targetZimouPrice) });
+                                    toast.success(`تم تحديث سعر التوصيل إلى ${targetZimouPrice} ${t('common.currency')}`);
+                                  }}
+                                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-black tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 shrink-0"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <span>تطبيق السعر الفعلي ({targetZimouPrice} {t('common.currency')})</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : targetZimouPrice !== null && targetZimouPrice !== undefined ? (
+                            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 mt-3">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>سعر التوصيل المحدد مطابق لتسعيرة Zimou Express الرسمية ({editedOrder.shippingCost} {t('common.currency')})</span>
+                            </div>
+                          ) : null}
+
+                        </div>
+                      ) : (
+                        <div className="py-2 flex items-center gap-2 text-xs font-bold text-slate-500">
+                          <Info className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>{zimouResult?.message || 'لم يتم العثور على تسعيرة لهذه البلدية'}</span>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
