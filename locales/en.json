@@ -931,7 +931,10 @@
       "phone_required": "Phone is required",
       "email_invalid": "Invalid email address",
       "phone_invalid": "Invalid phone number (10 digits)",
-      "password_short": "Password too short (min 6 characters)"
+      "password_short": "Password too short (min 6 characters)",
+      "phone_already_exist": "Phone number already exists",
+      "email_already_exist": "Email already exists",
+      "account_already_exist": "Account already exists"
     }
   },
   "shipping": {

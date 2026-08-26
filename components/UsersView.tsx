@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next';
 interface UsersViewProps {
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-  onAdd: (userData: any) => Promise<boolean>;
-  onUpdate: (id: string, userData: any) => Promise<boolean>;
+  onAdd: (userData: any) => Promise<boolean | { success: boolean; error?: string; code?: string }>;
+  onUpdate: (id: string, userData: any) => Promise<boolean | { success: boolean; error?: string; code?: string }>;
   onDelete: (id: string) => Promise<boolean>;
   onToggleActivation: (id: string, activation: boolean) => Promise<boolean>;
   isLoading?: boolean;
@@ -38,35 +38,39 @@ const UsersView: React.FC<UsersViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [editingUser, setEditingUser] = useState<any>(null);
-
-  // Delete Modal States
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const [newUser, setNewUser] = useState<{ name: string; email: string; phone: string; role: 'admin' | 'confirmed' | 'supervisor'; password: string; orderPrice?: number; teamIds?: string[] }>({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'confirmed',
-    password: '',
-    orderPrice: 0,
-    teamIds: []
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-
-  // Assignment Modal States
   const [assignmentUser, setAssignmentUser] = useState<User | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('');
   const [isSavingAssignments, setIsSavingAssignments] = useState(false);
 
-  // Queries & Mutations
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'confirmed' as User['role'],
+    password: '',
+    orderPrice: 0,
+    teamIds: [] as string[]
+  });
+
+  const [editingUser, setEditingUser] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: User['role'];
+    password?: string;
+    orderPrice?: number;
+    teamIds?: string[];
+  } | null>(null);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const { data: queueData, refetch: refetchQueue } = useQuery(GET_ALL_STAFF_QUEUE);
   const { data: productsData } = useQuery(GET_ALL_PRODUCTS);
   const [updateAssignments] = useMutation(UPDATE_PRODUCT_ASSIGNMENTS_STAFF_QUEUE);
@@ -111,7 +115,7 @@ const UsersView: React.FC<UsersViewProps> = ({
     setErrors({});
     setIsSubmitting(true);
     try {
-      const success = await onAdd({
+      const res: any = await onAdd({
         name: newUser.name,
         email: newUser.email,
         phone: newUser.phone,
@@ -121,12 +125,25 @@ const UsersView: React.FC<UsersViewProps> = ({
         teamIds: newUser.role === 'supervisor' ? newUser.teamIds : undefined
       });
 
-      if (success) {
+      const isSuccess = typeof res === 'boolean' ? res : res?.success;
+
+      if (isSuccess) {
         setShowModal(false);
-        setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0 });
+        setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0, teamIds: [] });
         toast.success(t('users.toasts.add_success'));
       } else {
-        toast.error(t('users.toasts.add_failed'));
+        const errorCode = typeof res === 'object' ? res?.code : undefined;
+        const errorMessage = typeof res === 'object' ? res?.error : undefined;
+
+        if (errorCode === 'PHONE_ALREADY_EXIST' || errorMessage?.includes('phone already exists')) {
+          toast.error(t('users.errors.phone_already_exist', 'رقم الهاتف مسجل مسبقاً'));
+        } else if (errorCode === 'EMAIL_ALREADY_EXIST' || errorMessage?.includes('email already exists')) {
+          toast.error(t('users.errors.email_already_exist', 'البريد الإلكتروني مسجل مسبقاً'));
+        } else if (errorCode === 'ACCOUNT_ALREADY_EXIST' || errorMessage?.includes('account already exists')) {
+          toast.error(t('users.errors.account_already_exist', 'الحساب مسجل مسبقاً'));
+        } else {
+          toast.error(errorMessage || t('users.toasts.add_failed'));
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -198,14 +215,26 @@ const UsersView: React.FC<UsersViewProps> = ({
         payload.password = editingUser.password;
       }
 
-      const success = await onUpdate(editingUser.id, payload);
+      const res: any = await onUpdate(editingUser.id, payload);
+      const isSuccess = typeof res === 'boolean' ? res : res?.success;
 
-      if (success) {
+      if (isSuccess) {
         setShowModal(false);
         setEditingUser(null);
         toast.success(t('users.toasts.update_success'));
       } else {
-        toast.error(t('users.toasts.update_failed'));
+        const errorCode = typeof res === 'object' ? res?.code : undefined;
+        const errorMessage = typeof res === 'object' ? res?.error : undefined;
+
+        if (errorCode === 'PHONE_ALREADY_EXIST' || errorMessage?.includes('phone already exists')) {
+          toast.error(t('users.errors.phone_already_exist', 'رقم الهاتف مسجل مسبقاً'));
+        } else if (errorCode === 'EMAIL_ALREADY_EXIST' || errorMessage?.includes('email already exists')) {
+          toast.error(t('users.errors.email_already_exist', 'البريد الإلكتروني مسجل مسبقاً'));
+        } else if (errorCode === 'ACCOUNT_ALREADY_EXIST' || errorMessage?.includes('account already exists')) {
+          toast.error(t('users.errors.account_already_exist', 'الحساب مسجل مسبقاً'));
+        } else {
+          toast.error(errorMessage || t('users.toasts.update_failed'));
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -229,7 +258,7 @@ const UsersView: React.FC<UsersViewProps> = ({
   const openAddModal = () => {
     setModalMode('add');
     setEditingUser(null);
-    setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0 });
+    setNewUser({ name: '', email: '', phone: '', role: 'confirmed', password: '', orderPrice: 0, teamIds: [] });
     setShowModal(true);
   };
 
@@ -787,7 +816,7 @@ const UsersView: React.FC<UsersViewProps> = ({
                       disabled={isSavingAssignments}
                       className="px-8 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black shadow-md hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
                     >
-                      {isSavingAssignments ? <LoadingSpinner size="14" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {isSavingAssignments ? <LoadingSpinner size={14} /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                       {t('common.save')}
                     </button>
                   </div>

@@ -48,12 +48,12 @@ const UsersPage: React.FC = () => {
 
       if (result.success) {
         await loadUsers(); // Reload users
-        return true;
+        return { success: true };
       }
-      return false;
-    } catch (error) {
+      return { success: false, error: result.error, code: result.code };
+    } catch (error: any) {
       console.error('Error adding user:', error);
-      return false;
+      return { success: false, error: error.message };
     }
   };
 
@@ -63,12 +63,12 @@ const UsersPage: React.FC = () => {
 
       if (result.success) {
         await loadUsers(); // Reload users
-        return true;
+        return { success: true };
       }
-      return false;
-    } catch (error) {
+      return { success: false, error: result.error, code: result.code };
+    } catch (error: any) {
       console.error('Error updating user:', error);
-      return false;
+      return { success: false, error: error.message };
     }
   };
 

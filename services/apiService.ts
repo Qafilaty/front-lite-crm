@@ -239,7 +239,10 @@ export const userService = {
       return { success: true, user: data?.createUser };
     } catch (error: any) {
       console.error('Create user error:', error);
-      return { success: false, error: error.message };
+      const graphQLError = error?.graphQLErrors?.[0] || error?.networkError?.result?.errors?.[0];
+      const message = graphQLError?.message || error.message;
+      const code = graphQLError?.extensions?.code;
+      return { success: false, error: message, code };
     }
   },
 
@@ -252,7 +255,10 @@ export const userService = {
       return { success: data?.updateUser?.status, user: data?.updateUser?.data };
     } catch (error: any) {
       console.error('Update user error:', error);
-      return { success: false, error: error.message };
+      const graphQLError = error?.graphQLErrors?.[0] || error?.networkError?.result?.errors?.[0];
+      const message = graphQLError?.message || error.message;
+      const code = graphQLError?.extensions?.code;
+      return { success: false, error: message, code };
     }
   },
 

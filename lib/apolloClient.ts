@@ -52,14 +52,24 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
   if (networkError) {
     console.error(`[Network error]: ${networkError}`);
 
+    const serverError = networkError as any;
+
     // Handle authentication errors (401) separately
-    if ('statusCode' in networkError && networkError.statusCode === 401) {
+    if (serverError?.statusCode === 401) {
       localStorage.removeItem('authToken');
       window.location.href = '/login';
       return;
     }
 
-    // Dispatch global network error event for other errors (CORS, 404, Offline)
+    // Do not trigger global full-screen network error for GraphQL responses or HTTP client/validation errors (400, 403, 404, 409, 422)
+    const hasGraphQLErrors = Boolean(serverError?.result?.errors && serverError.result.errors.length > 0);
+    const isClientOrValidationError = serverError?.statusCode && [400, 403, 404, 409, 422].includes(serverError.statusCode);
+
+    if (hasGraphQLErrors || isClientOrValidationError) {
+      return;
+    }
+
+    // Dispatch global network error event for actual server/connectivity issues (CORS, 502/503/504, Offline, Failed to fetch)
     window.dispatchEvent(new CustomEvent('feature:network-error', {
       detail: {
         message: networkError.message,

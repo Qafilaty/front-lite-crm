@@ -844,7 +844,10 @@
       "phone_required": "Le téléphone est requis",
       "email_invalid": "Adresse email invalide",
       "phone_invalid": "Numéro de téléphone invalide (10 chiffres)",
-      "password_short": "Mot de passe trop court (min 6 caractères)"
+      "password_short": "Mot de passe trop court (min 6 caractères)",
+      "phone_already_exist": "Le numéro de téléphone existe déjà",
+      "email_already_exist": "L'adresse e-mail existe déjà",
+      "account_already_exist": "Le compte existe déjà"
     }
   },
   "shipping": {

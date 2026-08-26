@@ -933,7 +933,10 @@
       "phone_required": "الهاتف مطلوب",
       "email_invalid": "بريد إلكتروني غير صالح",
       "phone_invalid": "رقم الهاتف غير صالح (10 أرقام)",
-      "password_short": "كلمة المرور قصيرة (6 أحرف على الأقل)"
+      "password_short": "كلمة المرور قصيرة (6 أحرف على الأقل)",
+      "phone_already_exist": "رقم الهاتف مسجل مسبقاً",
+      "email_already_exist": "البريد الإلكتروني مسجل مسبقاً",
+      "account_already_exist": "الحساب مسجل مسبقاً"
     }
   },
   "shipping": {
