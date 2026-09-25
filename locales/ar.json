@@ -970,6 +970,9 @@
       "placeholder_wilaya": "اختر الولاية...",
       "field_required": "حقل {{field}} مطلوب",
       "all_fields_required": "يرجى ملء جميع الحقول المطلوبة",
+      "display_name": "اسم العرض",
+      "display_name_hint": "اسم مميز لهذا الحساب، مفيد عند ربط أكثر من حساب لنفس شركة التوصيل",
+      "display_name_required": "اسم العرض مطلوب",
       "company_data_not_found": "لم يتم العثور على بيانات الشركة",
       "update_success": "تم تحديث الإعدادات بنجاح",
       "link_success": "تم ربط شركة التوصيل بنجاح",
@@ -1060,6 +1063,7 @@
       "price": "السعر",
       "total_price": "السعر الإجمالي",
       "delivery_type": "نوع التوصيل",
+      "delivery_price": "سعر التوصيل",
       "note": "ملاحظة"
     },
     "actions": {

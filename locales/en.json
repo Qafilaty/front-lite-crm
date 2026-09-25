@@ -968,6 +968,9 @@
       "placeholder_wilaya": "Select Wilaya...",
       "field_required": "{{field}} field is required",
       "all_fields_required": "Please fill all required fields",
+      "display_name": "Display Name",
+      "display_name_hint": "A distinct name for this account, useful when linking several accounts of the same carrier",
+      "display_name_required": "Display name is required",
       "company_data_not_found": "Company data not found",
       "update_success": "Settings updated successfully",
       "link_success": "Delivery company linked successfully",
@@ -1058,6 +1061,7 @@
       "price": "Price",
       "total_price": "Total Price",
       "delivery_type": "Delivery Type",
+      "delivery_price": "Delivery Price",
       "note": "Note"
     },
     "actions": {

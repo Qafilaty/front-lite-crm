@@ -491,6 +491,7 @@ export const IntegrationSettings: React.FC = () => {
         { id: 'products.price', label: t('google_sheets.mapping.price'), Icon: Box, required: false },
         { id: 'totalPrice', label: t('google_sheets.mapping.total_price'), Icon: Box, required: false },
         { id: 'deliveryType', label: t('google_sheets.mapping.delivery_type'), Icon: Box, required: false },
+        { id: 'deliveryPrice', label: t('google_sheets.mapping.delivery_price'), Icon: Box, required: false },
         { id: 'note', label: t('google_sheets.mapping.note'), Icon: Box, required: false },
     ];
 

@@ -53,7 +53,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     weight: order.weight || 0,
     deliveryCompanyId: order.deliveryCompany?.deliveryCompany?.id || '',
     deliveryCenterId: order.deliveryCompanyCenter?.id || '', // Using id to match dropdown values
-    shippingCost: order.deliveryPrice || 0
+    shippingCost: order.deliveryPrice || 0,
+    storageLocation: order.storageLocation || 'SHOP'
   }));
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
 

@@ -881,6 +881,9 @@
       "placeholder_wilaya": "Choisir Wilaya...",
       "field_required": "Le champ {{field}} est requis",
       "all_fields_required": "Veuillez remplir tous les champs requis",
+      "display_name": "Nom d'affichage",
+      "display_name_hint": "Un nom distinct pour ce compte, utile pour lier plusieurs comptes du même transporteur",
+      "display_name_required": "Le nom d'affichage est requis",
       "company_data_not_found": "Données compagnie introuvables",
       "update_success": "Paramètres mis à jour",
       "link_success": "Compagnie liée avec succès",
@@ -971,6 +974,7 @@
       "price": "Prix",
       "total_price": "Prix Total",
       "delivery_type": "Type de Livraison",
+      "delivery_price": "Prix de Livraison",
       "note": "Note"
     },
     "actions": {

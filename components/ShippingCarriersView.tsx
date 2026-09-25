@@ -54,6 +54,7 @@ const ShippingCarriersView: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [displayName, setDisplayName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
   const [wilayas, setWilayas] = useState<any[]>([]);
@@ -92,6 +93,7 @@ const ShippingCarriersView: React.FC = () => {
         });
       }
       setFormData(initialData);
+      setDisplayName(editModeCarrier.name || editModeCarrier.availableDeliveryCompany?.name || '');
       setIsSubmitDisabled(true);
       setStep('configure'); // Always configure in edit mode
     } else if (selectedCarrier) {
@@ -103,6 +105,7 @@ const ShippingCarriersView: React.FC = () => {
         });
       }
       setFormData(initialData);
+      setDisplayName(selectedCarrier.name || '');
       setIsSubmitDisabled(false);
       // Ensure we are in configure step if a carrier is selected (handled by handleSelectCarrier mostly)
     }
@@ -125,6 +128,7 @@ const ShippingCarriersView: React.FC = () => {
     setSelectedCarrier(null);
     setEditModeCarrier(null);
     setFormData({});
+    setDisplayName('');
     setErrors({});
     setStep('select');
   };
@@ -183,6 +187,9 @@ const ShippingCarriersView: React.FC = () => {
 
     // Validate required fields
     const newErrors: Record<string, string> = {};
+    if (!displayName.trim()) {
+      newErrors.name = t('shipping.add_edit_modal.display_name_required');
+    }
     if (selectedCarrier?.fields) {
       for (const fieldName of selectedCarrier.fields) {
         if (!formData[fieldName]) {
@@ -236,6 +243,7 @@ const ShippingCarriersView: React.FC = () => {
             content: {
               idAvailableDeliveryCompany: editModeCarrier.availableDeliveryCompany?.id,
               ...contentToSubmit,
+              name: displayName.trim(),
             }
           }
         });
@@ -247,11 +255,11 @@ const ShippingCarriersView: React.FC = () => {
         await createDeliveryCompany({
           variables: {
             content: {
-              name: selectedCarrier.name,
               originalName: selectedCarrier.name,
               active: true,
               idAvailableDeliveryCompany: selectedCarrier.id,
-              ...contentToSubmit
+              ...contentToSubmit,
+              name: displayName.trim(),
             }
           }
         });
@@ -501,6 +509,29 @@ const ShippingCarriersView: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Display Name (lets users tell apart several accounts of the same carrier) */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
+                          {t('shipping.add_edit_modal.display_name')} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={displayName}
+                          onChange={(e) => {
+                            setDisplayName(e.target.value);
+                            if (editModeCarrier) setIsSubmitDisabled(false);
+                            if (errors.name) setErrors({ ...errors, name: '' });
+                          }}
+                          placeholder={selectedCarrier?.name || ''}
+                          className={`w-full px-4 py-3 bg-slate-50 border rounded-lg text-xs font-bold transition-all ${errors.name ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                        />
+                        {errors.name ? (
+                          <p className="text-red-500 text-[9px] font-bold px-1">{errors.name}</p>
+                        ) : (
+                          <p className="text-[9px] font-bold text-slate-400 px-1">{t('shipping.add_edit_modal.display_name_hint')}</p>
+                        )}
+                      </div>
 
                       {/* Dynamic Fields */}
                       {selectedCarrier && selectedCarrier.fields && selectedCarrier.fields.length > 0 ? (

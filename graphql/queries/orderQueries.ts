@@ -39,6 +39,7 @@ export const GET_ORDER = gql`
       discount
       weight
       duplicatePhone
+      storageLocation
       store {
         store {
           id
