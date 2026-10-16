@@ -24,7 +24,8 @@ import { PostponedModal } from './PostponedModal';
 import toast from 'react-hot-toast';
 import { GET_CURRENT_USER, GET_ALL_STATUS_COMPANY } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
-import { UPDATE_ORDER, CHANGE_STATUS_ORDER } from '../graphql/mutations/orderMutations';
+import { UPDATE_ORDER, CHANGE_STATUS_ORDER, DUPLICATE_ORDER } from '../graphql/mutations/orderMutations';
+import { useNavigate } from 'react-router-dom';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { GET_ALL_DELIVERY_PRICE_COMPANY, ZIMOU_DELIVERY_PRICE_COMPARATOR } from '../graphql/queries/deliveryQueries';
 import { GET_ALL_DELIVERY_COMPANIES, GET_DELIVERY_COMPANY_CENTER } from '../graphql/queries/deliveryCompanyQueries';
@@ -246,6 +247,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const [updateOrder, { loading: isUpdating }] = useMutation(UPDATE_ORDER);
   const [changeStatusOrder, { loading: isStatusUpdating }] = useMutation(CHANGE_STATUS_ORDER);
+  const [duplicateOrder, { loading: isDuplicating }] = useMutation(DUPLICATE_ORDER);
+  const navigate = useNavigate();
+
+  const handleDuplicate = async () => {
+    try {
+      const { data } = await duplicateOrder({ variables: { id: order.id } });
+      const newId = data?.duplicateOrder?.id;
+      if (!newId) throw new Error(t('orders.details.duplicate_error'));
+      toast.success(t('orders.details.duplicate_success'));
+      navigate(`/dashboard/orders/${newId}`);
+    } catch (error: any) {
+      toast.error(error?.message || t('orders.details.duplicate_error'));
+    }
+  };
 
   // Derive statuses from backend data or fall back to defaults
   const confirmationStatuses = useMemo(() => {
@@ -739,6 +754,18 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               className="w-9 h-9 flex-shrink-0 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center"
             >
               <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+
+          {!readOnly && (
+            <button
+              onClick={handleDuplicate}
+              disabled={isDuplicating}
+              title={t('orders.details.duplicate_order')}
+              className={`h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-[10px] transition-all uppercase flex items-center gap-2 whitespace-nowrap ${isDuplicating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'}`}
+            >
+              {isDuplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+              {t('orders.details.duplicate_order')}
             </button>
           )}
 

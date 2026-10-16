@@ -5,21 +5,22 @@ import {
   Truck, MapPin, Search, Store, Phone, Eye,
   ChevronRight, ChevronLeft, Filter, X,
   PlusCircle, Check, RefreshCcw, Info, UserCheck, User, LayoutList, Home, Building2, AlertTriangle,
-  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar, Copy, MessageSquare, MessageCircle, Clock
+  AlertOctagon, RefreshCw, CheckCircle2, ShoppingBag, DollarSign, ArrowLeft, CheckSquare, Calendar, Copy, MessageSquare, MessageCircle, Clock, Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { statusLabels, statusColors } from '../constants/statusConstants';
 import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
-import { useQuery, useLazyQuery } from '@apollo/client';
+import { useQuery, useLazyQuery, useMutation } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
+import { DELETE_DELIVERY_COMPANY_FROM_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
 import { GET_ALL_STORES } from '../graphql/queries/storeQueries';
 import { GET_ALL_PRODUCTS } from '../graphql/queries/productQueries';
 import { useAuth } from '../contexts/AuthContext';
-import { ModernSelect, PaginationControl, DateRangeSelector, DateRange } from './common';
+import { ModernSelect, PaginationControl, DateRangeSelector, DateRange, ConfirmDialog } from './common';
 import { formatCurrency } from '../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { getTranslatedName, getWilayaName } from '../utils/i18nUtils';
@@ -237,8 +238,39 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
   useEffect(() => {
     if (ordersData?.allOrder?.data) {
       setOrders(ordersData.allOrder.data);
+      setSelectedOrderIds([]);
     }
   }, [ordersData]);
+
+  // Selection + bulk delete from delivery company
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isDeleteDeliveryOpen, setIsDeleteDeliveryOpen] = useState(false);
+  const [deleteDeliveryCompanyFromOrder, { loading: deletingFromDelivery }] = useMutation(DELETE_DELIVERY_COMPANY_FROM_ORDER);
+  const canDeleteFromDelivery = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'supervisor';
+
+  const toggleSelection = (id: string) => {
+    setSelectedOrderIds(prev => prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]);
+  };
+
+  const toggleAll = () => {
+    setSelectedOrderIds(selectedOrderIds.length === orders.length ? [] : orders.map(o => o.id));
+  };
+
+  const handleDeleteFromDelivery = async () => {
+    try {
+      const { data } = await deleteDeliveryCompanyFromOrder({ variables: { id: selectedOrderIds } });
+      if (data?.deleteDeliveryCompanyFromOrder?.status) {
+        toast.success(t('tracking.delete_from_delivery.success', { count: selectedOrderIds.length }));
+        setSelectedOrderIds([]);
+        setIsDeleteDeliveryOpen(false);
+        refetch();
+      } else {
+        toast.error(t('tracking.delete_from_delivery.error'));
+      }
+    } catch (error: any) {
+      toast.error(error?.message || t('tracking.delete_from_delivery.error'));
+    }
+  };
 
   const totalPages = ordersData?.allOrder?.total ? Math.ceil(ordersData.allOrder.total / itemsPerPage) : 0;
 
@@ -294,6 +326,16 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
           <h2 className="text-xl font-black text-slate-800 tracking-tight">{t('tracking.title')}</h2>
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">{t('tracking.subtitle')}</p>
         </div>
+        {selectedOrderIds.length > 0 && canDeleteFromDelivery && (
+          <div className="flex items-center gap-3 w-full lg:w-auto animate-in fade-in zoom-in">
+            <button
+              onClick={() => setIsDeleteDeliveryOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-600 text-white rounded-xl font-black text-xs hover:bg-rose-700 shadow-xl shadow-rose-600/20 transition-all flex-1 lg:flex-none"
+            >
+              <Trash2 className="w-4 h-4" /> {t('tracking.delete_from_delivery.button')} ({selectedOrderIds.length})
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 animate-in slide-in-from-top-4 relative z-[20]">
@@ -559,6 +601,11 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
             <table className={`w-full border-collapse min-w-[1100px] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
+                  {canDeleteFromDelivery && (
+                    <th className="px-6 py-4 w-12 text-center">
+                      <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" checked={orders.length > 0 && selectedOrderIds.length === orders.length} onChange={toggleAll} />
+                    </th>
+                  )}
                   {(visibleColumns as any).customerInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.customer')}</th>}
                   {(visibleColumns as any).communication && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">{t('tracking.table.communication')}</th>}
                   {(visibleColumns as any).locationInfo && <th className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>{t('tracking.table.location')}</th>}
@@ -578,6 +625,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                   const statusLabel = getStatusLabel(order.status);
                   const trackingCode = order.deliveryCompany?.trackingCode || '-';
                   const displayItems = order.products || order.items || [];
+                  const isSelected = selectedOrderIds.includes(order.id);
 
                   let hexColor = '#64748b';
                   if (typeof order.status === 'string') {
@@ -596,13 +644,18 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                     <tr
                       key={order.id}
                       onClick={() => navigate(`/dashboard/tracking/${order.id}`)}
-                      className={`group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95 ${tableTheme === 'clean' ? 'hover:bg-slate-50' : ''}`}
+                      className={`group transition-all cursor-pointer border-b border-slate-50 hover:brightness-95 ${isSelected ? 'brightness-90' : ''} ${tableTheme === 'clean' ? 'hover:bg-slate-50' : ''}`}
                       style={{
                         backgroundColor: tableTheme === 'vivid'
-                          ? `${hexColor}25`
-                          : 'white'
+                          ? (isSelected ? `${hexColor}50` : `${hexColor}25`)
+                          : (isSelected ? `${hexColor}20` : 'white')
                       }}
                     >
+                      {canDeleteFromDelivery && (
+                        <td className="px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" checked={isSelected} onChange={() => toggleSelection(order.id)} />
+                        </td>
+                      )}
 
                       {(visibleColumns as any).customerInfo && <td className={`px-6 py-5 ${i18n.dir() === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <div className="flex items-center gap-4">
@@ -871,7 +924,7 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-400 font-bold">{t('tracking.labels.empty_state')}</td>
+                    <td colSpan={12} className="text-center py-10 text-slate-400 font-bold">{t('tracking.labels.empty_state')}</td>
                   </tr>
                 )}
               </tbody>
@@ -888,6 +941,18 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
           isLoading={ordersLoading}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={isDeleteDeliveryOpen}
+        onClose={() => !deletingFromDelivery && setIsDeleteDeliveryOpen(false)}
+        onConfirm={handleDeleteFromDelivery}
+        title={t('tracking.delete_from_delivery.title')}
+        message={t('tracking.delete_from_delivery.message', { count: selectedOrderIds.length })}
+        confirmText={t('tracking.delete_from_delivery.confirm')}
+        cancelText={t('common.cancel')}
+        loading={deletingFromDelivery}
+        variant="danger"
+      />
     </div>
   );
 };

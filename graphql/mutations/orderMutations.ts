@@ -161,3 +161,19 @@ export const CHANGE_DELIVERY_TYPE_ORDER = gql`
     }
   }
 `;
+
+export const DELETE_DELIVERY_COMPANY_FROM_ORDER = gql`
+  mutation DeleteDeliveryCompanyFromOrder($id: [ID!]) {
+    deleteDeliveryCompanyFromOrder(id: $id) {
+      status
+    }
+  }
+`;
+
+export const DUPLICATE_ORDER = gql`
+  mutation DuplicateOrder($id: ID!) {
+    duplicateOrder(id: $id) {
+      id
+    }
+  }
+`;

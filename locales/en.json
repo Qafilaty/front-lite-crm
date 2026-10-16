@@ -453,7 +453,10 @@
       "delivery_assigned_to": "Order assigned to {{company}}",
       "manual_item_warning": "This item was entered manually and is not linked to inventory",
       "cart_empty": "Cart is empty",
-      "add_items_to_start": "Add items to start"
+      "add_items_to_start": "Add items to start",
+      "duplicate_order": "Duplicate order",
+      "duplicate_success": "Order duplicated successfully",
+      "duplicate_error": "Could not duplicate the order"
     },
     "assign_confirmer": {
       "toast_success": "Orders assigned successfully",
@@ -1653,7 +1656,15 @@
     },
     "carrier_timeline": "Carrier Tracking Updates",
     "internal_timeline": "Internal Delivery Logs",
-    "no_delivery_timeline": "No updates from the delivery company yet"
+    "no_delivery_timeline": "No updates from the delivery company yet",
+    "delete_from_delivery": {
+      "button": "Delete from carrier",
+      "title": "Delete from delivery company",
+      "message": "{{count}} order(s) will be removed from the delivery company, set to \"Deleted from delivery company\" and moved back to order confirmation. Continue?",
+      "confirm": "Yes, delete",
+      "success": "{{count}} order(s) deleted from the delivery company",
+      "error": "Could not delete orders from the delivery company"
+    }
   },
   "subscription": {
     "warning": {

@@ -453,7 +453,10 @@
       "delivery_assigned_to": "Commande assignée à {{company}}",
       "manual_item_warning": "Cet article a été saisi manuellement et n'est pas lié au stock",
       "cart_empty": "Le panier est vide",
-      "add_items_to_start": "Ajoutez des articles pour commencer"
+      "add_items_to_start": "Ajoutez des articles pour commencer",
+      "duplicate_order": "Dupliquer la commande",
+      "duplicate_success": "Commande dupliquée avec succès",
+      "duplicate_error": "Impossible de dupliquer la commande"
     },
     "assign_confirmer": {
       "toast_success": "Ordres assignés avec succès",
@@ -1635,7 +1638,15 @@
     },
     "carrier_timeline": "Suivi du Transporteur",
     "internal_timeline": "Historique de Livraison Interne",
-    "no_delivery_timeline": "Aucun suivi de transporteur encore disponible"
+    "no_delivery_timeline": "Aucun suivi de transporteur encore disponible",
+    "delete_from_delivery": {
+      "button": "Supprimer du transporteur",
+      "title": "Supprimer de la société de livraison",
+      "message": "{{count}} commande(s) seront supprimées de la société de livraison, passeront au statut \"Supprimé de la société de livraison\" et reviendront à la confirmation. Continuer ?",
+      "confirm": "Oui, supprimer",
+      "success": "{{count}} commande(s) supprimée(s) de la société de livraison",
+      "error": "Impossible de supprimer les commandes de la société de livraison"
+    }
   },
   "subscription": {
     "warning": {

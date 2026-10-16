@@ -472,7 +472,11 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                     const statusStyle = getStatusStyle(order.status);
                                     const statusLabel = getStatusLabel(order.status);
                                     const isSelected = selectedOrderIds.includes(order.id);
-                                    const displayItems = order.products || order.items || [];
+                                    const orderItems = order.products || order.items || [];
+                                    const funnelProduct = (order as any).funnel?.product;
+                                    const displayItems = orderItems.length > 0
+                                        ? orderItems
+                                        : (funnelProduct ? [{ name: funnelProduct.name, quantity: 1 }] : []);
 
                                     let hexColor = '#64748b';
                                     if (typeof order.status === 'string') {
@@ -567,14 +571,17 @@ const OrderAbandonedView: React.FC<OrderAbandonedViewProps> = () => {
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600"><ShoppingBag className="w-3.5 h-3.5" /></div>
-                                                        <span className="text-[11px] font-black text-slate-700">{t('common.order')} #: {order.numberOrder}</span>
+                                                        <span className="text-[11px] font-black text-slate-700">
+                                                            {t('common.order')}{order.numberOrder ? ` #${order.numberOrder}` : ''}
+                                                        </span>
                                                     </div>
                                                     <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
                                                         {displayItems.map((item: any, i: number) => (
                                                             <span key={i} className="px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[9px] font-bold text-slate-500 whitespace-nowrap">
-                                                                {item.product?.name || item.name} {item.quantity > 1 ? `(x${item.quantity})` : ''}
+                                                                {item.product?.name || item.name}{item.variantsProduct?.name ? ` - ${item.variantsProduct.name}` : ''} {item.quantity > 1 ? `(x${item.quantity})` : ''}
                                                             </span>
                                                         ))}
+                                                        {displayItems.length === 0 && <span className="text-[9px] font-bold text-slate-300">{t('common.not_specified')}</span>}
                                                     </div>
                                                 </div>
                                             </td>}

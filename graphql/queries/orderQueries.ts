@@ -467,6 +467,15 @@ export const GET_ALL_ABANDONED_ORDERS = gql`
         updatedAt
         updatedAtStatus
         isAbandoned
+        funnel {
+          id
+          name
+          product {
+            id
+            name
+            price
+          }
+        }
         confirmed {
           id
           name
