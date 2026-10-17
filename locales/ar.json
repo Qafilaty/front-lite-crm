@@ -463,7 +463,9 @@
       "add_items_to_start": "أضف منتجات للبدء",
       "duplicate_order": "تكرار الطلبية",
       "duplicate_success": "تم تكرار الطلبية بنجاح",
-      "duplicate_error": "تعذر تكرار الطلبية"
+      "duplicate_error": "تعذر تكرار الطلبية",
+      "more_actions": "خيارات إضافية",
+      "unsaved_changes_warning": "لديك تعديلات لم يتم حفظها بعد. احفظ التعديلات أولاً ثم غيّر الحالة."
     },
     "assign_confirmer": {
       "toast_success": "تم إسناد الطلبات بنجاح",
@@ -1700,6 +1702,14 @@
       "confirm": "نعم، احذف",
       "success": "تم حذف {{count}} طلبية من شركة التوصيل",
       "error": "تعذر حذف الطلبيات من شركة التوصيل"
+    },
+    "delete_orders": {
+      "button": "حذف",
+      "title": "حذف الطلبيات",
+      "message": "سيتم حذف {{count}} طلبية. هل تريد المتابعة؟",
+      "confirm": "نعم، احذف",
+      "success": "تم حذف {{count}} طلبية",
+      "error": "تعذر حذف الطلبيات"
     }
   },
   "subscription": {

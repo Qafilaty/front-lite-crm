@@ -13,7 +13,7 @@ import OrderDetailsView from './OrderDetailsView';
 import TableSkeleton from './common/TableSkeleton';
 import { useQuery, useLazyQuery, useMutation } from '@apollo/client';
 import { GET_ALL_ORDERS } from '../graphql/queries/orderQueries';
-import { DELETE_DELIVERY_COMPANY_FROM_ORDER } from '../graphql/mutations/orderMutations';
+import { DELETE_DELIVERY_COMPANY_FROM_ORDER, DELETE_MULTI_ORDER } from '../graphql/mutations/orderMutations';
 import { GET_ALL_STATUS_COMPANY } from '../graphql/queries/companyQueries';
 import { GET_CURRENT_USER, GET_ALL_USERS } from '../graphql/queries';
 import { GET_ALL_WILAYAS } from '../graphql/queries/wilayasQueries';
@@ -256,6 +256,25 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
     setSelectedOrderIds(selectedOrderIds.length === orders.length ? [] : orders.map(o => o.id));
   };
 
+  const [isDeleteOrdersOpen, setIsDeleteOrdersOpen] = useState(false);
+  const [deleteMultiOrder, { loading: deletingOrders }] = useMutation(DELETE_MULTI_ORDER);
+
+  const handleDeleteOrders = async () => {
+    try {
+      const { data } = await deleteMultiOrder({ variables: { id: selectedOrderIds } });
+      if (data?.deleteMultiOrder?.status) {
+        toast.success(t('tracking.delete_orders.success', { count: selectedOrderIds.length }));
+        setSelectedOrderIds([]);
+        setIsDeleteOrdersOpen(false);
+        refetch();
+      } else {
+        toast.error(t('tracking.delete_orders.error'));
+      }
+    } catch (error: any) {
+      toast.error(error?.message || t('tracking.delete_orders.error'));
+    }
+  };
+
   const handleDeleteFromDelivery = async () => {
     try {
       const { data } = await deleteDeliveryCompanyFromOrder({ variables: { id: selectedOrderIds } });
@@ -332,7 +351,13 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
               onClick={() => setIsDeleteDeliveryOpen(true)}
               className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-600 text-white rounded-xl font-black text-xs hover:bg-rose-700 shadow-xl shadow-rose-600/20 transition-all flex-1 lg:flex-none"
             >
-              <Trash2 className="w-4 h-4" /> {t('tracking.delete_from_delivery.button')} ({selectedOrderIds.length})
+              <Truck className="w-4 h-4" /> {t('tracking.delete_from_delivery.button')} ({selectedOrderIds.length})
+            </button>
+            <button
+              onClick={() => setIsDeleteOrdersOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-rose-200 text-rose-600 rounded-xl font-black text-xs hover:bg-rose-50 transition-all flex-1 lg:flex-none"
+            >
+              <Trash2 className="w-4 h-4" /> {t('tracking.delete_orders.button')} ({selectedOrderIds.length})
             </button>
           </div>
         )}
@@ -951,6 +976,18 @@ const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ orders: initialOr
         confirmText={t('tracking.delete_from_delivery.confirm')}
         cancelText={t('common.cancel')}
         loading={deletingFromDelivery}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={isDeleteOrdersOpen}
+        onClose={() => !deletingOrders && setIsDeleteOrdersOpen(false)}
+        onConfirm={handleDeleteOrders}
+        title={t('tracking.delete_orders.title')}
+        message={t('tracking.delete_orders.message', { count: selectedOrderIds.length })}
+        confirmText={t('tracking.delete_orders.confirm')}
+        cancelText={t('common.cancel')}
+        loading={deletingOrders}
         variant="danger"
       />
     </div>

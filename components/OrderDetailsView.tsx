@@ -14,7 +14,8 @@ import {
   UserCheck,
   Activity,
   Info,
-  Sparkles
+  Sparkles,
+  MoreVertical
 } from 'lucide-react';
 import { statusLabels, statusColors } from '../constants/statusConstants'; // Still used as fallback for colors if not provided by DB
 import { deliveryCompanyService } from '../services/apiService';
@@ -322,6 +323,34 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const isDirty = JSON.stringify(order) !== JSON.stringify(editedOrder);
 
+  // Status changes would be applied on top of unsaved edits, so they must be saved first
+  const blockIfUnsaved = () => {
+    if (!isDirty) return false;
+    toast.error(t('orders.details.unsaved_changes_warning'), { id: 'unsaved-changes' });
+    return true;
+  };
+
+  // Secondary actions (3-dots menu). Duplicate is only offered on the confirmation page.
+  const canDelete = !readOnly && !!onDelete;
+  const canDuplicate = !readOnly && !trackingMode;
+  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number; right: number } | null>(null);
+
+  const openMoreMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMoreMenuPos(prev => prev ? null : { top: rect.bottom + 6, left: rect.left, right: window.innerWidth - rect.right });
+  };
+
+  useEffect(() => {
+    if (!moreMenuPos) return;
+    const close = () => setMoreMenuPos(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [moreMenuPos]);
+
   const handleSave = async () => {
     if (readOnly) return;
     try {
@@ -378,6 +407,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
   const addStatusUpdate = async () => {
     if (!newLog.status) return;
+    if (blockIfUnsaved()) return;
 
     // Use ID if available (DB status), otherwise fallback to name/key
     const statusValue = (typeof newLog.status === 'object' && newLog.status !== null)
@@ -747,25 +777,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-          {!readOnly && onDelete && (
+          {(canDelete || canDuplicate) && (
             <button
-              onClick={() => setIsDeleteModalOpen(true)}
-              title={t('orders.details.delete_order')}
-              className="w-9 h-9 flex-shrink-0 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center"
+              onClick={openMoreMenu}
+              title={t('orders.details.more_actions')}
+              className={`w-9 h-9 flex-shrink-0 rounded-xl border transition-all flex items-center justify-center ${moreMenuPos ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'}`}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-
-          {!readOnly && (
-            <button
-              onClick={handleDuplicate}
-              disabled={isDuplicating}
-              title={t('orders.details.duplicate_order')}
-              className={`h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-[10px] transition-all uppercase flex items-center gap-2 whitespace-nowrap ${isDuplicating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'}`}
-            >
-              {isDuplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-              {t('orders.details.duplicate_order')}
+              {isDuplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
             </button>
           )}
 
@@ -781,8 +799,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           )}
 
           <button
-            onClick={() => { setIsAddLogOpen(true); }}
-            className="h-9 px-4 bg-indigo-600 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
+            onClick={() => { if (blockIfUnsaved()) return; setIsAddLogOpen(true); }}
+            aria-disabled={isDirty}
+            title={isDirty ? t('orders.details.unsaved_changes_warning') : undefined}
+            className={`h-9 px-4 bg-indigo-600 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-indigo-600/20 transition-all uppercase flex items-center gap-2 whitespace-nowrap ${isDirty ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'}`}
           >
             <RefreshCcw className="w-3.5 h-3.5" />
             <span>{t('orders.details.update_status')}</span>
@@ -790,8 +810,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 
           {!readOnly && !order.deliveryCompany?.trackingCode && getStatusKey(editedOrder.status) === 'confirmed' && (
             <button
-              onClick={openDeliveryModal}
-              className="h-9 px-4 bg-slate-900 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all uppercase flex items-center gap-2 whitespace-nowrap"
+              onClick={() => { if (blockIfUnsaved()) return; openDeliveryModal(); }}
+              aria-disabled={isDirty}
+              title={isDirty ? t('orders.details.unsaved_changes_warning') : undefined}
+              className={`h-9 px-4 bg-slate-900 text-white rounded-xl font-bold text-[10px] shadow-lg shadow-slate-900/20 transition-all uppercase flex items-center gap-2 whitespace-nowrap ${isDirty ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800'}`}
             >
               <Truck className="w-3.5 h-3.5" />
               <span>{t('orders.details.send')}</span>
@@ -2012,6 +2034,39 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* More actions menu (portal: the header bar scrolls horizontally and would clip it) */}
+      {moreMenuPos && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setMoreMenuPos(null)} />
+          <div
+            className="fixed z-[91] w-52 bg-white border border-slate-100 rounded-xl shadow-xl p-1.5 animate-in fade-in slide-in-from-top-2"
+            style={i18n.dir() === 'rtl' ? { top: moreMenuPos.top, left: moreMenuPos.left } : { top: moreMenuPos.top, right: moreMenuPos.right }}
+            dir={i18n.dir()}
+          >
+            {canDuplicate && (
+              <button
+                onClick={() => { setMoreMenuPos(null); handleDuplicate(); }}
+                disabled={isDuplicating}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                <Copy className="w-4 h-4 text-slate-400" />
+                {t('orders.details.duplicate_order')}
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => { setMoreMenuPos(null); setIsDeleteModalOpen(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                {t('orders.details.delete_order')}
+              </button>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

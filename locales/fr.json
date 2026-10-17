@@ -456,7 +456,9 @@
       "add_items_to_start": "Ajoutez des articles pour commencer",
       "duplicate_order": "Dupliquer la commande",
       "duplicate_success": "Commande dupliquée avec succès",
-      "duplicate_error": "Impossible de dupliquer la commande"
+      "duplicate_error": "Impossible de dupliquer la commande",
+      "more_actions": "Plus d'actions",
+      "unsaved_changes_warning": "Vous avez des modifications non enregistrées. Enregistrez-les d'abord, puis changez le statut."
     },
     "assign_confirmer": {
       "toast_success": "Ordres assignés avec succès",
@@ -1646,6 +1648,14 @@
       "confirm": "Oui, supprimer",
       "success": "{{count}} commande(s) supprimée(s) de la société de livraison",
       "error": "Impossible de supprimer les commandes de la société de livraison"
+    },
+    "delete_orders": {
+      "button": "Supprimer",
+      "title": "Supprimer les commandes",
+      "message": "{{count}} commande(s) seront supprimées. Continuer ?",
+      "confirm": "Oui, supprimer",
+      "success": "{{count}} commande(s) supprimée(s)",
+      "error": "Impossible de supprimer les commandes"
     }
   },
   "subscription": {

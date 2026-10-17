@@ -456,7 +456,9 @@
       "add_items_to_start": "Add items to start",
       "duplicate_order": "Duplicate order",
       "duplicate_success": "Order duplicated successfully",
-      "duplicate_error": "Could not duplicate the order"
+      "duplicate_error": "Could not duplicate the order",
+      "more_actions": "More actions",
+      "unsaved_changes_warning": "You have unsaved changes. Save them first, then change the status."
     },
     "assign_confirmer": {
       "toast_success": "Orders assigned successfully",
@@ -1664,6 +1666,14 @@
       "confirm": "Yes, delete",
       "success": "{{count}} order(s) deleted from the delivery company",
       "error": "Could not delete orders from the delivery company"
+    },
+    "delete_orders": {
+      "button": "Delete",
+      "title": "Delete orders",
+      "message": "{{count}} order(s) will be deleted. Continue?",
+      "confirm": "Yes, delete",
+      "success": "{{count}} order(s) deleted",
+      "error": "Could not delete the orders"
     }
   },
   "subscription": {
