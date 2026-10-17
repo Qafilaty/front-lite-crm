@@ -321,7 +321,33 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     }));
   }, [editedOrder.items, editedOrder.shippingCost]);
 
-  const isDirty = JSON.stringify(order) !== JSON.stringify(editedOrder);
+  // Only the fields the user can edit (and that handleSave sends) count as changes.
+  // editedOrder is reshaped from `order` on load, so comparing the two objects directly is always "dirty".
+  const getEditableSnapshot = (o: typeof editedOrder) => JSON.stringify({
+    customer: o.customer || '',
+    phone: o.phone || '',
+    state: typeof o.state === 'object' && o.state !== null ? (o.state as any).name : (o.state || ''),
+    city: o.city || '',
+    address: o.address || '',
+    deliveryType: o.deliveryType || '',
+    shippingCost: Number(o.shippingCost) || 0,
+    discount: Number(o.discount) || 0,
+    weight: Number(o.weight) || 0,
+    deliveryCompanyId: o.deliveryCompanyId || '',
+    deliveryCenterId: o.deliveryCenterId || '',
+    notes: o.notes || '',
+    storageLocation: o.storageLocation || 'SHOP',
+    items: (o.items || []).map(item => ({
+      productId: item.productId || '',
+      variant: item.idVariantsProduct || item.variantId || '',
+      name: item.name || '',
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 0
+    }))
+  });
+
+  const [savedSnapshot, setSavedSnapshot] = useState(() => getEditableSnapshot(editedOrder));
+  const isDirty = getEditableSnapshot(editedOrder) !== savedSnapshot;
 
   // Status changes would be applied on top of unsaved edits, so they must be saved first
   const blockIfUnsaved = () => {
@@ -398,6 +424,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       });
 
       toast.success(t('orders.details.save_success'));
+      setSavedSnapshot(getEditableSnapshot(editedOrder));
       onUpdate({ ...editedOrder, updatedAt: new Date().toISOString() });
     } catch (error: any) {
       console.error(error);
